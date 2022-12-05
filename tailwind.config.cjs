@@ -2,7 +2,7 @@ import('tailwindcss').Config
 module.exports = {
     content: [
         "./index.html",
-        "./src/**/*.{js,svelte}",
+        "./src/**/*.{html,js,svelte,ts}",
     ],
     theme: {
         extend: {},
