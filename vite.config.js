@@ -10,7 +10,8 @@ export default defineConfig({
       src: path.resolve(__dirname, 'src'),
     }
   },
-  plugins: [svelte(),
+  plugins: [
+    svelte(),
     nodePolyfills({
       // Whether to polyfill `node:` protocol imports.
       protocolImports: true,
