@@ -33,7 +33,7 @@
     "buffer": "^6.0.3",
     "compressorjs": "^1.1.1",
     "dexie": "^3.2.2",
-    "nostr-tools": "^0.24.1",
+    "nostr-tools": "github:fiatjaf/nostr-tools#12be5a5338f1b8c643411c196f8b90dad12335f6",
     "ramda": "^0.28.0",
     "svelte-loading-spinners": "^0.3.4",
     "svelte-routing": "^1.6.0",

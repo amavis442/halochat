@@ -4,9 +4,9 @@ import { getLocalJson, setLocalJson } from '../util/misc'
 export const relays = writable(getLocalJson("halonostr/relays") || []);
 export const filterRelay = writable('');
 
-export function addRelay(url) {
+export function addRelay(url: string) {
     relays.update(data => {
-        const result = data.find((value) => value.includes(url))
+        const result = data.find((value: string) => value.includes(url))
         if (!result) {
             return [...data, url]
         }
@@ -14,10 +14,10 @@ export function addRelay(url) {
     })
 }
 
-export function removeRelay(url) {
+export function removeRelay(url: string) {
     relays.update(data => {
-        return data.filter((value) => {
-            return value.url != url
+        return data.filter((value: string) => {
+            return value != url
         })
     });
 }
@@ -25,7 +25,7 @@ export function removeRelay(url) {
 export const f = derived(
     [relays, filterRelay],
     ([$relays, $filterRelay]) => {
-        return $relays.find((value) => value.url.includes($filterRelay))
+        return $relays.find((value: string) => value.includes($filterRelay))
     }
 )
 

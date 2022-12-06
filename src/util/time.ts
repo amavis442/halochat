@@ -11,6 +11,6 @@ export function getTime(t: number): string {
   
   export function now(): number {
     const date = new Date();
-    return date.valueOf() / 1000;
+    return Math.round(date.valueOf() / 1000);
   }
   
