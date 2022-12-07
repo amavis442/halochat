@@ -1,4 +1,7 @@
 import('tailwindcss').Config
+
+const colors = require('tailwindcss/colors')
+
 module.exports = {
     content: [
         "./index.html",
@@ -8,7 +11,7 @@ module.exports = {
         extend: {},
         colors: {
             transparent: "transparent",
-            black: "#0f0f0e",
+            current: 'currentColor',
             white: "#FFFCF2",
             accent: "#EB5E28",
             light: "#CCC5B9",
@@ -16,7 +19,13 @@ module.exports = {
             dark: "#252422",
             danger: "#ff0000",
             blue: "#080048",
-            gray: '#6F6B6A'
+            purple: colors.purple,
+            black: colors.black,
+            white: colors.white,
+            gray: colors.gray,
+            emerald: colors.emerald,
+            indigo: colors.indigo,
+            yellow: colors.yellow,
         },
     },
     plugins: [],
