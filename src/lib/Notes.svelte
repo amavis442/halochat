@@ -23,7 +23,7 @@ import {
 import {
     users
 } from '../stores/user'
-//import { getLocalJson, setLocalJson } from './util/misc'
+import Note from './Note.svelte'
 
 function addRelay(url: string) {
     relays.update(data => {
@@ -138,52 +138,10 @@ onMount(async () => {
 </script>
 
 <main>
-    <div class="w-full px-5 flex flex-col justify-between">
-        <div class="flex flex-col mt-5">
-            {#each $n as note,i  }
-            {#if i % 2 }
-            <div class="flex justify-end mb-4">
-                <div
-                    class="mr-2 py-3 px-4 bg-light rounded-bl-3xl rounded-tl-3xl rounded-tr-xl text-white text-right"
-                    >
-                    <div class="pr-4 text-right px-2">
-                        <small class="text-white">{note.user? (note.user.name ? note.user.name : note.pubkey) : note.pubkey}</small>
-                    </div>
-                    <span class="pr-4">{ note.content }</span>
-                    <div class="pr-4 text-right px-2">
-                        <small class="text-gray-500">{ getTime(note.created_at) }</small>
-                    </div>
-                </div>
-                <img
-                    src="{ note.user && note.user.picture ? note.user.picture : 'profile-placeholder.png' }"
-                    class="object-cover h-8 w-8 rounded-full"
-                    alt="{ note.user ? note.user.about : note.pubkey }"
-                    title="{ note.user ? note.user.name : note.pubkey }"
-                    />
-            </div>
-            {:else}
-                <div class="flex justify-start mb-4">
-                    <img
-                    src="{ note.user && note.user.picture ? note.user.picture : 'profile-placeholder.png' }"
-                    class="object-cover h-8 w-8 rounded-full"
-                    alt="{ note.user ? note.user.about : note.pubkey }"
-                    title="{ note.user ? note.user.name : note.pubkey }"
-                    />
-                <div
-                    class="mr-2 py-3 px-4 bg-blue rounded-bl-3xl rounded-tl-3xl rounded-tr-xl text-white text-right"
-                    >
-                    <div class="pr-4 text-right px-2">
-                        <small class="text-white">{note.user? (note.user.name ? note.user.name : note.pubkey) : note.pubkey}</small>
-                    </div>
-                    <div class="pr-4 space-x-4">{ note.content }</div>
-                    <div class="pr-4 text-right px-2">
-                        <small class="text-gray-500">{ getTime(note.created_at) }</small>
-                    </div>
-                </div>
-
-            </div>
-            {/if}
+    <div class="w-full px-5 flex flex-col justify-center">
+  
+            {#each $n as note }
+            <Note note={note} />
             {/each}
-        </div>
     </div>
 </main>
