@@ -32,12 +32,7 @@ function addRelay(url: string) {
 //localStorage.setItem('halonostr/users', '')
 //$users = []
 
-$relays = []
-
 onMount(async () => {
-    addRelay('wss://relay.damus.io')
-    addRelay('wss://nostr-relay.wlvs.space')
-
     const eventData = await initData()
     const myNotes = await processEvent(eventData)
     noteData.update($noteData => uniqBy(prop('id'), $noteData.concat(myNotes)))

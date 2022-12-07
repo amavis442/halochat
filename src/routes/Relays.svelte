@@ -57,5 +57,5 @@
 {#each $relays as relay}
     <button on:click={() => deleteRelay(relay)}
         ><span class="fa-solid fa-trash" /></button
-    >{relay}<br />
+    > {relay}<br />
 {/each}

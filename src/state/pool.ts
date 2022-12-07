@@ -122,7 +122,7 @@ relays.subscribe($relays => {
   Object.keys(pool.relays).forEach((url: string) => {
     if (!$relays.includes(url)) {
       //@ts-ignore
-      //pool.removeRelay(url)
+      pool.removeRelay(url)
     }
   })
 
