@@ -1,15 +1,6 @@
 import { writable } from 'svelte/store'
 import { getLocalJson, setLocalJson } from '../util/misc'
-import { now } from '../util/time'
-
-export type User = {
-  pubkey: string,
-  name: string,
-  about: string,
-  picture: string,
-  content: any,
-  refreshed: number,
-}
+import type { User } from '../state/types'
 
 export function addUser(user: User) {
   users.update(data => {

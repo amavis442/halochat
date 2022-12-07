@@ -3,6 +3,7 @@ import { getData } from '../state/pool'
 import { users } from '../stores/user'
 import { now } from "../util/time"
 import { uniqBy, prop, pluck } from 'ramda'
+import type { Event, User, Filter, Note, Reply } from './types'
 
 export const blacklist = writable([
     '887645fef0ce0c3c1218d2f5d8e6132a19304cdc57cd20281d082f38cfea0072'
@@ -10,7 +11,7 @@ export const blacklist = writable([
 
 export async function initData(): Promise < any > {
     // Get some events from 7 days with a max limit of 4000 records
-    let filter = {
+    let filter:Filter = {
         kinds: [1, 5, 7],
         since: now() - 2 * 60 * 60 * 24, // Events from 2 days
         limit: 20, // Start of with 20 events and get more when needed (scrolling).
@@ -43,13 +44,14 @@ export async function updateUserData(data: Array < any > ) {
          */
         users.update($users => {
             userData.forEach((e) => {
-                $users[e.pubkey] = {
+                const user:User = {
                     pubkey: e.pubkey,
                     ...$users[e.pubkey],
                     ...JSON.parse(e.content),
                     content: e.content,
                     refreshed: now()
                 }
+                $users[e.pubkey] = user
                 const regex = new RegExp('(http(s?):)|([/|.|\w|\s])*\.(?:jpg|gif|png)');
                 if (!regex.test($users[e.pubkey].picture)) {
                     $users[e.pubkey].picture = 'profile-placeholder.png'
@@ -60,9 +62,9 @@ export async function updateUserData(data: Array < any > ) {
     }
 }
 
-function findReplies(data) {
+function findReplies(data: Event[]) {
     let replies = []
-    data.forEach((event: any) => {
+    data.forEach((event: Event) => {
         if (event.tags) {
             event.tags.forEach((tag) => {
                 if (tag[0] == "e" && tag[1] && (tag[3] == "reply" )) {
@@ -81,7 +83,7 @@ function findReplies(data) {
  * @param data 
  * @returns 
  */
-export async function replies(data: Array < any > ) {
+export async function replies(data: Array < Event > ) {
     let replies = []
     
     const r = findReplies(data)
@@ -91,7 +93,7 @@ export async function replies(data: Array < any > ) {
     let replyData = []
     if (replies.length > 0) {
         const eventId = pluck('reply', replies)
-        const filter = {
+        const filter:Filter  = {
             kinds: [1],
             '#e': eventId,
         }
@@ -129,22 +131,22 @@ export async function processEvent(event: any) {
     }
     let myNotes = []
     //merge user with their events
-    event.forEach((note) => {
+    event.forEach((note: Event) => {
         if (!$blacklist.includes(note.pubkey)) {
             switch (note.kind) {
                 case 1:
-                    let thisReply = {}
+                    let thisReply:Reply
                     if (reply.json[note.id]) {
                         thisReply = {
                             ...reply.json[note.id],
                             user: $users[reply.json[note.id].pubkey]
                         } 
                     }
-                    const myNote = {
+                    const myNote:Note  = {
                         ...note,
                         user: $users[note.pubkey],
                         replies: thisReply,  
-                        reactions: {} 
+                        reactions: null
                     }
                     myNotes.push(myNote)
                     break;
@@ -152,7 +154,6 @@ export async function processEvent(event: any) {
         }
     })
     myNotes.reverse()
-    //$n = $n.concat(myNotes)
-    return myNotes //uniqBy(prop('id'), $n.concat(myNotes))
-    //$n.reverse()
+
+    return myNotes 
 }
