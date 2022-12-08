@@ -9,12 +9,12 @@ export const blacklist = writable([
     '887645fef0ce0c3c1218d2f5d8e6132a19304cdc57cd20281d082f38cfea0072'
 ])
 
-export async function initData(): Promise < any > {
+export async function initData(): Promise<any> {
     // Get some events from 7 days with a max limit of 4000 records
-    let filter:Filter = {
+    let filter: Filter = {
         kinds: [1, 5, 7],
-        since: now() - 2 * 60 * 60 * 24, // Events from 2 days
-        limit: 20, // Start of with 20 events and get more when needed (scrolling).
+        until: now(), // Events from 2 days
+        limit: 50, // Start of with 20 events and get more when needed (scrolling).
     };
     return getData(filter)
 }
@@ -23,7 +23,7 @@ export async function initData(): Promise < any > {
  * Retrieves all pubkey from the event(s) and tries to get the user meta data for this event
  * @param data
  */
-export async function updateUserData(data: Array < any > ) {
+export async function updateUserData(data: Array<any>) {
     let pubKeys = []
     data.forEach((event: any) => {
         pubKeys.push(event.pubkey.toString());
@@ -44,7 +44,7 @@ export async function updateUserData(data: Array < any > ) {
          */
         users.update($users => {
             userData.forEach((e) => {
-                const user:User = {
+                const user: User = {
                     pubkey: e.pubkey,
                     ...$users[e.pubkey],
                     ...JSON.parse(e.content),
@@ -67,12 +67,12 @@ function findReplies(data: Event[]) {
     data.forEach((event: Event) => {
         if (event.tags) {
             event.tags.forEach((tag) => {
-                if (tag[0] == "e" && tag[1] && (tag[3] == "reply" )) {
-                    replies.push({id: event.id, reply: tag[1]})
+                if (tag[0] == "e" && tag[1] && (tag[3] == "reply")) {
+                    replies.push({ id: event.id, reply: tag[1] })
                 }
             })
         }
-    })  
+    })
     return replies
 }
 
@@ -83,9 +83,9 @@ function findReplies(data: Event[]) {
  * @param data 
  * @returns 
  */
-export async function replies(data: Array < Event > ) {
+export async function replies(data: Array<Event>) {
     let replies = []
-    
+
     const r = findReplies(data)
     replies = uniqBy(prop('id'), r)
 
@@ -93,21 +93,21 @@ export async function replies(data: Array < Event > ) {
     let replyData = []
     if (replies.length > 0) {
         const eventId = pluck('reply', replies)
-        const filter:Filter  = {
+        const filter: Filter = {
             kinds: [1],
             '#e': eventId,
         }
         replyData = await getData(filter)
         replyData = uniqBy(prop('id'), replyData)
-       
+
         replyData.forEach((element) => {
-            const eId = replies.filter((a) => {return element.id == a.reply})
+            const eId = replies.filter((a) => { return element.id == a.reply })
             if (eId.length) {
-                 d[eId[0].id] = element
+                d[eId[0].id] = element
             }
         })
     }
-    return { json: d, raw: replyData}
+    return { json: d, raw: replyData }
 }
 
 /**
@@ -117,7 +117,7 @@ export async function replies(data: Array < Event > ) {
  * 
  * @param event
  */
-export async function processEvent(event: any) {
+export async function processEvent(event: any):Promise<Array<any>> {
     if (!Array.isArray(event)) {
         event = [event]
     }
@@ -129,31 +129,31 @@ export async function processEvent(event: any) {
     if (reply.raw.length) {
         await updateUserData(reply.raw)
     }
-    let myNotes = []
-    //merge user with their events
-    event.forEach((note: Event) => {
-        if (!$blacklist.includes(note.pubkey)) {
-            switch (note.kind) {
-                case 1:
-                    let thisReply:Reply
-                    if (reply.json[note.id]) {
-                        thisReply = {
-                            ...reply.json[note.id],
-                            user: $users[reply.json[note.id].pubkey]
-                        } 
-                    }
-                    const myNote:Note  = {
-                        ...note,
-                        user: $users[note.pubkey],
-                        replies: thisReply,  
-                        reactions: null
-                    }
-                    myNotes.push(myNote)
-                    break;
+    return new Promise((resolve, reject) => {
+        let myNotes = []
+        //merge user with their events
+        event.forEach((note: Event) => {
+            if (!$blacklist.includes(note.pubkey)) {
+                switch (note.kind) {
+                    case 1:
+                        let thisReply: Reply
+                        if (reply.json[note.id]) {
+                            thisReply = {
+                                ...reply.json[note.id],
+                                user: $users[reply.json[note.id].pubkey]
+                            }
+                        }
+                        const myNote: Note = {
+                            ...note,
+                            user: $users[note.pubkey],
+                            replies: thisReply,
+                            reactions: null
+                        }
+                        myNotes.push(myNote)
+                        break;
+                }
             }
-        }
+        })
+        resolve(myNotes)
     })
-    myNotes.reverse()
-
-    return myNotes 
 }

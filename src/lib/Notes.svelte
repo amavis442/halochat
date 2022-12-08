@@ -1,50 +1,116 @@
 <script lang="ts">
-import {
-    relays,
-    eventListener
-} from '../state/pool'
-import {
-    uniqBy,
-    prop,
-} from 'ramda'
-import {
-    onMount
-} from 'svelte'
-import {
-    writable
-} from 'svelte/store'
+  import { relays, eventListener, getData } from '../state/pool'
+  import { uniqBy, prop } from 'ramda'
+  import { onMount } from 'svelte'
+  import { writable } from 'svelte/store'
+  import Spinner from './Spinner.svelte'
+  import { processEvent, initData } from '../state/app'
+  import Note from './Note.svelte'
+  import { last,nth } from 'ramda'
+  import { delay } from '../util/time'
+  import { throttle } from 'throttle-debounce'
+  import type { Filter } from '../state/types'
 
-import { processEvent, initData } from '../state/app'
-import Note from './Note.svelte'
+  const noteData = writable([])
 
-const noteData = writable([])
+  //localStorage.setItem('halonostr/users', '')
+  //$users = []
+  let isLoading = true
 
-function addRelay(url: string) {
-    relays.update(data => {
-        const result = data.find((value: string) => value.includes(url))
-        if (!result) {
-            return [...data, url]
-        }
-        return data
+  export function updateNotes(myNotes) {
+    noteData.update(($noteData) => {
+      console.log('Update list', myNotes)
+      return uniqBy(prop('id'), $noteData.concat(myNotes))
     })
-}
 
-//localStorage.setItem('halonostr/users', '')
-//$users = []
+    isLoading = false
+    //eventListener(processEvent)
 
-onMount(async () => {
-    const eventData = await initData()
-    const myNotes = await processEvent(eventData)
-    noteData.update($noteData => uniqBy(prop('id'), $noteData.concat(myNotes)))
-    eventListener(processEvent)
-});
+    return true
+  }
+  function getNoteData(filter: Filter) {
+    return new Promise((resolve, reject) => {
+      const data = getData(filter)
+      resolve(data)
+    })
+      .then((eventData:any) => {
+        eventData = uniqBy(prop('id'), eventData) //We have multiple relays so wwe want unique events
+        return processEvent(eventData)
+      })
+      .then((noteData: any) => {
+        return updateNotes(noteData)
+      })
+  }
+
+  let options = {
+    root: document.getElementById('Notes'),
+    rootMargin: '0px',
+    threshold: 1.0,
+  }
+
+  function first(list:any){
+    return nth(0,list)
+  }
+
+  let observer = new IntersectionObserver(handleIntersection, options)
+  async function handleIntersection(changes, observer) {
+    if (isLoading) return
+    changes.forEach((change) => {
+      if (change.intersectionRatio > 0) {
+        isLoading = true
+        const lastEvent = last($noteData)
+        console.log('Last event: ', lastEvent)
+
+        const throttleFunc = throttle(
+          1000,
+          async () => {
+            console.log('Getting data')
+            let filter: Filter = {
+              kinds: [1, 5, 7],
+              until: lastEvent.created_at,
+              limit: 10,
+            }
+            await getNoteData(filter)
+            await delay(300)
+          },
+          { noLeading: false, noTrailing: false },
+        )
+
+        throttleFunc()
+      }
+    })
+  }
+
+  onMount(async () => {
+    observer.observe(document.querySelector('footer'))
+
+    isLoading = true
+    new Promise((resolve, reject) => {
+      const data = initData()
+      resolve(data)
+    })
+      .then((eventData) => {
+        return processEvent(eventData)
+      })
+      .then((noteData: any) => {
+        return updateNotes(noteData)
+      })
+  })
 </script>
 
-<main>
-    <div class="w-full px-5 flex flex-col justify-center">
-  
-            {#each $noteData as note }
-            <Note note={note} />
-            {/each}
-    </div>
-</main>
+<div class="pt-10 max-h-full" style="height:800px">
+  <div
+    id="Notes"
+    class="cointainer overflow-y-auto h-full relative max-w-full mx-auto
+    bg-white dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1
+    ring-black/5 rounded-xl flex flex-col flex-initial divide-y
+    dark:divide-slate-200/5 ml-4 mr-4">
+    {#each $noteData as note, index}
+      <Note {note} {index} />
+    {/each}
+    {#if isLoading}
+      <Spinner />
+    {/if}
+    <footer id="footer" />
+  </div>
+</div>

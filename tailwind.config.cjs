@@ -27,6 +27,11 @@ module.exports = {
             indigo: colors.indigo,
             yellow: colors.yellow,
         },
+        gridTemplateColumns:
+        {
+            '20/80': '20% 80%',
+            'fixed': '40px 260px',
+        }
     },
     plugins: [],
 }

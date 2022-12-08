@@ -14,3 +14,4 @@ export function getTime(t: number): string {
     return Math.round(date.valueOf() / 1000);
   }
   
+  export const delay = ms => new Promise(resolve => setTimeout(resolve, ms))

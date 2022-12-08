@@ -4,6 +4,7 @@
     import { addToast } from '../stores/toast'
     import { onMount } from 'svelte'
   
+
     let url = ''
   
     function deleteRelay(url: string) {
@@ -35,14 +36,6 @@
       })
     }
   
-    onMount(async () => {
-      addToast({
-        message: 'Hello, World!',
-        type: 'success',
-        dismissible: true,
-        timeout: 3000,
-      })
-    })
   </script>
   
   <Toasts />
