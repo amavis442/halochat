@@ -10,12 +10,13 @@
   import { delay } from '../util/time'
   import { throttle } from 'throttle-debounce'
   import type { Filter } from '../state/types'
-
+  import { now } from '../util/time'
   const noteData = writable([])
 
   //localStorage.setItem('halonostr/users', '')
   //$users = []
   let isLoading = true
+  let lastTimeStamp = now()
 
   export function updateNotes(myNotes) {
     noteData.update(($noteData) => {
@@ -35,9 +36,17 @@
     })
       .then((eventData:any) => {
         eventData = uniqBy(prop('id'), eventData) //We have multiple relays so wwe want unique events
+        console.log('Raw event data: ',eventData)
+        // Black list while result in 0 process event so we need to get the last Update timestamp here
+        const lastEvent:Note = last(eventData)
+        if (lastEvent.created_at < lastTimeStamp) {
+          lastTimeStamp = lastEvent.created_at
+        }
+
         return processEvent(eventData)
       })
       .then((noteData: any) => {
+        console.log('Processed data: ', noteData)
         return updateNotes(noteData)
       })
   }
@@ -58,8 +67,7 @@
     changes.forEach((change) => {
       if (change.intersectionRatio > 0) {
         isLoading = true
-        const lastEvent = last($noteData)
-        console.log('Last event: ', lastEvent)
+        console.log('Last event timestamp: ', lastTimeStamp)
 
         const throttleFunc = throttle(
           1000,
@@ -67,7 +75,7 @@
             console.log('Getting data')
             let filter: Filter = {
               kinds: [1, 5, 7],
-              until: lastEvent.created_at,
+              until: lastTimeStamp,
               limit: 10,
             }
             await getNoteData(filter)

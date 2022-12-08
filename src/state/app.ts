@@ -134,16 +134,17 @@ export async function processEvent(event: any):Promise<Array<any>> {
         //merge user with their events
         event.forEach((note: Event) => {
             if (!$blacklist.includes(note.pubkey)) {
+                let myNote:Note
                 switch (note.kind) {
                     case 1:
-                        let thisReply: Reply
+                        let thisReply: Reply | null = null
                         if (reply.json[note.id]) {
                             thisReply = {
                                 ...reply.json[note.id],
                                 user: $users[reply.json[note.id].pubkey]
                             }
                         }
-                        const myNote: Note = {
+                        myNote = {
                             ...note,
                             user: $users[note.pubkey],
                             replies: thisReply,
@@ -151,6 +152,24 @@ export async function processEvent(event: any):Promise<Array<any>> {
                         }
                         myNotes.push(myNote)
                         break;
+                    case 5:
+                        myNote = {
+                            ...note,
+                            user: $users[note.pubkey],
+                            replies: null,
+                            reactions: null
+                        }
+                        myNotes.push(myNote)
+                        break
+                    case 7:
+                        myNote = {
+                            ...note,
+                            user: $users[note.pubkey],
+                            replies: null,
+                            reactions: null
+                        }
+                        myNotes.push(myNote)
+                        break        
                 }
             }
         })

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { getTime } from '../util/time'
   import type { Note, Reply } from '../state/types'
+  import { toHtml } from '../util/html'
 
   export let note: Note
   export let index = 0
@@ -20,6 +21,11 @@
         : data.pubkey
       : data.pubkey
   }
+  let content = toHtml(note.content)
+  let replyContent = ''
+  if (reply) {
+    replyContent = toHtml(reply.content)
+  }
 </script>
 
 <div class="Note" data-num={index + 1}>
@@ -35,24 +41,26 @@
           <small class="text-gray">{getTime(reply.created_at)}</small>
         </strong>
         <span class="text-slate-500 text-sm font-medium dark:text-slate-400">
-          {reply.content}
+          {@html replyContent}
         </span>
       </div>
     </div>
   {/if}
-  <div class="flex items-center gap-4 p-4">
-    <img
-      class="w-12 h-12 rounded-full"
-      src={note.user && note.user.picture ? note.user.picture : 'profile-placeholder.png'}
-      alt="{note.user ? note.user.about : note.pubkey} title={note.user ? note.user.name : note.pubkey}" />
-    <div class="flex flex-col text-left">
-      <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">
-        {name.slice(0, 10)}
-        <small class="text-gray">{getTime(note.created_at)}</small>
-      </strong>
-      <span class="text-slate-500 text-sm font-medium dark:text-slate-400">
-        {note.content}
-      </span>
+  {#if note.kind == 1}
+    <div class="flex items-center gap-4 p-4">
+      <img
+        class="w-12 h-12 rounded-full"
+        src={note.user && note.user.picture ? note.user.picture : 'profile-placeholder.png'}
+        alt="{note.user ? note.user.about : note.pubkey} title={note.user ? note.user.name : note.pubkey}" />
+      <div class="flex flex-col text-left">
+        <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">
+          {name.slice(0, 10)}
+          <small class="text-gray">{getTime(note.created_at)}</small>
+        </strong>
+        <span class="text-slate-500 text-sm font-medium dark:text-slate-400">
+          {@html content}
+        </span>
+      </div>
     </div>
-  </div>
+  {/if}
 </div>
