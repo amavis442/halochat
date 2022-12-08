@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { relays, eventListener, getData } from '../state/pool'
+  import { eventListener, getData, pool } from '../state/pool'
   import { uniqBy, prop } from 'ramda'
   import { onMount } from 'svelte'
   import { writable } from 'svelte/store'
@@ -11,6 +11,8 @@
   import { throttle } from 'throttle-debounce'
   import type { Filter } from '../state/types'
   import { now } from '../util/time'
+  import { account } from '../stores/account'
+
   const noteData = writable([])
 
   //localStorage.setItem('halonostr/users', '')
@@ -25,10 +27,9 @@
     })
 
     isLoading = false
-    //eventListener(processEvent)
-
     return true
   }
+
   function getNoteData(filter: Filter) {
     return new Promise((resolve, reject) => {
       const data = getData(filter)
@@ -89,6 +90,23 @@
     })
   }
 
+  let msg = ''
+
+  function sendMessage()
+  {
+    pool.setPrivateKey($account.privkey)
+    let event = {
+          content: msg,
+          created_at: Math.floor(Date.now() / 1000),
+          kind: 1,
+          tags: [],
+          pubkey: $account.pubkey,
+        };
+
+    pool.publish(event,(status) => {console.log('Publish status')})
+  }
+
+
   onMount(async () => {
     observer.observe(document.querySelector('footer'))
 
@@ -102,6 +120,12 @@
       })
       .then((noteData: any) => {
         return updateNotes(noteData)
+      })
+
+      eventListener((event) => {
+        processEvent(event).then((noteData) => {
+          updateNotes(noteData)
+        })
       })
   })
 </script>
@@ -122,3 +146,4 @@
     <footer id="footer" />
   </div>
 </div>
+<div>Here comes the form <input type="text" bind:value={msg} placeholder='message to send' /><button on:click={sendMessage}>Send</button></div>

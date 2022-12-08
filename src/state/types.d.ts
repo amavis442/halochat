@@ -41,3 +41,8 @@ export type Filter = {
     until?: number;
     limit?: number;
 }
+
+export type Account = {
+    pubkey: string;
+    privkey:string;
+}
