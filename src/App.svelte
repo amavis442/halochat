@@ -2,10 +2,6 @@
     import { Router, Link, Route } from "svelte-routing";
     import Home from "./routes/Home.svelte";
     import Relays from "./routes/Relays.svelte";
-    //import About from "./routes/About.svelte";
-    //import Blog from "./routes/Blog.svelte";
-    //import Notes from "./lib/Notes.svelte";
-
     import "@fortawesome/fontawesome-free/css/fontawesome.css";
     import "@fortawesome/fontawesome-free/css/solid.css";
     export let url = "";
