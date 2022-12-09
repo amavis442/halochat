@@ -8,6 +8,7 @@ import {
   type SubscriptionCallback,
 } from "nostr-tools";
 import { now } from "../util/time";
+import type { Event } from './types'
 
 export const pool = relayPool();
 
@@ -31,14 +32,13 @@ export const login = (privateKey: string) => {
  * @param filter  
  * @returns 
  */
-export async function getData(filter: {}): Promise<Array<any>> {
+export async function getData(filter: {}): Promise<Array<Event>> {
   const subscriptionId = Math.random().toString().slice(2);
   const data: any = [];
-
+  
   //@ts-ignore
   const eoseRelays: string[] = []; //This one is optional according to the protocol.
   return new Promise((resolve) => {
-
     const sub = pool.sub(
       {
         cb: (e) => data.push(e),
@@ -47,6 +47,7 @@ export async function getData(filter: {}): Promise<Array<any>> {
       subscriptionId,
       //@ts-ignore
       (url: string) => {
+        
         eoseRelays.push(url);
         console.log('Avail relays: ', get(relays).length)
         if (eoseRelays.length == get(relays).length) {
@@ -57,7 +58,7 @@ export async function getData(filter: {}): Promise<Array<any>> {
         setTimeout(() => {
           sub.unsub();
           resolve(data);
-        }, 5000)
+        }, 3000)
       }
     );
   });
@@ -123,6 +124,7 @@ relays.subscribe($relays => {
     if (!$relays.includes(url)) {
       //@ts-ignore
       pool.removeRelay(url)
+      console.log('Remove relay form pool:', url)
     }
   })
 
@@ -131,8 +133,8 @@ relays.subscribe($relays => {
     if (!pool.relays[url]) {
       //@ts-ignore
       pool.addRelay(String(url))
+      console.log('Add relay to pool: ', url)
     }
   })
-
   setLocalJson("halonostr/relays", $relays)
 })
