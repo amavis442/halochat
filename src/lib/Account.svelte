@@ -34,8 +34,6 @@
    */
   function onSubmit(e) {
     addNewAccount()
-    pubkey = ''
-    privkey = ''
   }
 
   onMount(() => {
