@@ -15,11 +15,11 @@
   let reply = note.replies
 
   function normalizeName(data: Note | Reply): string {
-    return data.user
+    return (data.user
       ? data.user.name
         ? data.user.name
         : data.pubkey
-      : data.pubkey
+      : data.pubkey).slice(0, 10)
   }
   let content = toHtml(note.content)
   let replyContent = ''
@@ -37,7 +37,7 @@
         alt="{reply.user ? reply.user.about : reply.pubkey} title={reply.user ? reply.user.name : reply.pubkey}" />
       <div class="flex flex-col text-left">
         <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">
-          {name.slice(0, 10)}
+          {normalizeName(reply)}
           <small class="text-gray">{getTime(reply.created_at)}</small>
         </strong>
         <span class="text-slate-500 text-sm font-medium dark:text-slate-400">
@@ -54,7 +54,7 @@
         alt="{note.user ? note.user.about : note.pubkey} title={note.user ? note.user.name : note.pubkey}" />
       <div class="flex flex-col text-left">
         <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">
-          {name.slice(0, 10)}
+          {normalizeName(note)}
           <small class="text-gray">{getTime(note.created_at)}</small>
         </strong>
         <span class="text-slate-500 text-sm font-medium dark:text-slate-400">
