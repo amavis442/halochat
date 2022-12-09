@@ -12,15 +12,13 @@
   import Scrollable from './Scrollable.svelte'
 
   const noteData = writable([])
-
-  let isLoading = true
   let lastTimeStamp = now()
 
   /**
    *
    * @param myNotes
    */
-  function updateNotes(myNotes: Array<NoteEvent>) {
+  async function updateNotes(myNotes: Array<NoteEvent>) {
     noteData.update(($noteData) => {
       console.log('Update list', myNotes)
       return uniqBy(prop('id'), $noteData.concat(myNotes))
@@ -34,23 +32,21 @@
    */
   async function getNoteData() {
     let filter: Filter = {
-      kinds: [1, 5, 7],
+      kinds: [1], //For now only ask for kind 1 and not 1, 5 , 7
       until: lastTimeStamp,
       limit: 10,
     }
-    isLoading = true
     let eventData = await getData(filter)
     eventData = uniqBy(prop('id'), eventData) //We have multiple relays so wwe want unique events
     console.log('Raw event data: ', eventData)
     // Black list while result in 0 process event so we need to get the last Update timestamp here
+    const noteData: Array<NoteEvent> = await processEvent(eventData)
+    console.log('Processed data: ', noteData)
+    await updateNotes(noteData)
     let lastEvent: Event = last(eventData)
     if (lastEvent.created_at < lastTimeStamp) {
       lastTimeStamp = lastEvent.created_at
     }
-    const noteData: Array<NoteEvent> = await processEvent(eventData)
-    console.log('Processed data: ', noteData)
-    updateNotes(noteData)
-    isLoading = false
   }
 
   let msg = ''
@@ -72,11 +68,11 @@
 
   onMount(async () => {
     if ($relays.length) {
-      isLoading = true
       const data = await initData()
       const noteData = await processEvent(data)
       updateNotes(noteData)
     }
+
     /*
       eventListener((event) => {
         processEvent(event).then((noteData) => {
@@ -88,7 +84,9 @@
 </script>
 
 <div class="flex flex-col gap-4 h-screen">
-  <div class="h-5p"><h2 class="mt-2">Halonostr: nostr client</h2></div>
+  <div class="h-5p">
+    <h2 class="mt-2">Halonostr: nostr client</h2>
+  </div>
   <div class="h-85p">
     {#if $relays.length}
       <div
@@ -99,12 +97,10 @@
         {#each $noteData as note, index}
           <Note {note} {index} />
         {/each}
-
+        
         <Scrollable
-          loading={isLoading}
           cbGetData={getNoteData}
-          rootElement="Notes"
-          observeElement="footer" />
+          rootElement="Notes" />
         <footer id="footer" class="h-5" />
       </div>
     {:else}

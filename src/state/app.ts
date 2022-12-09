@@ -9,12 +9,12 @@ export const blacklist = writable([
     '887645fef0ce0c3c1218d2f5d8e6132a19304cdc57cd20281d082f38cfea0072'
 ])
 
-export async function initData(): Promise<any> {
+export async function initData(limit:number = 10): Promise<any> {
     // Get some events from 7 days with a max limit of 4000 records
     let filter: Filter = {
-        kinds: [1, 5, 7],
+        kinds: [1],
         until: now(), // Events from 2 days
-        limit: 50, // Start of with 20 events and get more when needed (scrolling).
+        limit: limit, // Start of with 20 events and get more when needed (scrolling).
     };
     return getData(filter)
 }
