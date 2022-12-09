@@ -11,6 +11,12 @@
         return value != url
       })
     })
+    addToast({
+      message: 'Relay removed!',
+      type: 'success',
+      dismissible: true,
+      timeout: 3000,
+    })
   }
 
   function addRelay() {
@@ -33,6 +39,12 @@
         return [...data, url]
       }
       return data
+    })
+    addToast({
+      message: 'Relay added!',
+      type: 'success',
+      dismissible: true,
+      timeout: 3000,
     })
   }
 

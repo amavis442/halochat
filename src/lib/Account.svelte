@@ -1,7 +1,8 @@
 <script lang="ts">
   import { account, addAccount, deleteAccount } from '../stores/account'
   import Toasts from '../lib/Toasts.svelte'
-  import { onMount } from 'svelte';
+  import { onMount } from 'svelte'
+  import { addToast } from '../stores/toast'
 
   let pubkey = $account.pubkey
   let privkey = $account.privkey
@@ -9,9 +10,14 @@
   let about = $account.about
   let picture = $account.picture
 
-
   function addNewAccount() {
-    addAccount(pubkey, privkey)
+    addAccount(pubkey, privkey, name, about, picture)
+    addToast({
+      message: 'Account updated!',
+      type: 'success',
+      dismissible: true,
+      timeout: 3000,
+    })
   }
 
   /**
@@ -31,8 +37,8 @@
     pubkey = ''
     privkey = ''
   }
-  
-  onMount(async()=> {
+
+  onMount(() => {
     name = $account.name
     about = $account.about
     picture = $account.picture
@@ -40,7 +46,7 @@
 </script>
 
 <Toasts />
-
+{JSON.stringify($account)}
 <div class="block p-6 rounded-lg shadow-lg bg-white w-full ml-6 mt-6">
   <form on:submit|preventDefault={onSubmit}>
     <div class="form-group mb-6">
@@ -133,13 +139,11 @@
         id="picture"
         placeholder="Picture url" />
       <small id="pictureHelp" class="block mt-1 text-xs text-gray-600">
-        A nice avatar or profile picture. This is a link to a external file somewhere on the net.
-        Pictures are not stored in relays.
+        A nice avatar or profile picture. This is a link to a external file
+        somewhere on the net. Pictures are not stored in relays.
       </small>
     </div>
 
-
-    
     <button
       type="submit"
       class="px-6 py-2.5 bg-blue-600 text-white font-medium text-xs
@@ -153,11 +157,15 @@
 </div>
 
 {#if $account.pubkey}
-<div class="block p-6 rounded-lg shadow-lg bg-white w-full ml-6 mt-6 text-left">
-  <ul class="bg-white rounded-lg border border-gray-200 w-full text-gray-900">
-    <li class="px-6 py-2 border-b border-gray-200 w-full rounded-t-lg"><button on:click={() => deleteOldAccount($account.pubkey)}>
-      <span class="fa-solid fa-trash" />
-    </button> {$account.pubkey} </li>
-  </ul>
-</div>
+  <div
+    class="block p-6 rounded-lg shadow-lg bg-white w-full ml-6 mt-6 text-left">
+    <ul class="bg-white rounded-lg border border-gray-200 w-full text-gray-900">
+      <li class="px-6 py-2 border-b border-gray-200 w-full rounded-t-lg">
+        <button on:click={() => deleteOldAccount($account.pubkey)}>
+          <span class="fa-solid fa-trash" />
+        </button>
+        {$account.pubkey}
+      </li>
+    </ul>
+  </div>
 {/if}
