@@ -28,7 +28,7 @@
   }
 </script>
 
-<div class="Note" data-num={index + 1}>
+<div class="Note flex flex-col items-start" data-num={index + 1}>
   {#if reply && reply.content}
     <div class="flex items-center gap-4 p-4">
       <img
@@ -47,7 +47,7 @@
     </div>
   {/if}
   {#if note.kind == 1}
-    <div class="flex items-center gap-4 p-4">
+    <div class="flex items-top gap-4 p-4">
       <img
         class="w-12 h-12 rounded-full"
         src={note.user && note.user.picture ? note.user.picture : 'profile-placeholder.png'}

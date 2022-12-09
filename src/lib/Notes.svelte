@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { eventListener, getData, pool } from '../state/pool'
+  import { eventListener, getData, pool, relays } from '../state/pool'
   import { uniqBy, prop, sortBy } from 'ramda'
   import { onMount } from 'svelte'
   import { writable } from 'svelte/store'
@@ -9,7 +9,7 @@
   import type { Filter, Event, Note as NoteEvent } from '../state/types'
   import { now } from '../util/time'
   import { account } from '../stores/account'
-  import Scrollable  from './Scrollable.svelte';
+  import Scrollable from './Scrollable.svelte'
 
   const noteData = writable([])
 
@@ -17,7 +17,7 @@
   let lastTimeStamp = now()
 
   /**
-   * 
+   *
    * @param myNotes
    */
   function updateNotes(myNotes: Array<NoteEvent>) {
@@ -30,7 +30,7 @@
   }
 
   /**
-   * 
+   *
    */
   async function getNoteData() {
     let filter: Filter = {
@@ -53,7 +53,6 @@
     isLoading = false
   }
 
- 
   let msg = ''
 
   function sendMessage() {
@@ -72,10 +71,12 @@
   }
 
   onMount(async () => {
-    isLoading = true
-    const data = await initData()
-    const noteData = await processEvent(data)
-    updateNotes(noteData)
+    if ($relays.length) {
+      isLoading = true
+      const data = await initData()
+      const noteData = await processEvent(data)
+      updateNotes(noteData)
+    }
     /*
       eventListener((event) => {
         processEvent(event).then((noteData) => {
@@ -86,23 +87,76 @@
   })
 </script>
 
-<div class="pt-10 max-h-full" style="height:800px">
-  <div
-    id="Notes"
-    class="cointainer overflow-y-auto h-full relative max-w-full mx-auto
-    bg-white dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1
-    ring-black/5 rounded-xl flex flex-col flex-initial divide-y
-    dark:divide-slate-200/5 ml-4 mr-4">
-    {#each $noteData as note, index}
-      <Note {note} {index} />
-    {/each}
+<div class="flex flex-col gap-4 h-screen">
+  <div class="h-5p"><h2 class="mt-2">Halonostr: nostr client</h2></div>
+  <div class="h-85p">
+    {#if $relays.length}
+      <div
+        id="Notes"
+        class="cointainer overflow-y-auto relative max-w-full mx-auto bg-white
+        dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1 ring-black/5
+        rounded-xl divide-y dark:divide-slate-200/5 ml-4 mr-4 h-full max-h-full">
+        {#each $noteData as note, index}
+          <Note {note} {index} />
+        {/each}
 
-    <Scrollable loading={isLoading} cbGetData={getNoteData} rootElement='Notes' observeElement='footer'/>
-    <footer id="footer" />
+        <Scrollable
+          loading={isLoading}
+          cbGetData={getNoteData}
+          rootElement="Notes"
+          observeElement="footer" />
+        <footer id="footer" class="h-5" />
+      </div>
+    {:else}
+      Please add an relay first. You can do this here
+      <a
+        href="relays"
+        class="px-6 py-2.5 bg-blue-600 text-white font-medium text-xs
+        leading-tight uppercase rounded shadow-md hover:bg-blue-700
+        hover:shadow-lg focus:bg-blue-700 focus:shadow-lg focus:outline-none
+        focus:ring-0 active:bg-blue-800 active:shadow-lg transition duration-150
+        ease-in-out mb-4">
+        relays
+      </a>
+    {/if}
   </div>
-</div>
-<div>
-  Here comes the form
-  <input type="text" bind:value={msg} placeholder="message to send" />
-  <button on:click={sendMessage}>Send</button>
+  <div class="h-10p">
+    {#if $relays.length && $account.privkey}
+      <div class="block max-w-full flex justify-center">
+        <div class="w-4/5 mr-2">
+          <input
+            type="text"
+            id="msg"
+            bind:value={msg}
+            placeholder="Message to send"
+            class="block w-full px-3 py-1.5 text-base font-normal text-gray-700
+            bg-white bg-clip-padding border border-solid border-gray-300 rounded
+            transition ease-in-out m-0 focus:text-gray-700 focus:bg-white
+            focus:border-blue-600 focus:outline-none" />
+        </div>
+        <button
+          on:click={sendMessage}
+          class="px-6 py-2.5 bg-blue-600 text-white font-medium text-xs
+          leading-tight uppercase rounded shadow-md hover:bg-blue-700
+          hover:shadow-lg focus:bg-blue-700 focus:shadow-lg focus:outline-none
+          focus:ring-0 active:bg-blue-800 active:shadow-lg transition
+          duration-150 ease-in-out">
+          Send
+        </button>
+      </div>
+    {:else}
+      To send messages, you need to add private key and have relays added. You
+      can generate your private key and add them here. For relays see the link
+      above.
+      <a
+        href="account"
+        class="px-6 py-2.5 bg-blue-600 text-white font-medium text-xs
+        leading-tight uppercase rounded shadow-md hover:bg-blue-700
+        hover:shadow-lg focus:bg-blue-700 focus:shadow-lg focus:outline-none
+        focus:ring-0 active:bg-blue-800 active:shadow-lg transition duration-150
+        ease-in-out mb-4">
+        account.
+      </a>
+    {/if}
+  </div>
 </div>

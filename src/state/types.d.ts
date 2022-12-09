@@ -19,7 +19,7 @@ export type Reaction = Event & {
 export type Note = Event & {
     user: User;
     replies: Reply | null;
-    reactions: Reaction| null;
+    reactions: Reaction | null;
 }
 
 export type User = {
@@ -44,5 +44,8 @@ export type Filter = {
 
 export type Account = {
     pubkey: string;
-    privkey:string;
+    privkey: string;
+    name?: string;
+    about?: string;
+    picture?: string;
 }
