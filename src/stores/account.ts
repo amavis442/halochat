@@ -1,4 +1,4 @@
-import { writable, derived } from 'svelte/store'
+import { writable } from 'svelte/store'
 import { getLocalJson, setLocalJson } from '../util/misc'
 import type { Account } from '../state/types'
 
