@@ -30,6 +30,7 @@ module.exports = {
         gridTemplateColumns:
         {
             '20/80': '20% 80%',
+            '20/40/20': '20% 60% 20%',
             'fixed': '40px 260px',
         }
     },

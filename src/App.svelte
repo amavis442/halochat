@@ -10,11 +10,11 @@
 
 <Router {url}>
   <div
-    class="grid grid-cols-20/80 w-screen h-screen max-w-screen max-h-screen
+    class="grid grid-cols-20/40/20 w-screen h-screen max-w-screen max-h-screen
     overflow-x-hidden overflow-y-hidden">
     <header>
       <div
-        class="mt-6 flex flex-col justify-start items-center pl-4 w-full
+        class="mt-6 grid-cols-1 justify-start items-center pl-4 w-full
         border-gray-600 border-b space-y-3 pb-5">
         <nav>
           <p class="text-base leading-4">
@@ -29,7 +29,7 @@
         </nav>
       </div>
     </header>
-    <main class="flex flex-col text-center justify-items-center max-h-max">
+    <main class="grid-cols-2 text-center justify-items-center max-h-max">
       <div>
         <Route path="/">
           <Home />
@@ -42,5 +42,6 @@
         </Route>
       </div>
     </main>
+    <div class="grid-cols-3 max-h-max"></div>
   </div>
 </Router>
