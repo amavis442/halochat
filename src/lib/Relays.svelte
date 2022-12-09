@@ -1,9 +1,7 @@
 <script lang="ts">
     import { relays } from '../state/pool'
     import Toasts from '../lib/Toasts.svelte'
-    import { addToast } from '../stores/toast'
-    import { onMount } from 'svelte'
-  
+    import { addToast } from '../stores/toast'  
 
     let url = ''
   
@@ -17,7 +15,7 @@
   
     function addRelay() {
       url = url.trim()
-      if (!url.match(/^wss?:\/\/[\w.:-]+$/)) {
+      if (!url.match(/^wss?:\/\/[\w.:-]+$/) && !url.match(/^http?:\/\/[\w.:-]+$/)) {
         addToast({
           message: 'Please start websocket url with wss://',
           type: 'error',
