@@ -8,17 +8,28 @@ module.exports = {
         "./src/**/*.{html,js,svelte,ts}",
     ],
     theme: {
-        extend: {},
+        extend: {
+            height: {
+                '5p': '5%',
+                '10p': '10%',
+                '20p': '20%',
+                '60p': '60%',
+                '80p': '80%',
+                '85p': '85%',
+                '90p': '90%',
+                '100p': '100%'
+              }
+        },
         colors: {
             transparent: "transparent",
             current: 'currentColor',
-            white: "#FFFCF2",
+            white: colors.white,
             accent: "#EB5E28",
             light: "#CCC5B9",
             medium: "#403D39",
             dark: "#252422",
             danger: "#ff0000",
-            blue: "#080048",
+            blue: colors.blue,
             purple: colors.purple,
             black: colors.black,
             white: colors.white,
