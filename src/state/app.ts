@@ -117,7 +117,7 @@ export async function replies(data: Array<Event>) {
  * 
  * @param event
  */
-export async function processEvent(event: any):Promise<Array<any>> {
+export async function processEvent(event: any):Promise<Array<Note>> {
     if (!Array.isArray(event)) {
         event = [event]
     }
