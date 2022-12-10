@@ -3,7 +3,12 @@
   import { uniqBy, prop, sortBy } from 'ramda'
   import { onMount } from 'svelte'
   import { writable } from 'svelte/store'
-  import { processEvent, initData, lastTimeStamp, firstTimeStamp } from '../state/app'
+  import {
+    processEvent,
+    initData,
+    lastTimeStamp,
+    firstTimeStamp,
+  } from '../state/app'
   import Note from './Note.svelte'
   import type { Filter, Event, Note as NoteEvent } from '../state/types'
   import { account } from '../stores/account'
@@ -31,7 +36,7 @@
    */
   async function getNoteData() {
     let filter: Filter = {
-      kinds: [1,5,7],
+      kinds: [0, 1, 5, 7],
       until: lastTimeStamp,
       limit: 20,
     }
@@ -65,31 +70,38 @@
     if ($relays.length) {
       let data = await initData()
       let noteData = await processEvent(data)
-      console.log('First: ', firstTimeStamp,', Last: ', lastTimeStamp)
+      console.log('First: ', firstTimeStamp, ', Last: ', lastTimeStamp)
       updateNotes(noteData)
 
       if (noteData.length < 20) {
         console.log('Need more data')
-        
+
         let filter: Filter = {
           kinds: [1, 5, 7],
-          until: lastTimeStamp, 
-          limit: 30, 
+          until: lastTimeStamp,
+          limit: 30,
         }
         data = await getData(filter)
         let pData = await processEvent(data)
-        console.log('First: ', firstTimeStamp,', Last: ', lastTimeStamp, 'Data: ', data, ', pData: ', pData)
+        console.log(
+          'First: ',
+          firstTimeStamp,
+          ', Last: ',
+          lastTimeStamp,
+          'Data: ',
+          data,
+          ', pData: ',
+          pData,
+        )
         updateNotes(pData)
       }
     }
 
-    /*
-      eventListener((event) => {
-        processEvent(event).then((noteData) => {
-          updateNotes(noteData)
-        })
+    eventListener((event) => {
+      processEvent(event).then((noteData) => {
+        updateNotes(noteData)
       })
-      */
+    })
   })
 </script>
 
@@ -104,10 +116,8 @@
         {#each $noteData as note, index}
           <Note {note} {index} />
         {/each}
-        
-        <Scrollable
-          cbGetData={getNoteData}
-          rootElement="Notes" />
+
+        <Scrollable cbGetData={getNoteData} rootElement="Notes" />
         <footer id="footer" class="h-5" />
       </div>
     {:else}
@@ -119,14 +129,15 @@
     {#if $relays.length && $account.privkey}
       <div class="block max-w-full flex justify-center">
         <div class="w-4/5 mr-2">
-          <Text bind:value={msg} id='msg' placeholder="Message to send"/>
+          <Text bind:value={msg} id="msg" placeholder="Message to send" />
         </div>
-        <Button type='button' click={sendMessage}>Send</Button>
+        <Button type="button" click={sendMessage}>Send</Button>
       </div>
     {:else}
       To send messages, you need to add private key and have relays added. You
       can generate your private key and add them here. For relays see the link
-      above.<Anchor href="account">account</Anchor>
+      above.
+      <Anchor href="account">account</Anchor>
     {/if}
   </div>
 </div>

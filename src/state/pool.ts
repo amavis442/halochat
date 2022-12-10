@@ -39,7 +39,7 @@ export async function getData(filter: {}): Promise<Array<Event>> {
   
   //@ts-ignore
   const eoseRelays: string[] = []; //This one is optional according to the protocol.
-  return new Promise((resolve) => {
+  return await new Promise((resolve) => {
     const sub = pool.sub(
       {
         cb: (e) => data.push(e),
@@ -103,10 +103,10 @@ export async function publish(kind: number, content = '', tags = []): Promise<an
  * @returns 
  */
 export function eventListener(onNote: SubscriptionCallback): Subscription {
-  const subscriptionId = Math.random().toString().slice(2);
+  const subscriptionId = 'ListenTo' + Math.random().toString().slice(2);
   console.log("Start listening on channel: ", subscriptionId);
   //@ts-ignore
-  const filter: Filter = { kinds: [1, 5, 7], since: now() };
+  const filter: Filter = { kinds: [0, 1, 5, 7], since: now() };
   //@ts-ignore
   return pool.sub(
     //@ts-ignore
