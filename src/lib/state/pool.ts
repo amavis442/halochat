@@ -85,12 +85,17 @@ export const createEvent = (kind: number, content = '', tags = []): any => {
   return { kind, content, tags, publicKey, created_at: createdAt }
 }
 
-
+/**
+ * Update meta data of user account
+ * 
+ * @see https://github.com/nostr-protocol/nips/blob/master/01.md#basic-event-kinds
+ * @returns 
+ */
 export function publishAccount() {
   const $account = get(account)
   pool.setPrivateKey($account.privkey)
   _privateKey = $account.privkey
-  const metadata = {name: $account.name, about: $account.about, picture: $account.picture}
+  const metadata = { name: $account.name, about: $account.about, picture: $account.picture }
   let event = {
     content: JSON.stringify(metadata),
     created_at: Math.floor(Date.now() / 1000),
@@ -101,10 +106,6 @@ export function publishAccount() {
   console.log(event)
   return pool.publish(event, (status: number) => { console.log('Message published. Status: ', status) })
 }
-
-
-
-
 
 /**
  * 
