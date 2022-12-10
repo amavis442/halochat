@@ -3,11 +3,9 @@
   import { uniqBy, prop, sortBy } from 'ramda'
   import { onMount } from 'svelte'
   import { writable } from 'svelte/store'
-  import { processEvent, initData } from '../state/app'
+  import { processEvent, initData, lastTimeStamp, firstTimeStamp } from '../state/app'
   import Note from './Note.svelte'
-  import { last } from 'ramda'
   import type { Filter, Event, Note as NoteEvent } from '../state/types'
-  import { now } from '../util/time'
   import { account } from '../stores/account'
   import Scrollable from './Scrollable.svelte'
   import Button from './partials/Button.svelte'
@@ -15,8 +13,6 @@
   import Anchor from './partials/Anchor.svelte'
 
   const noteData = writable([])
-  let lastTimeStamp = now()
-
   /**
    *
    * @param myNotes
@@ -46,10 +42,6 @@
     const noteData: Array<NoteEvent> = await processEvent(eventData)
     console.log('Processed data: ', noteData)
     await updateNotes(noteData)
-    let lastEvent: Event = last(eventData)
-    if (lastEvent.created_at < lastTimeStamp) {
-      lastTimeStamp = lastEvent.created_at
-    }
   }
 
   let msg = ''
@@ -71,9 +63,24 @@
 
   onMount(async () => {
     if ($relays.length) {
-      const data = await initData()
-      const noteData = await processEvent(data)
+      let data = await initData()
+      let noteData = await processEvent(data)
+      console.log('First: ', firstTimeStamp,', Last: ', lastTimeStamp)
       updateNotes(noteData)
+
+      if (noteData.length < 20) {
+        console.log('Need more data')
+        
+        let filter: Filter = {
+          kinds: [1, 5, 7],
+          until: lastTimeStamp, 
+          limit: 30, 
+        }
+        data = await getData(filter)
+        let pData = await processEvent(data)
+        console.log('First: ', firstTimeStamp,', Last: ', lastTimeStamp, 'Data: ', data, ', pData: ', pData)
+        updateNotes(pData)
+      }
     }
 
     /*
@@ -87,9 +94,6 @@
 </script>
 
 <div class="flex flex-col gap-4 h-screen">
-  <div class="h-5p">
-    <h2 class="mt-2">Halonostr: nostr client</h2>
-  </div>
   <div class="h-85p">
     {#if $relays.length}
       <div
@@ -111,7 +115,7 @@
       <Anchor href="relays">relays</Anchor>
     {/if}
   </div>
-  <div class="h-10p">
+  <div class="h-15p">
     {#if $relays.length && $account.privkey}
       <div class="block max-w-full flex justify-center">
         <div class="w-4/5 mr-2">

@@ -2,7 +2,7 @@ import { get, writable } from 'svelte/store'
 import { getData } from '../state/pool'
 import { users } from '../stores/user'
 import { now } from "../util/time"
-import { uniqBy, prop, pluck } from 'ramda'
+import { uniqBy, prop, pluck, sortBy, last } from 'ramda'
 import type { Event, User, Filter, Note, Reply } from './types'
 
 export const blacklist = writable([
@@ -12,10 +12,10 @@ export const blacklist = writable([
 export async function initData(limit: number = 10): Promise<any> {
     // Get some events from 7 days with a max limit of 4000 records
     let filter: Filter = {
-        kinds: [1],
+        kinds: [1, 5, 7],
         until: now(), // Events from 2 days
         limit: limit, // Start of with 20 events and get more when needed (scrolling).
-    };
+    }
     return getData(filter)
 }
 
@@ -26,7 +26,11 @@ export async function initData(limit: number = 10): Promise<any> {
 export async function updateUserData(data: Array<any>) {
     let pubKeys = []
     data.forEach((event: any) => {
-        pubKeys.push(event.pubkey.toString());
+        try {
+            pubKeys.push(event.pubkey.toString());
+        } catch (error) {
+            console.log('Error getting userdata', event)
+        }
     })
 
     const $users = get(users)
@@ -110,6 +114,14 @@ export async function replies(data: Array<Event>) {
     return { json: d, raw: replyData }
 }
 
+export let userData: Array<Event> = []
+export let noteData: Array<Event> = []
+export let replyData: Array<Event> = []
+export let reactionData: Array<Event> = []
+export let deleteData: Array<Event> = []
+export let allData: Array<Event> = []
+export let lastTimeStamp: number = now()
+export let firstTimeStamp: number = now()
 /**
  * Put note,user,replies and likes/dislikes together
  * 
@@ -141,6 +153,7 @@ export async function processEvent(event: any): Promise<Array<Note>> {
                         /**
                          * @see https://github.com/nostr-protocol/nips/blob/master/01.md#basic-event-kinds
                          */
+                        userData.push(note)
                         break;
                     case 1:
                         /**
@@ -160,34 +173,46 @@ export async function processEvent(event: any): Promise<Array<Note>> {
                             reactions: null
                         }
                         myNotes.push(myNote)
+                        noteData.push(note)
                         break;
                     case 5: //deletion request
                         /**
                          * @see https://github.com/nostr-protocol/nips/blob/master/09.md
                          */
-                        myNote = {
-                            ...note,
-                            user: $users[note.pubkey],
-                            replies: null,
-                            reactions: null
-                        }
-                        myNotes.push(myNote)
+                        deleteData.push(note)
                         break
                     case 7:  //reactions likes/dislikes. upvote/downvote (+,-)
                         /**
                          * @see https://github.com/nostr-protocol/nips/blob/master/25.md
                          */
-                        myNote = {
-                            ...note,
-                            user: $users[note.pubkey],
-                            replies: null,
-                            reactions: null
-                        }
-                        myNotes.push(myNote)
+                        reactionData.push(note)
                         break
                 }
             }
+            allData.push(note)
         })
+
+        if (userData.length) {
+            userData = uniqBy(prop('id'), userData)
+        }
+        if (noteData.length) {
+            noteData = uniqBy(prop('id'), noteData)
+        }
+        if (replyData.length) {
+            replyData = uniqBy(prop('id'), replyData)
+        }
+        if (reactionData.length) {
+            reactionData = uniqBy(prop('id'), reactionData)
+        }
+        if (deleteData.length) {
+            deleteData = uniqBy(prop('id'), deleteData)
+        }
+        if (allData.length) {
+            allData = sortBy(prop('created_at'), uniqBy(prop('id'), allData)) // Many relays with same data,so dedupe it
+            lastTimeStamp = allData[0].created_at
+            firstTimeStamp = last(allData).created_at
+        }
+        myNotes = uniqBy(prop('id'), myNotes)
         resolve(myNotes)
     })
 }

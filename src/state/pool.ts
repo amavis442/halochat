@@ -9,6 +9,7 @@ import {
 } from "nostr-tools";
 import { now } from "../util/time";
 import type { Event } from './types'
+import { uniqBy, prop } from 'ramda';
 
 export const pool = relayPool();
 
@@ -51,14 +52,17 @@ export async function getData(filter: {}): Promise<Array<Event>> {
         eoseRelays.push(url);
         console.log('Avail relays: ', get(relays).length)
         if (eoseRelays.length == get(relays).length) {
+          let result:Array<Event> = uniqBy(prop('id'), data)
           sub.unsub();
-          resolve(data);
+          resolve(result);
         }
 
         setTimeout(() => {
           sub.unsub();
-          resolve(data);
-        }, 3000)
+          let result:Array<Event> = uniqBy(prop('id'), data)
+          console.log('Timeout event for getting data from relays')
+          resolve(result);
+        }, 6000)
       }
     );
   });
