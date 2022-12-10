@@ -35,7 +35,7 @@ export async function updateUserData(data: Array<any>) {
     })
 
     const $users = get(users)
-    pubKeys = pubKeys.filter(k => !$users[k]) // filter out the ones we already have
+    pubKeys = pubKeys.filter(k => !$users[k] || $users[k].refreshed < now() - (60 * 60 * 10)) // filter out the ones we already have
     if (pubKeys.length) {
         let filter = {
             kinds: [0],
