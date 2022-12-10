@@ -10,6 +10,7 @@ import {
 import { now } from "../util/time";
 import type { Event } from './types'
 import { uniqBy, prop } from 'ramda';
+import { account } from '../stores/account';
 
 export const pool = relayPool();
 
@@ -36,7 +37,7 @@ export const login = (privateKey: string) => {
 export async function getData(filter: {}): Promise<Array<Event>> {
   const subscriptionId = Math.random().toString().slice(2);
   const data: any = [];
-  
+
   //@ts-ignore
   const eoseRelays: string[] = []; //This one is optional according to the protocol.
   return await new Promise((resolve) => {
@@ -48,18 +49,18 @@ export async function getData(filter: {}): Promise<Array<Event>> {
       subscriptionId,
       //@ts-ignore
       (url: string) => {
-        
+
         eoseRelays.push(url);
         console.log('Avail relays: ', get(relays).length)
         if (eoseRelays.length == get(relays).length) {
-          let result:Array<Event> = uniqBy(prop('id'), data)
+          let result: Array<Event> = uniqBy(prop('id'), data)
           sub.unsub();
           resolve(result);
         }
 
         setTimeout(() => {
           sub.unsub();
-          let result:Array<Event> = uniqBy(prop('id'), data)
+          let result: Array<Event> = uniqBy(prop('id'), data)
           console.log('Timeout event for getting data from relays')
           resolve(result);
         }, 6000)
@@ -81,8 +82,29 @@ export const createEvent = (kind: number, content = '', tags = []): any => {
   const publicKey = getPublicKey(_privateKey)
   const createdAt = now()
 
-  return {kind, content, tags, publicKey, created_at: createdAt}
+  return { kind, content, tags, publicKey, created_at: createdAt }
 }
+
+
+export function publishAccount() {
+  const $account = get(account)
+  pool.setPrivateKey($account.privkey)
+  _privateKey = $account.privkey
+  const metadata = {name: $account.name, about: $account.about, picture: $account.picture}
+  let event = {
+    content: JSON.stringify(metadata),
+    created_at: Math.floor(Date.now() / 1000),
+    kind: 0,
+    tags: [],
+    pubkey: $account.pubkey,
+  }
+  console.log(event)
+  return pool.publish(event, (status: number) => { console.log('Message published. Status: ', status) })
+}
+
+
+
+
 
 /**
  * 
@@ -92,7 +114,7 @@ export const createEvent = (kind: number, content = '', tags = []): any => {
  * @returns 
  */
 export async function publish(kind: number, content = '', tags = []): Promise<any> {
-  return pool.publish(createEvent(kind,content,tags), (status:number) => { console.log('Message published. Status: ', status)})
+  return pool.publish(createEvent(kind, content, tags), (status: number) => { console.log('Message published. Status: ', status) })
 }
 
 
@@ -116,8 +138,8 @@ export function eventListener(onNote: SubscriptionCallback): Subscription {
     },
     subscriptionId,
     //@ts-ignore
-    (url:any) => { console.log('Eose while listening', url)}
-    );
+    (url: any) => { console.log('Eose while listening', url) }
+  );
 }
 
 export const relays = writable(getLocalJson("halonostr/relays") || [])
