@@ -6,17 +6,19 @@ import {
   type Filter,
   type Subscription,
   type SubscriptionCallback,
+  type Relay
 } from "nostr-tools";
 import { now } from "../util/time";
 import type { Event } from './types'
-import { uniqBy, prop } from 'ramda';
+import { uniqBy, prop, pluck, head, values } from 'ramda';
 import { account } from '../stores/account';
 
 export const pool = relayPool();
 
 //@ts-ignore does exist just not in index.d.ts
-pool.onNotice((message: string) => {
-  console.debug(`Got an notice event from one of the relays ${message}`);
+pool.onNotice((message: string, relay?:Relay) => {
+  const url:string = relay.url
+  console.debug(`Got an notice event from relay ${url}: ${message}`);
 })
 
 let _privateKey = ''
@@ -25,6 +27,7 @@ export const login = (privateKey: string) => {
   _privateKey = privateKey
 }
 
+const subscriptionId = Math.random().toString().slice(2);
 /**
  * Getter function.
  * 
@@ -35,13 +38,12 @@ export const login = (privateKey: string) => {
  * @returns 
  */
 export async function getData(filter: {}): Promise<Array<Event>> {
-  const subscriptionId = Math.random().toString().slice(2);
   const data: any = [];
 
   //@ts-ignore
   const eoseRelays: string[] = []; //This one is optional according to the protocol.
   return await new Promise((resolve) => {
-    const sub = pool.sub(
+      const sub = pool.sub(
       {
         cb: (e) => data.push(e),
         filter: filter,
@@ -51,15 +53,15 @@ export async function getData(filter: {}): Promise<Array<Event>> {
       (url: string) => {
 
         eoseRelays.push(url);
-        console.log('Avail relays: ', get(relays).length)
+        //console.log('Avail relays: ', get(relays).length)
         if (eoseRelays.length == get(relays).length) {
           let result: Array<Event> = uniqBy(prop('id'), data)
-          sub.unsub();
+          //sub.unsub();
           resolve(result);
         }
 
         setTimeout(() => {
-          sub.unsub();
+          //sub.unsub();
           let result: Array<Event> = uniqBy(prop('id'), data)
           console.log('Timeout event for getting data from relays')
           resolve(result);
@@ -79,10 +81,12 @@ export async function getData(filter: {}): Promise<Array<Event>> {
  */
 export const createEvent = (kind: number, content = '', tags = []): any => {
   //@ts-ignore
-  const publicKey = getPublicKey(_privateKey)
+  const $account = get(account)
+  const publicKey = $account.pubkey
+  pool.setPrivateKey($account.privkey)
   const createdAt = now()
 
-  return { kind, content, tags, publicKey, created_at: createdAt }
+  return { kind: kind, content: content, tags: tags, pubkey: publicKey, created_at: createdAt }
 }
 
 /**
@@ -107,6 +111,31 @@ export function publishAccount() {
   return pool.publish(event, (status: number) => { console.log('Message published. Status: ', status) })
 }
 
+export function publishReply(content: string, replyToEvent: Event) {
+  const $account = get(account)
+  _privateKey = $account.privkey
+  console.log($account.privkey)
+  pool.setPrivateKey($account.privkey)
+  const publicKey = $account.pubkey
+  const r = head(values(pool.getRelayList()))
+
+  console.log(r)
+
+  const tags:string[][] = [
+    //@ts-ignore
+    //['e', replyToEvent.id, r.relay.url, 'root'],
+    //@ts-ignore
+    ['e', replyToEvent.id, r.relay.url, 'reply'],
+    ['p', replyToEvent.pubkey]
+  ]
+  if (publicKey != replyToEvent.pubkey) {
+    tags.push(['p', publicKey])
+  }
+  const sendEvent = createEvent(1, content, tags)
+  console.log(sendEvent)
+  pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
+}
+
 /**
  * 
  * @param kind Returns the even type when publish was successful
@@ -115,7 +144,11 @@ export function publishAccount() {
  * @returns 
  */
 export async function publish(kind: number, content = '', tags = []): Promise<any> {
-  return pool.publish(createEvent(kind, content, tags), (status: number) => { console.log('Message published. Status: ', status) })
+  const $account = get(account)
+  pool.setPrivateKey($account.privkey)
+  const sendEvent = createEvent(kind, content, tags)
+  console.log(sendEvent)
+  return pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
 }
 
 
