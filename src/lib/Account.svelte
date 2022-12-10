@@ -5,6 +5,7 @@
   import { addToast } from '../stores/toast'
   import Button from './partials/Button.svelte'
   import Text from './partials/Text.svelte'
+  import { getKeys } from '../util/keys'
 
   let pubkey = $account.pubkey
   let privkey = $account.privkey
@@ -16,8 +17,16 @@
 
    * @param pubkey
    */
-  function deleteOldAccount(pubkey: string) {
+  async function deleteOldAccount(pubkey: string) {
     deleteAccount(pubkey)
+    name = ''
+    about = ''
+    picture = ''
+    const keys = await getKeys()
+    if (!(privkey && pubkey)) {
+      privkey = keys.priv
+      pubkey = keys.pub
+    }
   }
 
   /**
@@ -39,10 +48,16 @@
     })
   }
 
-  onMount(() => {
+  onMount(async () => {
     name = $account.name
     about = $account.about
     picture = $account.picture
+
+    const keys = await getKeys()
+    if (!(privkey && pubkey)) {
+      privkey = keys.priv
+      pubkey = keys.pub
+    }
   })
 </script>
 
@@ -116,7 +131,7 @@
         <button on:click={() => deleteOldAccount($account.pubkey)}>
           <span class="fa-solid fa-trash" />
         </button>
-        {$account.pubkey}
+        {$account.pubkey.slice(0,5)}....{$account.pubkey.slice(-5)}
       </li>
     </ul>
   </div>
