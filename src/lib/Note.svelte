@@ -6,12 +6,6 @@
   export let note: Note
   export let index = 0
 
-  let name: string = note.user
-    ? note.user.name
-      ? note.user.name
-      : note.pubkey
-    : note.pubkey
-
   let reply = note.replies
 
   function normalizeName(data: Note | Reply): string {
@@ -34,7 +28,7 @@
       <img
         class="w-12 h-12 rounded-full"
         src={reply.user && reply.user.picture ? reply.user.picture : 'profile-placeholder.png'}
-        alt="{reply.user ? reply.user.about : reply.pubkey} title={reply.user ? reply.user.name : reply.pubkey}" />
+        alt="{reply.user ? reply.user.about : reply.pubkey}" title="{reply.user ? reply.user.name : reply.pubkey}" />
       <div class="flex flex-col text-left">
         <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">
           {normalizeName(reply)}
@@ -51,7 +45,7 @@
       <img
         class="w-12 h-12 rounded-full"
         src={note.user && note.user.picture ? note.user.picture : 'profile-placeholder.png'}
-        alt="{note.user ? note.user.about : note.pubkey} title={note.user ? note.user.name : note.pubkey}" />
+        alt="{note.user ? note.user.about : note.pubkey}" title="{note.user ? note.user.name : note.pubkey}" />
       <div class="flex flex-col text-left">
         <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">
           {normalizeName(note)}
