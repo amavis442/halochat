@@ -69,7 +69,7 @@
 
   onMount(async () => {
     if ($relays.length) {
-      let data
+      let data:Array<Event> = []
       if ($eventdata) {
         data = $eventdata
       } else {
