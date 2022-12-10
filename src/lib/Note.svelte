@@ -5,6 +5,7 @@
 
   export let note: Note
   export let index = 0
+  export let cbReply
 
   let reply = note.replies
 
@@ -13,13 +14,15 @@
       ? data.user.name
         ? data.user.name
         : data.pubkey
-      : data.pubkey).slice(0, 10)
+      : data.pubkey
+    ).slice(0, 10)
   }
   let content = toHtml(note.content)
   let replyContent = ''
   if (reply) {
     replyContent = toHtml(reply.content)
   }
+  let upvote = false
 </script>
 
 <div class="Note flex flex-col items-start" data-num={index + 1}>
@@ -28,7 +31,8 @@
       <img
         class="w-12 h-12 rounded-full"
         src={reply.user && reply.user.picture ? reply.user.picture : 'profile-placeholder.png'}
-        alt="{reply.user ? reply.user.about : reply.pubkey}" title="{reply.user ? reply.user.name : reply.pubkey}" />
+        alt={reply.user ? reply.user.about : reply.pubkey}
+        title={reply.user ? reply.user.name : reply.pubkey} />
       <div class="flex flex-col text-left">
         <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">
           {normalizeName(reply)}
@@ -45,7 +49,8 @@
       <img
         class="w-12 h-12 rounded-full"
         src={note.user && note.user.picture ? note.user.picture : 'profile-placeholder.png'}
-        alt="{note.user ? note.user.about : note.pubkey}" title="{note.user ? note.user.name : note.pubkey}" />
+        alt={note.user ? note.user.about : note.pubkey}
+        title={note.user ? note.user.name : note.pubkey} />
       <div class="flex flex-col text-left">
         <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">
           {normalizeName(note)}
@@ -53,6 +58,22 @@
         </strong>
         <span class="text-slate-500 text-sm font-medium dark:text-slate-400">
           {@html content}
+        </span>
+        <span>
+          <button type="button" on:click={() => cbReply(note)}>
+            <i class="fa-regular fa-comment-dots" />
+          </button>
+
+          {#if upvote}
+            <button type="button">
+              <i class="fa-solid fa-thumbs-up" />
+            </button>
+          {:else}
+            <button type="button">
+              <i class="fa-regular fa-thumbs-up" />
+            </button>
+          {/if}
+
         </span>
       </div>
     </div>
