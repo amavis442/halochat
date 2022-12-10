@@ -9,7 +9,7 @@ export const blacklist = writable([
     '887645fef0ce0c3c1218d2f5d8e6132a19304cdc57cd20281d082f38cfea0072'
 ])
 
-export async function initData(limit:number = 10): Promise<any> {
+export async function initData(limit: number = 10): Promise<any> {
     // Get some events from 7 days with a max limit of 4000 records
     let filter: Filter = {
         kinds: [1],
@@ -117,7 +117,7 @@ export async function replies(data: Array<Event>) {
  * 
  * @param event
  */
-export async function processEvent(event: any):Promise<Array<Note>> {
+export async function processEvent(event: any): Promise<Array<Note>> {
     if (!Array.isArray(event)) {
         event = [event]
     }
@@ -129,14 +129,23 @@ export async function processEvent(event: any):Promise<Array<Note>> {
     if (reply.raw.length) {
         await updateUserData(reply.raw)
     }
+
     return new Promise((resolve, reject) => {
         let myNotes = []
         //merge user with their events
         event.forEach((note: Event) => {
             if (!$blacklist.includes(note.pubkey)) {
-                let myNote:Note
+                let myNote: Note
                 switch (note.kind) {
+                    case 0: //User meta data
+                        /**
+                         * @see https://github.com/nostr-protocol/nips/blob/master/01.md#basic-event-kinds
+                         */
+                        break;
                     case 1:
+                        /**
+                         * @see https://github.com/nostr-protocol/nips/blob/master/01.md#events-and-signatures
+                         */
                         let thisReply: Reply | null = null
                         if (reply.json[note.id]) {
                             thisReply = {
@@ -152,7 +161,10 @@ export async function processEvent(event: any):Promise<Array<Note>> {
                         }
                         myNotes.push(myNote)
                         break;
-                    case 5:
+                    case 5: //deletion request
+                        /**
+                         * @see https://github.com/nostr-protocol/nips/blob/master/09.md
+                         */
                         myNote = {
                             ...note,
                             user: $users[note.pubkey],
@@ -161,7 +173,10 @@ export async function processEvent(event: any):Promise<Array<Note>> {
                         }
                         myNotes.push(myNote)
                         break
-                    case 7:
+                    case 7:  //reactions likes/dislikes. upvote/downvote (+,-)
+                        /**
+                         * @see https://github.com/nostr-protocol/nips/blob/master/25.md
+                         */
                         myNote = {
                             ...note,
                             user: $users[note.pubkey],
@@ -169,7 +184,7 @@ export async function processEvent(event: any):Promise<Array<Note>> {
                             reactions: null
                         }
                         myNotes.push(myNote)
-                        break        
+                        break
                 }
             }
         })

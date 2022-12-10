@@ -14,7 +14,7 @@ export function deleteAccount(pubkey: string) {
   })
 }
 
-export function addAccount(pubkey: string, privkey: string, name?: string | null, about?: string | null, picture?: string | null) {
+export function updateAccount(pubkey: string, privkey: string, name?: string | null, about?: string | null, picture?: string | null) {
   account.update((data) => {
     const ac: Account = {
       pubkey: pubkey,

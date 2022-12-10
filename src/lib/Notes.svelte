@@ -10,6 +10,9 @@
   import { now } from '../util/time'
   import { account } from '../stores/account'
   import Scrollable from './Scrollable.svelte'
+  import Button from './partials/Button.svelte'
+  import Text from './partials/Text.svelte'
+  import Anchor from './partials/Anchor.svelte'
 
   const noteData = writable([])
   let lastTimeStamp = now()
@@ -32,9 +35,9 @@
    */
   async function getNoteData() {
     let filter: Filter = {
-      kinds: [1], //For now only ask for kind 1 and not 1, 5 , 7
+      kinds: [1,5,7],
       until: lastTimeStamp,
-      limit: 10,
+      limit: 20,
     }
     let eventData = await getData(filter)
     eventData = uniqBy(prop('id'), eventData) //We have multiple relays so wwe want unique events
@@ -105,54 +108,21 @@
       </div>
     {:else}
       Please add an relay first. You can do this here
-      <a
-        href="relays"
-        class="px-6 py-2.5 bg-blue-600 text-white font-medium text-xs
-        leading-tight uppercase rounded shadow-md hover:bg-blue-700
-        hover:shadow-lg focus:bg-blue-700 focus:shadow-lg focus:outline-none
-        focus:ring-0 active:bg-blue-800 active:shadow-lg transition duration-150
-        ease-in-out mb-4">
-        relays
-      </a>
+      <Anchor href="relays">relays</Anchor>
     {/if}
   </div>
   <div class="h-10p">
     {#if $relays.length && $account.privkey}
       <div class="block max-w-full flex justify-center">
         <div class="w-4/5 mr-2">
-          <input
-            type="text"
-            id="msg"
-            bind:value={msg}
-            placeholder="Message to send"
-            class="block w-full px-3 py-1.5 text-base font-normal text-gray-700
-            bg-white bg-clip-padding border border-solid border-gray-300 rounded
-            transition ease-in-out m-0 focus:text-gray-700 focus:bg-white
-            focus:border-blue-600 focus:outline-none" />
+          <Text bind:value={msg} id='msg' placeholder="Message to send"/>
         </div>
-        <button
-          on:click={sendMessage}
-          class="px-6 py-2.5 bg-blue-600 text-white font-medium text-xs
-          leading-tight uppercase rounded shadow-md hover:bg-blue-700
-          hover:shadow-lg focus:bg-blue-700 focus:shadow-lg focus:outline-none
-          focus:ring-0 active:bg-blue-800 active:shadow-lg transition
-          duration-150 ease-in-out">
-          Send
-        </button>
+        <Button type='button' click={sendMessage}>Send</Button>
       </div>
     {:else}
       To send messages, you need to add private key and have relays added. You
       can generate your private key and add them here. For relays see the link
-      above.
-      <a
-        href="account"
-        class="px-6 py-2.5 bg-blue-600 text-white font-medium text-xs
-        leading-tight uppercase rounded shadow-md hover:bg-blue-700
-        hover:shadow-lg focus:bg-blue-700 focus:shadow-lg focus:outline-none
-        focus:ring-0 active:bg-blue-800 active:shadow-lg transition duration-150
-        ease-in-out mb-4">
-        account.
-      </a>
+      above.<Anchor href="account">account</Anchor>
     {/if}
   </div>
 </div>

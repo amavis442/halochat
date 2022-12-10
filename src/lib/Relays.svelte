@@ -2,6 +2,10 @@
   import { relays } from '../state/pool'
   import Toasts from '../lib/Toasts.svelte'
   import { addToast } from '../stores/toast'
+  import Button from './partials/Button.svelte'
+  import Text from './partials/Text.svelte'
+  import Anchor from './partials/Anchor.svelte'
+  import Link from './partials/Link.svelte'
 
   let url = ''
 
@@ -41,7 +45,7 @@
       return data
     })
     addToast({
-      message: 'Relay added!',
+      message: 'Relay [' + url + '] added!',
       type: 'success',
       dismissible: true,
       timeout: 3000,
@@ -66,38 +70,19 @@
       <label for="url" class="form-label inline-block mb-2 text-gray-700">
         Relay
       </label>
-      <input
-        type="text"
+      <Text
         bind:value={url}
-        class="form-control block w-full px-3 py-1.5 text-base font-normal
-        text-gray-700 bg-white bg-clip-padding border border-solid
-        border-gray-300 rounded transition ease-in-out m-0 focus:text-gray-700
-        focus:bg-white focus:border-blue-600 focus:outline-none"
-        id="pubKey"
-        aria-describedby="emailHelp"
+        id="relayUrl"
+        describedby="relayHelp"
         placeholder="wss://nostr.rocks" />
-      <small id="pubkeyHelp" class="block mt-1 text-xs text-gray-600">
+      <small id="relayHelp" class="block mt-1 text-xs text-gray-600">
         A relay is a service where we send and receive messages from. We need at
         least 1 relay to receive and to send messages to. The relays usually has
         the form of wss://[name of relay]. For more relays see
-        <a
-          href="https://nostr-registry.netlify.app/"
-          class="text-blue-600 visited:text-purple-600"
-          target="_blank"
-          rel="noreferrer">
-          nostr-registry
-        </a>
+        <Link href="https://nostr-registry.netlify.app/">nostr-registry</Link>
       </small>
     </div>
-    <button
-      type="submit"
-      class="px-6 py-2.5 bg-blue-600 text-white font-medium text-xs
-      leading-tight uppercase rounded shadow-md hover:bg-blue-700
-      hover:shadow-lg focus:bg-blue-700 focus:shadow-lg focus:outline-none
-      focus:ring-0 active:bg-blue-800 active:shadow-lg transition duration-150
-      ease-in-out opacity-100">
-      Submit
-    </button>
+    <Button type="submit">Submit</Button>
   </form>
 </div>
 
