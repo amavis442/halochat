@@ -6,6 +6,7 @@
   import Button from './partials/Button.svelte'
   import Text from './partials/Text.svelte'
   import { getKeys } from './util/keys'
+  import { publishAccount } from './state/pool'
 
   let pubkey = $account.pubkey
   let privkey = $account.privkey
@@ -34,12 +35,20 @@
    * @param e
    */
   function onSubmit(e) {
-    /* const formData = new FormData(e.target);
-    for ( let field of formData ) {
-      const [key, value] = field;
-    } */
-
+    name = name.trim()
+    if (!name.match(/^\w[\w\-]+\w$/i)) {
+      addToast({
+        message:
+          'Account name not correct! George-Washington-1776 is a valid <username>, but George Washington is not',
+        type: 'error',
+        dismissible: true,
+        timeout: 3000,
+      })
+      return
+    }
     updateAccount(pubkey, privkey, name, about, picture)
+    publishAccount()
+
     addToast({
       message: 'Account updated!',
       type: 'success',
@@ -64,12 +73,16 @@
 <Toasts />
 <div class="block p-6 rounded-lg shadow-lg bg-white w-full ml-6 mt-6">
   <form on:submit|preventDefault={onSubmit}>
-    
+
     <div class="form-group mb-6">
       <label for="pubKey" class="form-label inline-block mb-2 text-gray-700">
         Public key
       </label>
-      <Text bind:value={pubkey} id='pubkey' describedby="emailHelp" placeholder="Public key" />
+      <Text
+        bind:value={pubkey}
+        id="pubkey"
+        describedby="emailHelp"
+        placeholder="Public key" />
       <small id="pubkeyHelp" class="block mt-1 text-xs text-gray-600">
         This is you username for nostr. You can add more info like name,about
         and picture which most clients will pickup and show that instead of you
@@ -80,7 +93,11 @@
       <label for="privKey" class="form-label inline-block mb-2 text-gray-700">
         Private key
       </label>
-      <Text bind:value={privkey} id='privKey' describedby="privkeyHelp" placeholder="Private key" />
+      <Text
+        bind:value={privkey}
+        id="privKey"
+        describedby="privkeyHelp"
+        placeholder="Private key" />
       <small id="privkeyHelp" class="block mt-1 text-xs text-gray-600">
         Keep this key private. It will be used to sign your messages. If others
         get this key, they can pretend to be you and send messages in your
@@ -92,7 +109,11 @@
       <label for="myname" class="form-label inline-block mb-2 text-gray-700">
         Name
       </label>
-      <Text bind:value={name} id='myname' describedby="nameHelp" placeholder="Name" />
+      <Text
+        bind:value={name}
+        id="myname"
+        describedby="nameHelp"
+        placeholder="Name" />
       <small id="nameHelp" class="block mt-1 text-xs text-gray-600">
         Name to be used instead of your public key
       </small>
@@ -102,24 +123,34 @@
       <label for="aboutme" class="form-label inline-block mb-2 text-gray-700">
         About
       </label>
-      <Text bind:value={about} id='aboutme' describedby="aboutHelp" placeholder="About" />
+      <Text
+        bind:value={about}
+        id="aboutme"
+        describedby="aboutHelp"
+        placeholder="About" />
       <small id="aboutHelp" class="block mt-1 text-xs text-gray-600">
         Tell us something about you. Any hobby's, what do you like/dislike?
       </small>
     </div>
 
     <div class="form-group mb-6">
-      <label for="pictureofme" class="form-label inline-block mb-2 text-gray-700">
+      <label
+        for="pictureofme"
+        class="form-label inline-block mb-2 text-gray-700">
         Picture
       </label>
-      <Text bind:value={picture} id='pictureofme' describedby="pictureHelp" placeholder="Picture url" />
+      <Text
+        bind:value={picture}
+        id="pictureofme"
+        describedby="pictureHelp"
+        placeholder="Picture url" />
       <small id="pictureHelp" class="block mt-1 text-xs text-gray-600">
         A nice avatar or profile picture. This is a link to a external file
         somewhere on the net. Pictures are not stored in relays.
       </small>
     </div>
 
-    <Button type='submit'>Submit</Button>
+    <Button type="submit">Submit</Button>
   </form>
 </div>
 
@@ -131,7 +162,7 @@
         <button on:click={() => deleteOldAccount($account.pubkey)}>
           <span class="fa-solid fa-trash" />
         </button>
-        {$account.pubkey.slice(0,5)}....{$account.pubkey.slice(-5)}
+        {$account.pubkey.slice(0, 5)}....{$account.pubkey.slice(-5)}
       </li>
     </ul>
   </div>
