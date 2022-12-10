@@ -1,5 +1,12 @@
 <script lang="ts">
-  import { eventListener, getData, pool, relays } from './state/pool'
+  import {
+    eventListener,
+    getData,
+    pool,
+    publish,
+    publishReply,
+    relays,
+  } from './state/pool'
   import { uniqBy, prop, sortBy } from 'ramda'
   import { onMount } from 'svelte'
   import { writable } from 'svelte/store'
@@ -24,12 +31,14 @@
    * @param myNotes
    */
   async function updateNotes(myNotes: Array<NoteEvent>) {
-    noteData.update(($noteData) => {
-      console.log('Update list', myNotes)
-      return uniqBy(prop('id'), $noteData.concat(myNotes))
-    })
-    console.log('Update view with $noteData')
-    $noteData = sortBy(prop('created_at'), $noteData).reverse()
+    if (myNotes.length) {
+      noteData.update(($noteData) => {
+        console.log('Update list', myNotes)
+        return uniqBy(prop('id'), $noteData.concat(myNotes))
+      })
+      console.log('Update view with $noteData')
+      $noteData = sortBy(prop('created_at'), $noteData).reverse()
+    }
   }
 
   /**
@@ -51,25 +60,31 @@
   }
 
   let msg = ''
+  let replyTo: NoteEvent | null = null
 
   function sendMessage() {
-    pool.setPrivateKey($account.privkey)
-    let event = {
-      content: msg,
-      created_at: Math.floor(Date.now() / 1000),
-      kind: 1,
-      tags: [],
-      pubkey: $account.pubkey,
+    if (replyTo) {
+      console.log(replyTo)
+      publishReply(msg, replyTo)
     }
+    if (!replyTo) {
+      publish(1, msg)
+    }
+    replyTo = null
+  }
 
-    pool.publish(event, (status) => {
-      console.log('Publish status')
-    })
+  function onReply(note) {
+    replyTo = note
+    console.log(note)
+  }
+  
+  function removeReply() {
+    replyTo = null
   }
 
   onMount(async () => {
     if ($relays.length) {
-      let data:Array<Event> = []
+      let data: Array<Event> = []
       if ($eventdata) {
         data = $eventdata
       } else {
@@ -120,7 +135,7 @@
         dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1 ring-black/5
         rounded-xl divide-y dark:divide-slate-200/5 ml-4 mr-4 h-full max-h-full">
         {#each $noteData as note, index}
-          <Note {note} {index} />
+          <Note {note} {index} cbReply={onReply} />
         {/each}
 
         <Scrollable cbGetData={getNoteData} rootElement="Notes" />
@@ -135,6 +150,9 @@
     {#if $relays.length && $account.privkey}
       <div class="block max-w-full flex justify-center">
         <div class="w-4/5 mr-2">
+          {#if replyTo}
+          <button on:click={removeReply}> Reply to { replyTo.content.slice(0,10) } </button>
+          {/if}
           <Text bind:value={msg} id="msg" placeholder="Message to send" />
         </div>
         <Button type="button" click={sendMessage}>Send</Button>
