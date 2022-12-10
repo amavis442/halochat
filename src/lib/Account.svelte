@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { account, updateAccount, deleteAccount } from '../stores/account'
-  import Toasts from '../lib/Toasts.svelte'
+  import { account, updateAccount, deleteAccount } from './stores/account'
+  import Toasts from './Toasts.svelte'
   import { onMount } from 'svelte'
-  import { addToast } from '../stores/toast'
+  import { addToast } from './stores/toast'
   import Button from './partials/Button.svelte'
   import Text from './partials/Text.svelte'
-  import { getKeys } from '../util/keys'
+  import { getKeys } from './util/keys'
 
   let pubkey = $account.pubkey
   let privkey = $account.privkey

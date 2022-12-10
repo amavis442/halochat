@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { eventListener, getData, pool, relays } from '../state/pool'
+  import { eventListener, getData, pool, relays } from './state/pool'
   import { uniqBy, prop, sortBy } from 'ramda'
   import { onMount } from 'svelte'
   import { writable } from 'svelte/store'
@@ -8,14 +8,15 @@
     initData,
     lastTimeStamp,
     firstTimeStamp,
-  } from '../state/app'
+  } from './state/app'
   import Note from './Note.svelte'
-  import type { Filter, Event, Note as NoteEvent } from '../state/types'
-  import { account } from '../stores/account'
+  import type { Filter, Event, Note as NoteEvent } from './state/types'
+  import { account } from './stores/account'
   import Scrollable from './Scrollable.svelte'
   import Button from './partials/Button.svelte'
   import Text from './partials/Text.svelte'
   import Anchor from './partials/Anchor.svelte'
+  import { eventdata } from './stores/eventdata'
 
   const noteData = writable([])
   /**
@@ -68,7 +69,12 @@
 
   onMount(async () => {
     if ($relays.length) {
-      let data = await initData()
+      let data
+      if ($eventdata) {
+        data = $eventdata
+      } else {
+        data = await initData()
+      }
       let noteData = await processEvent(data)
       console.log('First: ', firstTimeStamp, ', Last: ', lastTimeStamp)
       updateNotes(noteData)

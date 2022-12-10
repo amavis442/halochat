@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { relays } from '../state/pool'
+  import { relays } from './state/pool'
   import Toasts from '../lib/Toasts.svelte'
-  import { addToast } from '../stores/toast'
+  import { addToast } from './stores/toast'
   import Button from './partials/Button.svelte'
   import Text from './partials/Text.svelte'
   import Anchor from './partials/Anchor.svelte'

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { getTime } from '../util/time'
-  import type { Note, Reply } from '../state/types'
-  import { toHtml } from '../util/html'
+  import { getTime } from './util/time'
+  import type { Note, Reply } from './state/types'
+  import { toHtml } from './util/html'
 
   export let note: Note
   export let index = 0

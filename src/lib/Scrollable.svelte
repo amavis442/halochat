@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { delay } from '../util/time'
+  import { delay } from './util/time'
   import { throttle, debounce } from 'throttle-debounce'
   import Spinner from './Spinner.svelte'
   import { onMount } from 'svelte'
