@@ -53,7 +53,6 @@ export async function getData(filter: {}): Promise<Array<Event>> {
       (url: string) => {
 
         eoseRelays.push(url);
-        //console.log('Avail relays: ', get(relays).length)
         if (eoseRelays.length == get(relays).length) {
           let result: Array<Event> = uniqBy(prop('id'), data)
           //sub.unsub();

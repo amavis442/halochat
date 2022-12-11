@@ -30,9 +30,10 @@
     <div class="flex items-center gap-4 p-4">
       <img
         class="w-12 h-12 rounded-full"
-        src={reply.user && reply.user.picture ? reply.user.picture : 'profile-placeholder.png'}
-        alt={reply.user ? reply.user.about : reply.pubkey}
-        title={reply.user ? reply.user.name : reply.pubkey} />
+        src="{reply.user && reply.user.picture ? reply.user.picture : 'profile-placeholder.png'}"
+        alt="no pic"
+        title={reply.user ? reply.user.name : reply.pubkey}
+        crossorigin="anonymous" />
       <div class="flex flex-col text-left">
         <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">
           {normalizeName(reply)}
@@ -48,9 +49,10 @@
     <div class="flex items-top gap-4 p-4">
       <img
         class="w-12 h-12 rounded-full"
-        src={note.user && note.user.picture ? note.user.picture : 'profile-placeholder.png'}
-        alt={note.user ? note.user.about : note.pubkey}
-        title={note.user ? note.user.name : note.pubkey} />
+        src="{note.user && note.user.picture ? note.user.picture : 'profile-placeholder.png'}"
+        alt="no pic"
+        title={note.user ? note.user.name : note.pubkey}
+        crossorigin="anonymous" />
       <div class="flex flex-col text-left">
         <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">
           {normalizeName(note)}
