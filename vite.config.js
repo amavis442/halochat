@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import * as path from 'path'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
+import wasm from "vite-plugin-wasm"
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -16,5 +17,20 @@ export default defineConfig({
       // Whether to polyfill `node:` protocol imports.
       protocolImports: true,
     }),
+    wasm(),
   ],
+  worker: {
+    format: "es",
+    plugins: [
+      wasm(),
+    ]
+  },
+  build: {
+    manifest: true,
+  },
+  server: {
+    cors:true,
+    origin: 'http://localhost:5173',
+  }
+  
 })

@@ -5,6 +5,7 @@ import { now } from "../util/time"
 import { uniqBy, prop, pluck, sortBy, last } from 'ramda'
 import type { Event, User, Filter, Note, Reply } from './types'
 import { eventdata } from '../stores/eventdata'
+import {dbSave} from '../../db'
 
 export const blacklist = writable([
     '887645fef0ce0c3c1218d2f5d8e6132a19304cdc57cd20281d082f38cfea0072'

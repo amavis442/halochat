@@ -4,7 +4,6 @@
   import { addToast } from './stores/toast'
   import Button from './partials/Button.svelte'
   import Text from './partials/Text.svelte'
-  import Anchor from './partials/Anchor.svelte'
   import Link from './partials/Link.svelte'
 
   let url = ''
