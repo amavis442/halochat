@@ -113,12 +113,12 @@ export async function replies(data: Array<Event>) {
 
 export const loading = writable(false)
 export async function listen(limit: number = 250): Promise<any> {
-    const subscriptionId = Math.random().toString().slice(2);
+    const subscriptionId = 'listenToMoi';
     loading.set(true)
     // Get some events from 7 days with a max limit of 4000 records
     let filter: Filter = {
-        kinds: [0, 1, 5, 7],
-        until: now(),
+        //kinds: [0, 1, 5, 7],
+        //until: now(),
         limit: limit,
     }
 
@@ -172,8 +172,7 @@ export async function getContacts(): Promise<any> {
         subscriptionId,
         //@ts-ignore
         () => {
-            subscription.unsub()
-            console.log(`Closed subscription for getContacts() with subscription id ${subscriptionId}`)
+            console.log(`Not gonna close this subscription for getContacts() with subscription id ${subscriptionId}`)
             loading.set(false)
         }
     )
@@ -202,6 +201,7 @@ function handleReaction(evt, relay) { }
 export function onEvent(evt: Event, relay: string) {
     switch (evt.kind) {
         case 0:
+            console.log(`Received msg ${evt.content}`)
             handleMetadata(evt, relay)
             break
         case 1:
