@@ -28,6 +28,7 @@
       publish(1, msg);
     }
     replyTo = null;
+    msg = ''
   }
 
   function onReply(note) {
