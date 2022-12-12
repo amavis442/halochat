@@ -2,13 +2,11 @@ import { get, writable } from 'svelte/store'
 import type { User } from '../state/types'
 import { setLocalJson,getLocalJson } from '../util/storage'
 
-export const userPubKeys = []
 export function addUser(user: User) {
   users.update(data => {
     if (data.find((item) => user.pubkey == item.pubkey)) {
       return data
     }
-    userPubKeys.push(user.pubkey)
     let item = {}
     item[user.pubkey] = user
     if (data && data.length) {

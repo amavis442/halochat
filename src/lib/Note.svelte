@@ -5,44 +5,53 @@
   import { uniqBy, prop, values, sortBy } from "ramda";
   import type { Filter, Event, Note as NoteEvent } from "./state/types";
   import {users} from './stores/users'
+  import {notes} from './stores/notes'
+  
   import { get } from "svelte/store";
 
   export let note: Note;
   
   export let index = 0;
   export let cbReply;
+  
+  $users = get(users)
 
-  let reply = note.replies;
+  let reply:Note
+  let replyUser
+  if (note.reply_id) {
+    const $notes = get(notes)
+    if ($notes[note.reply_id]) {
+      reply = $notes[note.reply_id]
+      replyUser = $users[reply.pubkey] ? $users[reply.pubkey] : []
+    }
+  }
+  let replyContent = "";
+  if (reply) {
+    replyContent = toHtml(reply.content);
+  }
 
+  let noteUser = $users[note.pubkey] ? $users[note.pubkey] : []
+  let content = toHtml(note.content);
+  
   function normalizeName(data: Note | Reply): string {
     return (
       data.user ? (data.user.name ? data.user.name : data.pubkey) : data.pubkey
     ).slice(0, 10);
   }
-  let content = toHtml(note.content);
-  let replyContent = "";
-  if (reply) {
-    replyContent = toHtml(reply.content);
-  }
-  let upvote = false;
   
-  let user = []
-  $users = get(users)
-  if (!note.user && $users[note.pubkey]) {
-    note.user = $users[note.pubkey]
-    user = $users[note.pubkey]
-  }
+  let upvote = false;
+    
 </script>
 <div class="Note flex flex-col items-start" data-num={index + 1}>
   {#if reply && reply.content}
     <div class="flex items-center gap-4 p-4">
       <img
         class="w-12 h-12 rounded-full"
-        src={reply.user && reply.user.picture
-          ? reply.user.picture
+        src={replyUser && replyUser.picture
+          ? replyUser.picture
           : "profile-placeholder.png"}
-        alt={reply.user ? reply.user.about : reply.pubkey}
-        title={reply.user ? reply.user.name : reply.pubkey}
+        alt={replyUser ? replyUser.about : reply.pubkey}
+        title={replyUser ? replyUser.name : reply.pubkey}
       />
       <div class="flex flex-col text-left">
         <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">
@@ -59,11 +68,11 @@
     <div class="flex items-top gap-4 p-4">
       <img
         class="w-12 h-12 rounded-full"
-        src={user && user.picture
-          ? user.picture
+        src={noteUser && noteUser.picture
+          ? noteUser.picture
           : "profile-placeholder.png"}
-        alt={user ? user.about : note.pubkey}
-        title={user ? user.name : note.pubkey}
+        alt={noteUser ? noteUser.about : note.pubkey}
+        title={noteUser ? noteUser.name : note.pubkey}
       />
       <div class="flex flex-col text-left">
         <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">

@@ -1,16 +1,17 @@
 import { get, writable } from 'svelte/store'
-import { users, addUser, userPubKeys } from '../stores/users'
-import { notes, updateNotes, notePubKeys } from '../stores/notes'
+import { users, addUser } from '../stores/users'
+import { notes, updateNotes, noteReplyPubKeys } from '../stores/notes'
 
 import { now } from "../util/time"
-import { uniqBy,uniq,  prop, pluck, sortBy, last,difference } from 'ramda'
-import type { Event, User, Filter, Note, Reply } from './types'
-import { eventdata } from '../stores/eventdata'
+import { uniqBy, uniq, prop, pluck, difference } from 'ramda'
+import type { Event, User, Filter } from './types'
 import { pool } from './pool'
 
 export const blacklist = writable([
     '887645fef0ce0c3c1218d2f5d8e6132a19304cdc57cd20281d082f38cfea0072'
 ])
+
+export const queue = writable([])
 
 async function sendRequest(filter: Filter) {
     return []
@@ -110,15 +111,6 @@ export async function replies(data: Array<Event>) {
     return { json: d, raw: replyData }
 }
 
-export let userData: Array<Event> = []
-export let noteData: Array<Event> = []
-export let replyData: Array<Event> = []
-export let reactionData: Array<Event> = []
-export let deleteData: Array<Event> = []
-export let allData: Array<Event> = []
-export let lastTimeStamp: number = now()
-export let firstTimeStamp: number = now()
-
 export const loading = writable(false)
 export async function listen(limit: number = 250): Promise<any> {
     const subscriptionId = Math.random().toString().slice(2);
@@ -129,8 +121,7 @@ export async function listen(limit: number = 250): Promise<any> {
         until: now(),
         limit: limit,
     }
-    
-    const numRelays = 0
+
     const subscription = pool.sub(
         //@ts-ignore
         {
@@ -140,7 +131,7 @@ export async function listen(limit: number = 250): Promise<any> {
         },
         subscriptionId,
         //@ts-ignore
-        (url: string) => { 
+        (url: string) => {
             //numRelays
             console.log('EOSE from relay: ', url)
             loading.set(false)
@@ -161,7 +152,7 @@ export async function getContacts(): Promise<any> {
     const userPubKeys = uniq(pluck('pubkey', Object.values($users)))
     const notePubKeys = uniq(pluck('pubkey', Object.values($notes)))
 
-    let pkeys = difference(notePubKeys,userPubKeys)
+    let pkeys = difference(notePubKeys, userPubKeys)
     if (!pkeys || pkeys.length == 0) {
         loading.set(false)
         return 0
@@ -180,14 +171,12 @@ export async function getContacts(): Promise<any> {
         },
         subscriptionId,
         //@ts-ignore
-        () => { 
+        () => {
             subscription.unsub()
             console.log(`Closed subscription for getContacts() with subscription id ${subscriptionId}`)
             loading.set(false)
         }
     )
-
-    console.log(subscription)
     return subscription
 }
 
@@ -203,6 +192,7 @@ function handleMetadata(evt, relay) {
 }
 
 function handleTextNote(evt: Event, relay: string) {
+    //@ts-ignore
     updateNotes(evt)
 }
 
@@ -225,113 +215,17 @@ export function onEvent(evt: Event, relay: string) {
     }
 }
 
-function setMetadata(evt: Event, relay: string , content:any) {
+function setMetadata(evt: Event, relay: string, content: any) {
     const $users = get(users)
-    let user:User = {
-        pubkey:evt.pubkey,
-        name: content.name,
-        about: content.about,
-        picture: content.picture,
-        content: JSON.stringify(content),
-        refreshed: now()
+    if (!$users[evt.pubkey]) {
+        let user: User = {
+            pubkey: evt.pubkey,
+            name: content.name,
+            about: content.about,
+            picture: content.picture,
+            content: JSON.stringify(content),
+            refreshed: now()
+        }
+        addUser(user)
     }
-    addUser(user)
-}
-
-/**
- * Put note,user,replies and likes/dislikes together
- * 
- * For reactions @see https://github.com/nostr-protocol/nips/blob/master/25.md
- * 
- * @param event
- */
-export async function processEvent(event: any): Promise<Array<Note>> {
-    if (!Array.isArray(event)) {
-        event = [event]
-    }
-    const $users = get(users)
-    const $blacklist = get(blacklist)
-
-    await updateUserData(event)
-    const reply = await replies(event)
-    if (reply.raw.length) {
-        await updateUserData(reply.raw)
-    }
-
-    return new Promise((resolve, reject) => {
-        let myNotes = []
-        //merge user with their events
-        event.forEach((note: Event) => {
-            if (!$blacklist.includes(note.pubkey)) {
-                let myNote: Note
-                switch (note.kind) {
-                    case 0: //User meta data
-                        /**
-                         * @see https://github.com/nostr-protocol/nips/blob/master/01.md#basic-event-kinds
-                         */
-                        userData.push(note)
-                        break;
-                    case 1:
-                        /**
-                         * @see https://github.com/nostr-protocol/nips/blob/master/01.md#events-and-signatures
-                         */
-                        let thisReply: Reply | null = null
-                        if (reply.json[note.id]) {
-                            thisReply = {
-                                ...reply.json[note.id],
-                                user: $users[reply.json[note.id].pubkey]
-                            }
-                        }
-                        myNote = {
-                            ...note,
-                            user: $users[note.pubkey],
-                            replies: thisReply,
-                            reactions: null
-                        }
-                        myNotes.push(myNote)
-                        noteData.push(note)
-                        break;
-                    case 5: //deletion request
-                        /**
-                         * @see https://github.com/nostr-protocol/nips/blob/master/09.md
-                         */
-                        deleteData.push(note)
-                        break
-                    case 7:  //reactions likes/dislikes. upvote/downvote (+,-)
-                        /**
-                         * @see https://github.com/nostr-protocol/nips/blob/master/25.md
-                         */
-                        reactionData.push(note)
-                        break
-                }
-            }
-            allData.push(note)
-        })
-
-        if (userData.length) {
-            userData = uniqBy(prop('id'), userData)
-        }
-        if (noteData.length) {
-            noteData = uniqBy(prop('id'), noteData)
-        }
-        if (replyData.length) {
-            replyData = uniqBy(prop('id'), replyData)
-        }
-        if (reactionData.length) {
-            reactionData = uniqBy(prop('id'), reactionData)
-        }
-        if (deleteData.length) {
-            deleteData = uniqBy(prop('id'), deleteData)
-        }
-        if (allData.length) {
-            allData = sortBy(prop('created_at'), uniqBy(prop('id'), allData)) // Many relays with same data,so dedupe it
-            lastTimeStamp = allData[0].created_at
-            firstTimeStamp = last(allData).created_at
-        }
-
-        eventdata.set(allData)
-
-        myNotes = uniqBy(prop('id'), myNotes)
-        resolve(myNotes)
-    })
 }

@@ -8,17 +8,12 @@ export type Event = {
     sig?: string;
 }
 
-export type Reply = Event & {
-    user: User;
-}
-
 export type Reaction = Event & {
     user: User
 }
 
 export type Note = Event & {
-    user: User;
-    replies: Reply | null;
+    reply_id: string | null;
     reactions: Reaction | null;
 }
 

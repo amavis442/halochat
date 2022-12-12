@@ -3,41 +3,18 @@
   import { uniqBy, prop, sortBy } from "ramda";
   import { onMount, afterUpdate } from "svelte";
   import { writable } from "svelte/store";
-  import {
-    listen,
-    getContacts,
-    lastTimeStamp,
-    firstTimeStamp,
-    loading,
-  } from "./state/app";
-  import { debounce, throttle  } from "throttle-debounce";
-  import Note from "./Note.svelte";
+  import { listen, getContacts, loading } from "./state/app";
+  import { throttle } from "throttle-debounce";
   import type { Note as NoteEvent } from "./state/types";
   import { account } from "./stores/account";
   import { notes } from "./stores/notes";
+  import { delay } from "./util/time";
 
+  import Note from "./Note.svelte";
   import Spinner from "./Spinner.svelte";
   import Button from "./partials/Button.svelte";
   import Text from "./partials/Text.svelte";
   import Anchor from "./partials/Anchor.svelte";
-  import { delay } from "./util/time";
-  import { users } from "./stores/users";
-
-  const noteData = writable([]);
-  /**
-   *
-   * @param myNotes
-   */
-  async function updateNotes(myNotes: Array<NoteEvent>) {
-    if (myNotes.length) {
-      noteData.update(($noteData) => {
-        console.log("Update list", myNotes);
-        return uniqBy(prop("id"), $noteData.concat(myNotes));
-      });
-      console.log("Update view with $noteData");
-      $noteData = sortBy(prop("created_at"), $noteData).reverse();
-    }
-  }
 
   let msg = "";
   let replyTo: NoteEvent | null = null;
@@ -63,21 +40,19 @@
   }
 
   const throttleFunc = throttle(5000, () => {
-        console.log("Bouncy");
-        loading.set(true);
-        getContacts();
+    console.log("Bouncy");
+    loading.set(true);
+    getContacts();
   });
 
-
   let page = 0;
-  let action = ''
+  let action = "";
   loading.subscribe((value) => {
-    if (!value && page > 1 && action != 'contacts') {
+    if (!value && page > 1 && action != "contacts") {
       delay(500); // Just to be sure and fire once with debounce
       throttleFunc();
-      action = 'contacts'
+      action = "contacts";
     }
-    
   });
 
   onMount(async () => {
