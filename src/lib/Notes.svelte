@@ -1,27 +1,28 @@
 <script lang="ts">
-  import {
-    publish,
-    publishReply,
-    relays,
-  } from "./state/pool";
-  import { uniqBy, prop, values, sortBy } from "ramda";
-  import { onMount } from "svelte";
+  import { publish, publishReply, relays } from "./state/pool";
+  import { uniqBy, prop, sortBy } from "ramda";
+  import { onMount, afterUpdate } from "svelte";
   import { writable } from "svelte/store";
   import {
-    processEvent,
     listen,
+    getContacts,
     lastTimeStamp,
     firstTimeStamp,
+    loading,
   } from "./state/app";
+  import { debounce, throttle  } from "throttle-debounce";
   import Note from "./Note.svelte";
-  import type { Filter, Event, Note as NoteEvent } from "./state/types";
+  import type { Note as NoteEvent } from "./state/types";
   import { account } from "./stores/account";
   import { notes } from "./stores/notes";
 
+  import Spinner from "./Spinner.svelte";
   import Button from "./partials/Button.svelte";
   import Text from "./partials/Text.svelte";
   import Anchor from "./partials/Anchor.svelte";
-  
+  import { delay } from "./util/time";
+  import { users } from "./stores/users";
+
   const noteData = writable([]);
   /**
    *
@@ -61,40 +62,35 @@
     replyTo = null;
   }
 
+  const throttleFunc = throttle(5000, () => {
+        console.log("Bouncy");
+        loading.set(true);
+        getContacts();
+  });
+
+
+  let page = 0;
+  let action = ''
+  loading.subscribe((value) => {
+    if (!value && page > 1 && action != 'contacts') {
+      delay(500); // Just to be sure and fire once with debounce
+      throttleFunc();
+      action = 'contacts'
+    }
+    
+  });
+
   onMount(async () => {
     if ($relays.length) {
-      let data: Array<Event> = [];
-
-      listen();
-      /*
-      let noteData = await processEvent(data)
-      console.log('First: ', firstTimeStamp, ', Last: ', lastTimeStamp)
-      updateNotes(noteData)
-
-      if (noteData.length < 20) {
-        console.log('Need more data')
-
-        let filter: Filter = {
-          kinds: [1, 5, 7],
-          until: lastTimeStamp,
-          limit: 30,
-        }
-        data = await getData(filter)
-        let pData = await processEvent(data)
-        console.log(
-          'First: ',
-          firstTimeStamp,
-          ', Last: ',
-          lastTimeStamp,
-          'Data: ',
-          data,
-          ', pData: ',
-          pData,
-        )
-        updateNotes(pData)
-      }
-      */
+      const subscription = listen(250);
+      //users.set([])
+      //delay(500)
+      //getContacts(10);
     }
+  });
+
+  afterUpdate(async () => {
+    page++;
   });
 </script>
 
@@ -107,10 +103,14 @@
         dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1 ring-black/5
         rounded-xl divide-y dark:divide-slate-200/5 ml-4 mr-4 h-full max-h-full"
       >
-        {#each $notes as note, index}
-          <Note {note} {index} cbReply={onReply} />
-        {/each}
-
+        {#if Object.keys($notes).length}
+          {#each Object.values($notes) as note, index}
+            <Note {note} {index} cbReply={onReply} />
+          {/each}
+        {/if}
+        {#if $loading}
+          <Spinner />
+        {/if}
         <footer id="footer" class="h-5" />
       </div>
     {:else}

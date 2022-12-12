@@ -28,7 +28,7 @@ export type User = {
     about: string;
     picture: string;
     content: string;
-    refreshed: string;
+    refreshed: number;
 }
 
 export type Filter = {

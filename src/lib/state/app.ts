@@ -1,9 +1,9 @@
 import { get, writable } from 'svelte/store'
-import { users } from '../stores/user'
-import { notes, updateNotes } from '../stores/notes'
+import { users, addUser, userPubKeys } from '../stores/users'
+import { notes, updateNotes, notePubKeys } from '../stores/notes'
 
 import { now } from "../util/time"
-import { uniqBy, prop, pluck, sortBy, last } from 'ramda'
+import { uniqBy,uniq,  prop, pluck, sortBy, last,difference } from 'ramda'
 import type { Event, User, Filter, Note, Reply } from './types'
 import { eventdata } from '../stores/eventdata'
 import { pool } from './pool'
@@ -12,7 +12,7 @@ export const blacklist = writable([
     '887645fef0ce0c3c1218d2f5d8e6132a19304cdc57cd20281d082f38cfea0072'
 ])
 
-async function sendRequest(filter:Filter){
+async function sendRequest(filter: Filter) {
     return []
 }
 /**
@@ -119,15 +119,56 @@ export let allData: Array<Event> = []
 export let lastTimeStamp: number = now()
 export let firstTimeStamp: number = now()
 
-
+export const loading = writable(false)
 export async function listen(limit: number = 250): Promise<any> {
     const subscriptionId = Math.random().toString().slice(2);
-
+    loading.set(true)
     // Get some events from 7 days with a max limit of 4000 records
     let filter: Filter = {
         kinds: [0, 1, 5, 7],
         until: now(),
         limit: limit,
+    }
+    
+    const numRelays = 0
+    const subscription = pool.sub(
+        //@ts-ignore
+        {
+            //@ts-ignore
+            cb: onEvent,
+            filter: filter,
+        },
+        subscriptionId,
+        //@ts-ignore
+        (url: string) => { 
+            //numRelays
+            console.log('EOSE from relay: ', url)
+            loading.set(false)
+        }
+    )
+
+    return subscription
+}
+
+export async function getContacts(): Promise<any> {
+    const subscriptionId = Math.random().toString().slice(2);
+    let filter: Filter = {
+        kinds: [0],
+    }
+    let $users = get(users)
+    let $notes = get(notes)
+    //@ts-ignore
+    const userPubKeys = uniq(pluck('pubkey', Object.values($users)))
+    const notePubKeys = uniq(pluck('pubkey', Object.values($notes)))
+
+    let pkeys = difference(notePubKeys,userPubKeys)
+    if (!pkeys || pkeys.length == 0) {
+        loading.set(false)
+        return 0
+    }
+
+    if (pkeys && pkeys.length) {
+        filter.authors = pkeys
     }
 
     const subscription = pool.sub(
@@ -139,25 +180,30 @@ export async function listen(limit: number = 250): Promise<any> {
         },
         subscriptionId,
         //@ts-ignore
-        () => {}
+        () => { 
+            subscription.unsub()
+            console.log(`Closed subscription for getContacts() with subscription id ${subscriptionId}`)
+            loading.set(false)
+        }
     )
 
     console.log(subscription)
+    return subscription
 }
 
 
 function handleMetadata(evt, relay) {
-
+    try {
+        const content = JSON.parse(evt.content);
+        setMetadata(evt, relay, content);
+    } catch (err) {
+        console.log(evt);
+        console.error(err);
+    }
 }
 
-function handleTextNote(evt:Event , relay:string) {
-    let $notes = get(notes)
-    let data = {}
-    if (!$notes[evt.id]) {
-        data[evt.id] = evt
-        console.log(data)
-        updateNotes(data)   
-    }
+function handleTextNote(evt: Event, relay: string) {
+    updateNotes(evt)
 }
 
 function handleReaction(evt, relay) { }
@@ -179,6 +225,18 @@ export function onEvent(evt: Event, relay: string) {
     }
 }
 
+function setMetadata(evt: Event, relay: string , content:any) {
+    const $users = get(users)
+    let user:User = {
+        pubkey:evt.pubkey,
+        name: content.name,
+        about: content.about,
+        picture: content.picture,
+        content: JSON.stringify(content),
+        refreshed: now()
+    }
+    addUser(user)
+}
 
 /**
  * Put note,user,replies and likes/dislikes together
