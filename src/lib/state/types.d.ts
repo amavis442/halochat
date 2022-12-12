@@ -1,11 +1,11 @@
 export type Event = {
-    id: string;
+    id?: string;
     pubkey: string;
     created_at: number;
     kind: number;
     tags: string[][];
     content: string;
-    sig: string;
+    sig?: string;
 }
 
 export type Reply = Event & {

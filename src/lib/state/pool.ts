@@ -3,6 +3,7 @@ import { getLocalJson, setLocalJson } from '../util/storage'
 import {
   relayPool,
   getPublicKey,
+  signEvent,
   type Filter,
   type Subscription,
   type SubscriptionCallback,
@@ -79,14 +80,15 @@ export async function getData(filter: {}): Promise<Array<Event>> {
  * @param tags 
  * @returns 
  */
-export const createEvent = (kind: number, content = '', tags = []): any => {
+export const createEvent = async (kind: number, content:string = '', tags:string[][] = []): Promise<Event> => {
   //@ts-ignore
   const $account = get(account)
   const publicKey = $account.pubkey
-  pool.setPrivateKey($account.privkey)
   const createdAt = now()
 
-  return { kind: kind, content: content, tags: tags, pubkey: publicKey, created_at: createdAt }
+  let note:Event = { kind: kind, content: content, tags: tags, pubkey: publicKey, created_at: createdAt }
+  let sig:any = await signEvent(note, $account.privkey)
+  return {...note, sig}
 }
 
 /**
@@ -95,20 +97,24 @@ export const createEvent = (kind: number, content = '', tags = []): any => {
  * @see https://github.com/nostr-protocol/nips/blob/master/01.md#basic-event-kinds
  * @returns 
  */
-export function publishAccount() {
+export async function publishAccount() {
   const $account = get(account)
-  pool.setPrivateKey($account.privkey)
-  _privateKey = $account.privkey
   const metadata = { name: $account.name, about: $account.about, picture: $account.picture }
-  let event = {
-    content: JSON.stringify(metadata),
-    created_at: Math.floor(Date.now() / 1000),
-    kind: 0,
-    tags: [],
-    pubkey: $account.pubkey,
-  }
-  console.log(event)
-  return pool.publish(event, (status: number) => { console.log('Message published. Status: ', status) })
+  
+  let event = await createEvent(0, JSON.stringify(metadata))
+
+  await pool.publish(event, (status: number, url:string) => { 
+    switch(status){
+      case 0:
+        console.info(`Account request send to ${url}`) 
+      break
+      case 1:
+        console.info(`Account published by ${url}`)
+        break
+      default:
+        console.error(`Unknown status ${status} while publishing account`)
+    }
+  })
 }
 
 export function publishReply(content: string, replyToEvent: Event) {
