@@ -2,16 +2,12 @@ import { writable, get } from 'svelte/store'
 import { getLocalJson, setLocalJson } from '../util/storage'
 import {
   relayPool,
-  getPublicKey,
   signEvent,
-  type Filter,
-  type Subscription,
-  type SubscriptionCallback,
   type Relay
 } from "nostr-tools";
 import { now } from "../util/time";
 import type { Event } from './types'
-import { uniqBy, prop, pluck, head, values } from 'ramda';
+import { head, values } from 'ramda';
 import { account } from '../stores/account';
 
 export const pool = relayPool();
@@ -72,7 +68,7 @@ export async function publishAccount() {
   })
 }
 
-export function publishReply(content: string, replyToEvent: Event) {
+export async function publishReply(content: string, replyToEvent: Event) {
   const $account = get(account)
   _privateKey = $account.privkey
   console.log($account.privkey)
@@ -92,8 +88,7 @@ export function publishReply(content: string, replyToEvent: Event) {
   if (publicKey != replyToEvent.pubkey) {
     tags.push(['p', publicKey])
   }
-  const sendEvent = createEvent(1, content, tags)
-  console.log(sendEvent)
+  const sendEvent = await createEvent(1, content, tags)
   pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
 }
 
@@ -105,8 +100,7 @@ export function publishReply(content: string, replyToEvent: Event) {
  * @returns 
  */
 export async function publish(kind: number, content = '', tags = []): Promise<any> {
-  const sendEvent = createEvent(kind, content, tags)
-  console.log(sendEvent)
+  const sendEvent = await createEvent(kind, content, tags)
   return pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
 }
 
