@@ -59,7 +59,7 @@
 
   onMount(async () => {
     if ($relays.length) {
-      /** Reset data
+      /** Reset data 
       users.set([])
       setLocalJson('halonostr/users', [])
       notes.set([])
@@ -89,7 +89,7 @@
         rounded-xl divide-y dark:divide-slate-200/5 ml-4 mr-4 h-full max-h-full"
       >
         {#if $notes.length}
-          {#each $notes as note}
+          {#each $notes as note (note.id)}
             <Note {note} cbReply={onReply} />
           {/each}
         {/if}
