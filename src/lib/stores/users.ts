@@ -1,20 +1,26 @@
-import { get, writable } from 'svelte/store'
+import { writable } from 'svelte/store'
 import type { User } from '../state/types'
-import { setLocalJson,getLocalJson } from '../util/storage'
+import { setLocalJson, getLocalJson } from '../util/storage'
+import { now } from '../util/time';
+
+export const users = writable(getLocalJson('halonostr/users') || []);
 
 export function addUser(user: User) {
   users.update(data => {
-    if (data.find((item) => user.pubkey == item.pubkey)) {
+    let foundUser = data.find((item) => user.pubkey == item.pubkey)
+    if (foundUser) {
+      if (foundUser.refreshed < now() - 60 * 60 * 10) {
+        foundUser = {
+          ...foundUser,
+          user
+        }
+        console.log('Updated user ', foundUser)
+      }
       return data
     }
-    let item = {}
-    item[user.pubkey] = user
-    if (data && data.length) {
-        return data.concat(item)
-    } else {
-        data[user.pubkey] = user
-        return data
-    }
+
+    data.push(user)
+    return data
   })
 }
 
@@ -26,7 +32,7 @@ export function removeUser(pubkey: string) {
   });
 }
 
-export const users = writable(getLocalJson('halonostr/users') || []);
+
 
 users.subscribe((value) => {
   setLocalJson('halonostr/users', value)

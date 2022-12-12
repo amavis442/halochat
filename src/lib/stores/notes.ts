@@ -1,8 +1,9 @@
 import { writable, get } from 'svelte/store'
 import { queue } from '../state/app'
 import type { Note } from '../state/types'
+import { setLocalJson,getLocalJson } from '../util/storage'
 
-export const notes = writable([])
+export const notes = writable(getLocalJson('halonostr/notes') || [])
 
 export const noteReplyPubKeys = []
 
@@ -21,14 +22,11 @@ export function updateNotes(note: Note) {
                 q.push(tags[1])
             }
         }
-
-        let item = {}
-        item[note.id] = note
-        if (data && data.length) {
-            return data.concat(item)
-        } else {
-            data[note.id] = note
-            return data
-        }
+        data.push(note)
+        return data
     })
 }
+
+notes.subscribe((value) => {
+    setLocalJson('halonostr/notes', value)
+  })

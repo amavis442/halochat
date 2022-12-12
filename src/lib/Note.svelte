@@ -3,26 +3,24 @@
   import type { Note, Reply } from "./state/types";
   import { toHtml } from "./util/html";
   import { uniqBy, prop, values, sortBy } from "ramda";
-  import type { Filter, Event, Note as NoteEvent } from "./state/types";
-  import {users} from './stores/users'
-  import {notes} from './stores/notes'
-  
+  import type { User, Filter, Event, Note as NoteEvent } from "./state/types";
+  import { users } from "./stores/users";
+  import { notes } from "./stores/notes";
+
   import { get } from "svelte/store";
 
   export let note: Note;
-  
-  export let index = 0;
   export let cbReply;
-  
-  $users = get(users)
 
-  let reply:Note
-  let replyUser
+  $users = get(users);
+
+  let reply: Note;
+  let replyUser;
   if (note.reply_id) {
-    const $notes = get(notes)
-    if ($notes[note.reply_id]) {
-      reply = $notes[note.reply_id]
-      replyUser = $users[reply.pubkey] ? $users[reply.pubkey] : []
+    const $notes = get(notes);
+    reply = $notes.find((n) => n.id == note.reply_id);
+    if (reply) {
+      replyUser = $users.find((u) => u.pubkey == reply.pubkey);
     }
   }
   let replyContent = "";
@@ -30,19 +28,19 @@
     replyContent = toHtml(reply.content);
   }
 
-  let noteUser = $users[note.pubkey] ? $users[note.pubkey] : []
+  let noteUser = $users.find((u) => u.pubkey == note.pubkey);
   let content = toHtml(note.content);
-  
-  function normalizeName(data: Note | Reply): string {
+
+  function normalizeName(data: User): string {
     return (
-      data.user ? (data.user.name ? data.user.name : data.pubkey) : data.pubkey
+      data ? (data.name ? data.name : note.pubkey) : note.pubkey
     ).slice(0, 10);
   }
-  
-  let upvote = false;
-    
+
+  let upvote: boolean = false;
 </script>
-<div class="Note flex flex-col items-start" data-num={index + 1}>
+
+<div class="Note flex flex-col items-start">
   {#if reply && reply.content}
     <div class="flex items-center gap-4 p-4">
       <img
@@ -76,7 +74,7 @@
       />
       <div class="flex flex-col text-left">
         <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">
-          {normalizeName(note)}
+          {normalizeName(noteUser)}
           <small class="text-gray">{getTime(note.created_at)}</small>
         </strong>
         <span class="text-slate-500 text-sm font-medium dark:text-slate-400">

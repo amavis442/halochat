@@ -8,6 +8,7 @@
   import type { Note as NoteEvent } from "./state/types";
   import { account } from "./stores/account";
   import { notes } from "./stores/notes";
+  import { users } from "./stores/users";
   import { delay } from "./util/time";
 
   import Note from "./Note.svelte";
@@ -15,7 +16,7 @@
   import Button from "./partials/Button.svelte";
   import Text from "./partials/Text.svelte";
   import Anchor from "./partials/Anchor.svelte";
-
+  //import { setLocalJson,getLocalJson } from './util/storage'
   let msg = "";
   let replyTo: NoteEvent | null = null;
 
@@ -58,7 +59,15 @@
 
   onMount(async () => {
     if ($relays.length) {
+      /** Reset data
+      users.set([])
+      setLocalJson('halonostr/users', [])
+      notes.set([])
+      setLocalJson('halonostr/notes', [])
+      */
+
       const subscription = listen(250);
+      
       //users.set([])
       //delay(500)
       //getContacts(10);
@@ -79,9 +88,9 @@
         dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1 ring-black/5
         rounded-xl divide-y dark:divide-slate-200/5 ml-4 mr-4 h-full max-h-full"
       >
-        {#if Object.keys($notes).length}
-          {#each Object.values($notes) as note, index}
-            <Note {note} {index} cbReply={onReply} />
+        {#if $notes.length}
+          {#each $notes as note}
+            <Note {note} cbReply={onReply} />
           {/each}
         {/if}
         {#if $loading}
