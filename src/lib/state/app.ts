@@ -150,6 +150,7 @@ export async function getContacts(): Promise<any> {
     let $notes = get(notes)
     //@ts-ignore
     const userPubKeys = uniq(pluck('pubkey', Object.values($users)))
+    //@ts-ignore
     const notePubKeys = uniq(pluck('pubkey', Object.values($notes)))
 
     let pkeys = difference(notePubKeys, userPubKeys)

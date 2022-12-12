@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getTime } from "./util/time";
-  import type { Note, Reply } from "./state/types";
+  import type { Note } from "./state/types";
   import { toHtml } from "./util/html";
   import { uniqBy, prop, values, sortBy } from "ramda";
   import type { User, Filter, Event, Note as NoteEvent } from "./state/types";
@@ -53,7 +53,7 @@
       />
       <div class="flex flex-col text-left">
         <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">
-          {normalizeName(reply)}
+          {normalizeName(replyUser)}
           <small class="text-gray">{getTime(reply.created_at)}</small>
         </strong>
         <span class="text-slate-500 text-sm font-medium dark:text-slate-400">

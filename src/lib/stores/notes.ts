@@ -8,6 +8,7 @@ export const notes = writable(getLocalJson('halonostr/notes') || [])
 
 export const noteReplyPubKeys = []
 export let since = 0
+const hasEventTag = tag => tag[0] === 'e'
 
 export function updateNotes(note: Note) {
     const q = get(queue)
@@ -26,12 +27,16 @@ export function updateNotes(note: Note) {
             throw error
         }
 
-        let tags = note.tags.find(item => item[0] == 'e' && item[3] == 'reply')
-        if (tags) {
-            note.reply_id = tags[1]
-            if (!data[tags[1]]) {
-                // else we need to fetch it somehow
-                q.push(tags[1])
+        
+        if (note.tags.some(hasEventTag) ) {
+            let tags = note.tags.find(item => item[0] == 'e' && item[3] == 'reply')
+            if (tags) {
+                note.reply_id = tags[1]
+                //note.replies.push(tags[1])
+                if (!data[tags[1]]) {
+                    // else we need to fetch it somehow
+                    q.push(tags[1])
+                }
             }
         }
         data.unshift(note)
@@ -39,7 +44,8 @@ export function updateNotes(note: Note) {
     })
     
     $notes = sortBy(prop('created_at'), $notes)
-    let headNote = head($notes)
+    //@ts-ignore
+    let headNote:Note = head($notes)
     if (headNote) {
         since = headNote.created_at
     }    

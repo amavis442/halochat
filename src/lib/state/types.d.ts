@@ -13,8 +13,9 @@ export type Reaction = Event & {
 }
 
 export type Note = Event & {
-    reply_id: string | null;
-    reactions: Reaction | null;
+    reply_id?: string;
+    replies?: string[];
+    reactions?: Reaction;
 }
 
 export type User = {

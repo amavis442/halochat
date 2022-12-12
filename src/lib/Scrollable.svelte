@@ -7,7 +7,6 @@
   export let loading: boolean = false
   export let cbGetData: Function
   export let rootElement: string
-  export let currentPage: number = 1
 
   const throttleFunc = debounce(
     1000,
