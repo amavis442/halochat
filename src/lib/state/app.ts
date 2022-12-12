@@ -1,25 +1,20 @@
 import { get, writable } from 'svelte/store'
-import { getData } from './pool'
 import { users } from '../stores/user'
+import { notes, updateNotes } from '../stores/notes'
+
 import { now } from "../util/time"
 import { uniqBy, prop, pluck, sortBy, last } from 'ramda'
 import type { Event, User, Filter, Note, Reply } from './types'
 import { eventdata } from '../stores/eventdata'
+import { pool } from './pool'
 
 export const blacklist = writable([
     '887645fef0ce0c3c1218d2f5d8e6132a19304cdc57cd20281d082f38cfea0072'
 ])
 
-export async function initData(limit: number = 10): Promise<any> {
-    // Get some events from 7 days with a max limit of 4000 records
-    let filter: Filter = {
-        kinds: [1, 5, 7],
-        until: now(), // Events from 2 days
-        limit: limit, // Start of with 20 events and get more when needed (scrolling).
-    }
-    return getData(filter)
+async function sendRequest(filter:Filter){
+    return []
 }
-
 /**
  * Retrieves all pubkey from the event(s) and tries to get the user meta data for this event
  * @param data
@@ -41,7 +36,7 @@ export async function updateUserData(data: Array<any>) {
             kinds: [0],
             authors: pubKeys,
         };
-        const userData = await getData(filter)
+        const userData = await sendRequest(filter)
 
         /**
          * Add metadata to user and tries to update the data in localstore
@@ -102,7 +97,7 @@ export async function replies(data: Array<Event>) {
             kinds: [1],
             '#e': eventId,
         }
-        replyData = await getData(filter)
+        replyData = await sendRequest(filter)
         replyData = uniqBy(prop('id'), replyData)
 
         replyData.forEach((element) => {
@@ -123,6 +118,68 @@ export let deleteData: Array<Event> = []
 export let allData: Array<Event> = []
 export let lastTimeStamp: number = now()
 export let firstTimeStamp: number = now()
+
+
+export async function listen(limit: number = 250): Promise<any> {
+    const subscriptionId = Math.random().toString().slice(2);
+
+    // Get some events from 7 days with a max limit of 4000 records
+    let filter: Filter = {
+        kinds: [0, 1, 5, 7],
+        until: now(),
+        limit: limit,
+    }
+
+    const subscription = pool.sub(
+        //@ts-ignore
+        {
+            //@ts-ignore
+            cb: onEvent,
+            filter: filter,
+        },
+        subscriptionId,
+        //@ts-ignore
+        () => {}
+    )
+
+    console.log(subscription)
+}
+
+
+function handleMetadata(evt, relay) {
+
+}
+
+function handleTextNote(evt:Event , relay:string) {
+    let $notes = get(notes)
+    let data = {}
+    if (!$notes[evt.id]) {
+        data[evt.id] = evt
+        console.log(data)
+        updateNotes(data)   
+    }
+}
+
+function handleReaction(evt, relay) { }
+
+
+export function onEvent(evt: Event, relay: string) {
+    switch (evt.kind) {
+        case 0:
+            handleMetadata(evt, relay)
+            break
+        case 1:
+            handleTextNote(evt, relay)
+            break
+        case 7:
+            handleReaction(evt, relay)
+            break
+        default:
+            console.info(`Got an unhandled kind ${evt.kind}`)
+    }
+}
+
+
 /**
  * Put note,user,replies and likes/dislikes together
  * 

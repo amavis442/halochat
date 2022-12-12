@@ -28,50 +28,6 @@ export const login = (privateKey: string) => {
   _privateKey = privateKey
 }
 
-const subscriptionId = Math.random().toString().slice(2);
-/**
- * Getter function.
- * 
- * Request a set of data and then close the subscription
- * These are abstracted in nostr-tools. This function is only for the REQ part to get the data
- * @see https://github.com/amavis442/nips/blob/master/01.md#from-client-to-relay-sending-events-and-creating-subscriptions
- * @param filter  
- * @returns 
- */
-export async function getData(filter: {}): Promise<Array<Event>> {
-  const data: any = [];
-
-  //@ts-ignore
-  const eoseRelays: string[] = []; //This one is optional according to the protocol.
-  return await new Promise((resolve) => {
-      const sub = pool.sub(
-      {
-        cb: (e) => data.push(e),
-        filter: filter,
-      },
-      subscriptionId,
-      //@ts-ignore
-      (url: string) => {
-
-        eoseRelays.push(url);
-        //console.log('Avail relays: ', get(relays).length)
-        if (eoseRelays.length == get(relays).length) {
-          let result: Array<Event> = uniqBy(prop('id'), data)
-          //sub.unsub();
-          resolve(result);
-        }
-
-        setTimeout(() => {
-          //sub.unsub();
-          let result: Array<Event> = uniqBy(prop('id'), data)
-          console.log('Timeout event for getting data from relays')
-          resolve(result);
-        }, 6000)
-      }
-    );
-  });
-}
-
 /**
  * id and sig are added in the pool.publish() function.
  * @see https://github.com/amavis442/nips/blob/master/01.md#events-and-signatures
@@ -81,7 +37,6 @@ export async function getData(filter: {}): Promise<Array<Event>> {
  * @returns 
  */
 export const createEvent = async (kind: number, content:string = '', tags:string[][] = []): Promise<Event> => {
-  //@ts-ignore
   const $account = get(account)
   const publicKey = $account.pubkey
   const createdAt = now()
@@ -150,36 +105,9 @@ export function publishReply(content: string, replyToEvent: Event) {
  * @returns 
  */
 export async function publish(kind: number, content = '', tags = []): Promise<any> {
-  const $account = get(account)
-  pool.setPrivateKey($account.privkey)
   const sendEvent = createEvent(kind, content, tags)
   console.log(sendEvent)
   return pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
-}
-
-
-/**
- * Listen for socket message events. These can be of type EVENT or NOTICE 
- * @see https://github.com/amavis442/nips/blob/master/01.md#from-relay-to-client-sending-events-and-notices
- * @param onNote 
- * @returns 
- */
-export function eventListener(onNote: SubscriptionCallback): Subscription {
-  const subscriptionId = 'ListenTo' + Math.random().toString().slice(2);
-  console.log("Start listening on channel: ", subscriptionId);
-  //@ts-ignore
-  const filter: Filter = { kinds: [0, 1, 5, 7], since: now() };
-  //@ts-ignore
-  return pool.sub(
-    //@ts-ignore
-    {
-      cb: onNote,
-      filter: filter,
-    },
-    subscriptionId,
-    //@ts-ignore
-    (url: any) => { console.log('Eose while listening', url) }
-  );
 }
 
 export const relays = writable(getLocalJson("halonostr/relays") || [])
