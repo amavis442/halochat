@@ -2,7 +2,6 @@ import { writable, get } from 'svelte/store'
 import { queue } from '../state/app'
 import type { Note } from '../state/types'
 import { setLocalJson, getLocalJson } from '../util/storage'
-import { prop, sort, ascend } from "ramda";
 
 export const notes = writable(getLocalJson('halonostr/notes') || [])
 
@@ -27,7 +26,6 @@ export function updateNotes(note: Note) {
             throw error
         }
 
-
         if (note.tags.some(hasEventTag)) {
             let tags = note.tags.find((item: Array<string>) => item[0] == 'e' && item[3] == 'reply')
             if (tags) {
@@ -39,15 +37,9 @@ export function updateNotes(note: Note) {
                 }
             }
         }
-        data.push(note)
-        let byCreatedAt = ascend<Note>(prop('created_at'))
-        data = sort(byCreatedAt, data)
+        data.unshift(note)
         return data
     })
-    let headNote: Note = $notes[0]
-    if (headNote) {
-        since = headNote.created_at
-    }
 }
 
 notes.subscribe((value) => {

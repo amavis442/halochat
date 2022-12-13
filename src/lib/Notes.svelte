@@ -8,7 +8,7 @@
   import { account } from "./stores/account";
   import { notes } from "./stores/notes";
   import { delay } from "./util/time";
-  import { head } from "ramda";
+  import { prop, sort, descend } from "ramda";
   import { now } from "./util/time";
   import Note from "./Note.svelte";
   import Spinner from "./Spinner.svelte";
@@ -57,6 +57,8 @@
   });
 
   let subscription: Subscription;
+  let notesToShow:Array<Note> = []
+
   onMount(async () => {
     if ($relays.length) {
       /** Reset data 
@@ -65,13 +67,17 @@
       notes.set([])
       setLocalJson('halonostr/notes', [])
       */
+      
+      let byCreatedAt = descend<Note>(prop('created_at'))
+      notesToShow = sort(byCreatedAt, $notes)
+
 
       let since: number = now();
       if ($notes.length) {
-        //console.log('First ',$notes[0].created_at, ' Last ', $notes[$notes.length-1].created_at)
         const lastStoredNote: Note = $notes[0];
-        console.log('First ',lastStoredNote.created_at)
-        since = lastStoredNote.created_at - 1;
+        const firstStoredNote = $notes[$notes.length-1].created_at;
+        console.log('Last ',lastStoredNote.created_at, ' First ', firstStoredNote)
+        //since = lastStoredNote.created_at - 1;
       }
       subscription = listen(since)
 
@@ -101,9 +107,12 @@
         dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1 ring-black/5
         rounded-xl divide-y dark:divide-slate-200/5 ml-4 mr-4 h-full max-h-full"
       >
-        {#if $notes.length}
-          {#each $notes as note (note.id)}
+        {#if notesToShow.length}
+          {#each notesToShow as note (note.id)}
             <Note {note} cbReply={onReply} />
+            {#if note.reply_id}
+              <span>Is reply {note.reply_id}</span>
+            {/if}
           {/each}
         {/if}
         {#if $loading}
