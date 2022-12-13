@@ -2,7 +2,7 @@
     export let id = Math.random().toString().slice(2)
     export let placeholder:string = 'Placeholder'
     export let describedby:string = ''
-    export let value
+    export let value:string
 </script>
 <input
         type="text"

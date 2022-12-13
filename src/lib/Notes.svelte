@@ -1,14 +1,12 @@
 <script lang="ts">
   import { publish, publishReply, relays } from "./state/pool";
-  import { uniqBy, prop, sortBy } from "ramda";
-  import { onMount, afterUpdate } from "svelte";
-  import { writable } from "svelte/store";
+  import type { Subscription } from "nostr-tools";
+  import { onMount, afterUpdate, onDestroy } from "svelte";
   import { listen, getContacts, loading } from "./state/app";
   import { throttle } from "throttle-debounce";
   import type { Note as NoteEvent } from "./state/types";
   import { account } from "./stores/account";
   import { notes } from "./stores/notes";
-  import { users } from "./stores/users";
   import { delay } from "./util/time";
 
   import Note from "./Note.svelte";
@@ -29,10 +27,10 @@
       publish(1, msg);
     }
     replyTo = null;
-    msg = ''
+    msg = "";
   }
 
-  function onReply(note) {
+  function onReply(note: NoteEvent) {
     replyTo = note;
     console.log(note);
   }
@@ -57,6 +55,7 @@
     }
   });
 
+  let subscription: Subscription;
   onMount(async () => {
     if ($relays.length) {
       /** Reset data 
@@ -66,12 +65,16 @@
       setLocalJson('halonostr/notes', [])
       */
 
-      const subscription = listen(250);
-      
+      subscription = listen(250);
+
       //users.set([])
       //delay(500)
       //getContacts(10);
     }
+  });
+
+  onDestroy(async () => {
+    subscription.unsub();
   });
 
   afterUpdate(async () => {

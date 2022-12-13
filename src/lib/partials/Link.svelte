@@ -1,5 +1,5 @@
 <script lang="ts">
-  export let href
+  export let href:string
 </script>
 
 <a

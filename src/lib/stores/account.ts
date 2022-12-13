@@ -4,25 +4,23 @@ import type { Account } from '../state/types'
 
 export const account = writable(getLocalJson("halonostr/account") || []);
 
-account.subscribe($account => {
+account.subscribe(($account: Account) => {
   setLocalJson("halonostr/account", $account)
 })
 
-export function deleteAccount(pubkey: string) {
-  account.update((data) => {
-    return ''
-  })
+export function deleteAccount() {
+  account.set({})
 }
 
 export function updateAccount(pubkey: string, privkey: string, name?: string | null, about?: string | null, picture?: string | null) {
-  account.update((data) => {
-    const ac: Account = {
+  account.update((data: Account) => {
+    data = {
       pubkey: pubkey,
       privkey: privkey,
       name: name ? name : '',
       about: about ? about : '',
       picture: picture ? picture : ''
     }
-    return ac
+    return data
   })
 }

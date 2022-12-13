@@ -1,26 +1,23 @@
 <script lang="ts">
   import { getTime } from "./util/time";
-  import type { Note } from "./state/types";
+  import type { User, Note } from "./state/types";
   import { toHtml } from "./util/html";
-  import { uniqBy, prop, values, sortBy } from "ramda";
-  import type { User, Filter, Event, Note as NoteEvent } from "./state/types";
   import { users } from "./stores/users";
   import { notes } from "./stores/notes";
-
   import { get } from "svelte/store";
 
   export let note: Note;
-  export let cbReply;
+  export let cbReply: Function;
 
   $users = get(users);
 
   let reply: Note;
-  let replyUser;
+  let replyUser: User;
   if (note.reply_id) {
     const $notes = get(notes);
-    reply = $notes.find((n) => n.id == note.reply_id);
+    reply = $notes.find((n: Note) => n.id == note.reply_id);
     if (reply) {
-      replyUser = $users.find((u) => u.pubkey == reply.pubkey);
+      replyUser = $users.find((u: User) => u.pubkey == reply.pubkey);
     }
   }
   let replyContent = "";
@@ -28,13 +25,14 @@
     replyContent = toHtml(reply.content);
   }
 
-  let noteUser = $users.find((u) => u.pubkey == note.pubkey);
+  let noteUser: User = $users.find((u: User) => u.pubkey == note.pubkey);
   let content = toHtml(note.content);
 
   function normalizeName(data: User): string {
-    return (
-      data ? (data.name ? data.name : note.pubkey) : note.pubkey
-    ).slice(0, 10);
+    return (data ? (data.name ? data.name : note.pubkey) : note.pubkey).slice(
+      0,
+      10
+    );
   }
 
   let upvote: boolean = false;

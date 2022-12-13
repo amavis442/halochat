@@ -2,13 +2,13 @@ import { writable, get } from 'svelte/store'
 import { queue } from '../state/app'
 import type { Note } from '../state/types'
 import { setLocalJson, getLocalJson } from '../util/storage'
-import { uniqBy, prop, sortBy, head } from "ramda";
+import { prop, sortBy, head } from "ramda";
 
 export const notes = writable(getLocalJson('halonostr/notes') || [])
 
 export const noteReplyPubKeys = []
 export let since = 0
-const hasEventTag = tag => tag[0] === 'e'
+const hasEventTag = (tag:Array<string>) => tag[0] === 'e'
 
 export function updateNotes(note: Note) {
     const q = get(queue)
@@ -17,9 +17,9 @@ export function updateNotes(note: Note) {
         notes.set([])
     }
 
-    notes.update(data => {
+    notes.update((data: Array<Note>) => {
         try {
-            if (data.length && data.find((item) => item.id == note.id)) {
+            if (data.length && data.find((item: Note) => item.id == note.id)) {
                 return data
             }
         } catch (error) {
@@ -27,9 +27,9 @@ export function updateNotes(note: Note) {
             throw error
         }
 
-        
-        if (note.tags.some(hasEventTag) ) {
-            let tags = note.tags.find(item => item[0] == 'e' && item[3] == 'reply')
+
+        if (note.tags.some(hasEventTag)) {
+            let tags = note.tags.find((item: Array<string>) => item[0] == 'e' && item[3] == 'reply')
             if (tags) {
                 note.reply_id = tags[1]
                 //note.replies.push(tags[1])
@@ -42,13 +42,13 @@ export function updateNotes(note: Note) {
         data.unshift(note)
         return data
     })
-    
+
     $notes = sortBy(prop('created_at'), $notes)
     //@ts-ignore
-    let headNote:Note = head($notes)
+    let headNote: Note = head($notes)
     if (headNote) {
         since = headNote.created_at
-    }    
+    }
 }
 
 notes.subscribe((value) => {

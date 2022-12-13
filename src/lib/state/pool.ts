@@ -13,16 +13,10 @@ import { account } from '../stores/account';
 export const pool = relayPool();
 
 //@ts-ignore does exist just not in index.d.ts
-pool.onNotice((message: string, relay?:Relay) => {
-  const url:string = relay.url
+pool.onNotice((message: string, relay?: Relay) => {
+  const url: string = relay.url
   console.debug(`Got an notice event from relay ${url}: ${message}`);
 })
-
-let _privateKey = ''
-export const login = (privateKey: string) => {
-  pool.setPrivateKey(privateKey)
-  _privateKey = privateKey
-}
 
 /**
  * id and sig are added in the pool.publish() function.
@@ -32,14 +26,14 @@ export const login = (privateKey: string) => {
  * @param tags 
  * @returns 
  */
-export const createEvent = async (kind: number, content:string = '', tags:string[][] = []): Promise<Event> => {
+export const createEvent = async (kind: number, content: string = '', tags: string[][] = []): Promise<Event> => {
   const $account = get(account)
   const publicKey = $account.pubkey
   const createdAt = now()
 
-  let note:Event = { kind: kind, content: content, tags: tags, pubkey: publicKey, created_at: createdAt }
-  let sig:any = await signEvent(note, $account.privkey)
-  return {...note, sig}
+  let note: Event = { kind: kind, content: content, tags: tags, pubkey: publicKey, created_at: createdAt }
+  let sig: any = await signEvent(note, $account.privkey)
+  return { ...note, sig }
 }
 
 /**
@@ -51,14 +45,14 @@ export const createEvent = async (kind: number, content:string = '', tags:string
 export async function publishAccount() {
   const $account = get(account)
   const metadata = { name: $account.name, about: $account.about, picture: $account.picture }
-  
+
   let event = await createEvent(0, JSON.stringify(metadata))
 
-  await pool.publish(event, (status: number, url:string) => { 
-    switch(status){
+  await pool.publish(event, (status: number, url: string) => {
+    switch (status) {
       case 0:
-        console.info(`Account request send to ${url}`) 
-      break
+        console.info(`Account request send to ${url}`)
+        break
       case 1:
         console.info(`Account published by ${url}`)
         break
@@ -70,15 +64,13 @@ export async function publishAccount() {
 
 export async function publishReply(content: string, replyToEvent: Event) {
   const $account = get(account)
-  _privateKey = $account.privkey
   console.log($account.privkey)
-  pool.setPrivateKey($account.privkey)
   const publicKey = $account.pubkey
   const r = head(values(pool.getRelayList()))
 
   console.log(r)
 
-  const tags:string[][] = [
+  const tags: string[][] = [
     //@ts-ignore
     //['e', replyToEvent.id, r.relay.url, 'root'],
     //@ts-ignore

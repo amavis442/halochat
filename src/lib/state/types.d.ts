@@ -16,6 +16,7 @@ export type Note = Event & {
     reply_id?: string;
     replies?: string[];
     reactions?: Reaction;
+    relays?: Array<string>
 }
 
 export type User = {
@@ -25,6 +26,7 @@ export type User = {
     picture: string;
     content: string;
     refreshed: number;
+    relays?: Array<string>
 }
 
 export type Filter = {

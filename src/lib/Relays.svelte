@@ -4,7 +4,6 @@
   import { addToast } from './stores/toast'
   import Button from './partials/Button.svelte'
   import Text from './partials/Text.svelte'
-  import Anchor from './partials/Anchor.svelte'
   import Link from './partials/Link.svelte'
 
   let url = ''
@@ -56,7 +55,7 @@
    * @see https://www.thisdot.co/blog/handling-forms-in-svelte
    * @param e
    */
-  function onSubmit(e) {
+  function onSubmit() {
     addRelay()
     url = ''
   }

@@ -7,9 +7,9 @@ export const users = writable(getLocalJson('halonostr/users') || []);
 
 export function addUser(user: User) {
   users.update(data => {
-    let foundUser = data.find((item) => user.pubkey == item.pubkey)
+    let foundUser = data.find((item: User) => user.pubkey == item.pubkey)
     if (foundUser) {
-      if (foundUser.refreshed < now() - 60 * 60 * 10) {
+      if (foundUser.refreshed < now() - 60 * 10) {
         foundUser = {
           ...foundUser,
           user
