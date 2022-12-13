@@ -15,14 +15,16 @@ export const queue: Writable<Array<string>> = writable([])
 
 export const loading: Writable<boolean> = writable(false)
 
-export function listen(limit: number = 250): Subscription {
+export function listen(since? :number): Subscription {
     const subscriptionId = 'listenToMoi';
     loading.set(true)
-    // Get some events from 7 days with a max limit of 4000 records
+
+    if (!since) {
+        since = now()
+    }
+
     let filter: Filter = {
-        //kinds: [0, 1, 5, 7],
-        //until: now(),
-        limit: limit,
+        since: since,
     }
 
     const subscription: Subscription = pool.sub(

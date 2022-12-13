@@ -8,7 +8,8 @@
   import { account } from "./stores/account";
   import { notes } from "./stores/notes";
   import { delay } from "./util/time";
-
+  import { head } from "ramda";
+  import { now } from "./util/time";
   import Note from "./Note.svelte";
   import Spinner from "./Spinner.svelte";
   import Button from "./partials/Button.svelte";
@@ -65,7 +66,14 @@
       setLocalJson('halonostr/notes', [])
       */
 
-      subscription = listen(250);
+      let since: number = now();
+      if ($notes.length) {
+        //console.log('First ',$notes[0].created_at, ' Last ', $notes[$notes.length-1].created_at)
+        const lastStoredNote: Note = $notes[0];
+        console.log('First ',lastStoredNote.created_at)
+        since = lastStoredNote.created_at - 1;
+      }
+      subscription = listen(since)
 
       //users.set([])
       //delay(500)
@@ -73,8 +81,10 @@
     }
   });
 
-  onDestroy(async () => {
-    subscription.unsub();
+  onDestroy(() => {
+    if (subscription) {
+      subscription.unsub();
+    }
   });
 
   afterUpdate(async () => {

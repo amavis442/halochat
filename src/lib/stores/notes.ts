@@ -2,7 +2,7 @@ import { writable, get } from 'svelte/store'
 import { queue } from '../state/app'
 import type { Note } from '../state/types'
 import { setLocalJson, getLocalJson } from '../util/storage'
-import { prop, sortBy, head } from "ramda";
+import { prop, sort, ascend } from "ramda";
 
 export const notes = writable(getLocalJson('halonostr/notes') || [])
 
@@ -39,13 +39,12 @@ export function updateNotes(note: Note) {
                 }
             }
         }
-        data.unshift(note)
+        data.push(note)
+        let byCreatedAt = ascend<Note>(prop('created_at'))
+        data = sort(byCreatedAt, data)
         return data
     })
-
-    $notes = sortBy(prop('created_at'), $notes)
-    //@ts-ignore
-    let headNote: Note = head($notes)
+    let headNote: Note = $notes[0]
     if (headNote) {
         since = headNote.created_at
     }
