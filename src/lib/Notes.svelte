@@ -1,9 +1,10 @@
 <script lang="ts">
   import { publish, publishReply, relays } from "./state/pool";
   import { onMount, afterUpdate, onDestroy } from "svelte";
+  import { get } from "svelte/store";
   import { getContacts, loading, Listener } from "./state/app";
   import { throttle } from "throttle-debounce";
-  import type { Note as NoteEvent } from "./state/types";
+  import type { Note as NoteEvent, Account } from "./state/types";
   import { account } from "./stores/account";
   import { notes } from "./stores/notes";
   import { delay } from "./util/time";
@@ -16,7 +17,6 @@
   import Text from "./partials/Text.svelte";
   import Anchor from "./partials/Anchor.svelte";
 
-  //import { setLocalJson,getLocalJson } from './util/storage'
   let msg = "";
   let replyTo: NoteEvent | null = null;
 
@@ -57,13 +57,12 @@
     }
   });
 
-  let tagsWithReply = []
-
+  let userHasAccount:boolean = false
   let notesToShow: Array<Note> = [];
   let listener: Listener;
   onMount(async () => {
     if ($relays.length) {
-      listener = new Listener({ since: now() - 60 * 60 });
+      listener = new Listener({ since: now() - 4 * 60 * 60 });
       listener.start();
 
       if ($notes.length) {
@@ -77,6 +76,11 @@
         );
         let byCreatedAt = descend<Note>(prop("created_at"));
         notesToShow = sort(byCreatedAt, $notes); //.slice(0,50);
+      }
+      let $account:Account = get(account)
+      if ($account.pubkey) {
+        userHasAccount = true
+        console.log('Account:', $account)
       }
     }
   });
@@ -109,11 +113,11 @@
         {#if notesToShow.length}
           {#each notesToShow as note (note.id)}
           <div class="Note flex flex-col items-start">
-            <Note {note} />
+            <Note {note} {userHasAccount} />
             {#if note?.replies}
               {#each note.replies as reply (reply.id)}
                 <div class="reply border-l-4 border-indigo-500/100" >
-                  <Note note={reply} />
+                  <Note note={reply} {userHasAccount} />
                 </div>
               {/each}
             {/if}

@@ -35,16 +35,18 @@
    * @param e
    */
   function onSubmit() {
-    name = name.trim();
-    if (!name.match(/^\w[\w\-]+\w$/i)) {
-      addToast({
-        message:
-          "Account name not correct! George-Washington-1776 is a valid <username>, but George Washington is not",
-        type: "error",
-        dismissible: true,
-        timeout: 3000,
-      });
-      return;
+    if (name) {
+      name = name.trim();
+      if (name && !name.match(/^\w[\w\-]+\w$/i)) {
+        addToast({
+          message:
+            "Account name not correct! George-Washington-1776 is a valid <username>, but George Washington is not",
+          type: "error",
+          dismissible: true,
+          timeout: 3000,
+        });
+        return;
+      }
     }
     updateAccount(pubkey, privkey, name, about, picture);
     publishAccount();
@@ -85,8 +87,8 @@
       />
       <small id="pubkeyHelp" class="block mt-1 text-xs text-gray-600">
         This is your username for nostr. You can add more info like name, about
-        and a picture which most clients will pickup and show that instead of your
-        pubkey.
+        and a picture which most clients will pickup and show that instead of
+        your pubkey.
       </small>
     </div>
     <div class="form-group mb-6">

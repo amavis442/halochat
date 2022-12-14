@@ -8,6 +8,8 @@
 
   export let note: Note;
   export let isReply: boolean = false;
+  export let userHasAccount:boolean = false;
+
   let upvote: boolean = false;
   let user: User;
   let hasReplies: boolean = false;
@@ -48,6 +50,7 @@
       <span class="text-slate-500 text-sm font-medium dark:text-slate-400">
         {@html toHtml(note.content)}
       </span>
+      {#if userHasAccount}
       <span>
         <button type="button" on:click={handleReplyClick}>
           <i class="fa-regular fa-comment-dots" />
@@ -63,6 +66,7 @@
           </button>
         {/if}
       </span>
+      {/if}
     </div>
   </div>
 {/if}
