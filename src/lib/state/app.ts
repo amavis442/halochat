@@ -1,5 +1,5 @@
 import { get, writable, type Writable } from 'svelte/store'
-import { users, addUser } from '../stores/users'
+import { users, addUser, formatUser } from '../stores/users'
 import { notes, updateNotes } from '../stores/notes'
 import type { Subscription } from 'nostr-tools'
 import { now } from "../util/time"
@@ -66,13 +66,34 @@ function handleMetadata(evt: Event, relay: string) {
     }
 }
 
+async function fetchMetaDataUser(pubkey: string, relay: string): Promise<User> {
+    let filter: Filter = {
+        kinds: [0],
+        authors: [pubkey]
+    }
+    const fetchUsers: Array<Event> = await channels.getter.all(filter)
+    if (fetchUsers.length) {
+        let formattedUser: User = formatUser(fetchUsers[0], relay)
+        console.log(formattedUser)
+        addUser(formattedUser)
+        return formattedUser
+    }
+
+    return null
+}
+
 async function handleTextNote(evt: Event, relay: string) {
     let note: Note = evt
     note.relays = [relay]
     let $users = get(users)
-    let user:User = $users.find((u:User) => u.pubkey == evt.pubkey)
+    let user: User = $users.find((u: User) => u.pubkey == evt.pubkey)
     if (user) {
         note.user = user
+    } else {
+        let u = await fetchMetaDataUser(evt.pubkey, relay)
+        if (u) {
+            note.user = u
+        }
     }
 
     if (note.tags.some(hasEventTag)) {
@@ -80,14 +101,19 @@ async function handleTextNote(evt: Event, relay: string) {
         if (tags) {
             let eventId: string = tags[1]
             let $notes = get(notes)
-            let reply:Note = $notes.find((n:Note) => n.id == eventId)
+            let reply: Note = $notes.find((n: Note) => n.id == eventId)
             if (reply) {
-                let user:User = $users.find((u:User) => u.pubkey == reply.pubkey)
+                let user: User = $users.find((u: User) => u.pubkey == reply.pubkey)
                 if (user) {
                     reply.user = user
+                } else {
+                    let u = await fetchMetaDataUser(evt.pubkey, relay)
+                    if (u) {
+                        reply.user = u
+                    }
                 }
 
-                if (note.replies?.length){
+                if (note.replies?.length) {
                     note.replies.push(reply)
                 } else {
                     note.replies = [reply]
@@ -95,9 +121,9 @@ async function handleTextNote(evt: Event, relay: string) {
             } else {
                 const replies = await channels.getter.all({
                     kinds: [1],
-                    '#e': [pluck('id', evt)],
-                  })
-                console.log(replies)  
+                    '#e': [evt.id],
+                })
+                console.log(replies)
             }
         }
     }
@@ -111,16 +137,17 @@ function handleReaction(evt: Event, relay: string) {
 
 export class Listener {
     filter: Filter
-    sub:{unsub:Function}
+    sub: { unsub: Function }
 
-    constructor(filter:Filter) {
-      this.filter = filter
+    constructor(filter: Filter) {
+        this.filter = filter
     }
 
     async start() {
         this.sub = await channels.listener.sub(
             this.filter,
-            onEvent
+            onEvent,
+            (r: string) => { console.log('Eose from ', r) }
         )
     }
     stop() {
@@ -128,7 +155,7 @@ export class Listener {
             this.sub.unsub()
         }
     }
-} 
+}
 
 export function onEvent(evt: Event, relay: string) {
     switch (evt.kind) {
