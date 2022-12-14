@@ -10,7 +10,7 @@
 
 <Router {url}>
   <div
-    class="grid grid-cols-20/40/20 w-screen h-screen max-w-screen max-h-screen
+    class="grid grid-cols-20/80 w-screen h-screen max-w-screen max-h-screen
     justify-center bg-gray-100">
     <header>
       <div
