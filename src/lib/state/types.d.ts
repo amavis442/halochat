@@ -14,9 +14,10 @@ export type Reaction = Event & {
 
 export type Note = Event & {
     reply_id?: string;
-    replies?: string[];
-    reactions?: Reaction;
-    relays?: Array<string>
+    replies?: Array<Note>;
+    reactions?: Array<Reaction>;
+    relays?: Array<string>;
+    user?: User;
 }
 
 export type User = {

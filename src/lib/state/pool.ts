@@ -6,9 +6,9 @@ import {
   type Relay
 } from "nostr-tools";
 import { now } from "../util/time";
-import type { Event } from './types'
 import { head, values } from 'ramda';
 import { account } from '../stores/account';
+import type { Event, Filter } from './types'
 
 export const pool = relayPool();
 
@@ -34,6 +34,85 @@ export const createEvent = async (kind: number, content: string = '', tags: stri
   let note: Event = { kind: kind, content: content, tags: tags, pubkey: publicKey, created_at: createdAt }
   let sig: any = await signEvent(note, $account.privkey)
   return { ...note, sig }
+}
+
+/**
+ * Taken from @see https://github.com/staab/coracle
+ * @see https://github.com/staab/coracle/blob/master/src/state/nostr.js
+ */
+export class Channel {
+  name:string
+  p:Promise<any>
+  
+  constructor(name:string) {
+    this.name = name
+    this.p = Promise.resolve()
+  }
+  
+  async sub(filter: Filter, cb, onEose = (r:string) => {}) {
+    // Make sure callers have to wait for the previous sub to be done
+    // before they can get a new one.
+    await this.p
+
+    // If we don't have any relays, we'll wait forever for an eose, but
+    // we already know we're done. Use a timeout since callers are
+    // expecting this to be async and we run into errors otherwise.
+    if (get(relays).length === 0) {
+      setTimeout(onEose)
+
+      return {unsub: () => {}}
+    }
+
+    let resolve: (value: any) => void
+    const eoseRelays = []
+    const sub = pool.sub(
+      {filter, cb}, 
+      this.name, 
+      //@ts-ignore
+      (r:string) => {
+        eoseRelays.push(r)
+
+        if (eoseRelays.length === get(relays).length) {
+          onEose(r)
+        }
+    })
+
+    this.p = new Promise(r => {
+      resolve = r
+    })
+
+    return {
+      unsub: () => {
+        sub.unsub()
+
+        resolve(null)
+      }
+    }
+  }
+  all(filter: Filter):Promise<Array<Event>> {
+    /**
+     * @see https://eslint.org/docs/latest/rules/no-async-promise-executor
+     */
+    /* eslint no-async-promise-executor: 0 */
+    return new Promise(async resolve => {
+      const result = []
+
+      const sub = await this.sub(
+        filter,
+        (e:Event) => result.push(e),
+        (r:string) => {
+          sub.unsub()
+
+          resolve(result)
+        },
+      )
+    })
+  }
+}
+
+export const channels = {
+  listener: new Channel('listener'),
+  getter: new Channel('getter'),
 }
 
 /**
@@ -65,22 +144,42 @@ export async function publishAccount() {
 export async function publishReply(content: string, replyToEvent: Event) {
   const $account = get(account)
   console.log($account.privkey)
-  const publicKey = $account.pubkey
   const r = head(values(pool.getRelayList()))
 
   console.log(r)
 
-  const tags: string[][] = [
-    //@ts-ignore
-    //['e', replyToEvent.id, r.relay.url, 'root'],
-    //@ts-ignore
-    ['e', replyToEvent.id, r.relay.url, 'reply'],
-    ['p', replyToEvent.pubkey]
-  ]
-  if (publicKey != replyToEvent.pubkey) {
-    tags.push(['p', publicKey])
-  }
-  const sendEvent = await createEvent(1, content, tags)
+  let newtags = [];
+  let hasRoot = false
+  replyToEvent.tags.forEach((tag) => {
+    let t = [];
+    let add = true
+    
+
+    if (tag[3] == "reply") {
+      t = [tag[0], tag[1], tag[2]];
+    } else {
+      t = tag;
+    }
+    if (tag[3] == "root"){
+      hasRoot = true
+    }
+    
+    if(tag[0] == 'client') {
+      t = ['client', 'halochat']
+    }
+    if(tag[0] == 'p' && tag[1] == replyToEvent.pubkey) {
+      add = false
+    }
+    if (add) {
+      newtags.push(t);
+    }
+  });
+  newtags.push(["e", replyToEvent.id, head(get(relays)), "reply"]);
+  newtags.push(["p", replyToEvent.pubkey, head(get(relays))]);
+
+  const tags: string[][] = newtags
+  const sendEvent = await createEvent(1, content, newtags)
+
   pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
 }
 

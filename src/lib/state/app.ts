@@ -5,46 +5,17 @@ import type { Subscription } from 'nostr-tools'
 import { now } from "../util/time"
 import { uniq, pluck, difference } from 'ramda'
 import type { Event, User, Filter, Note } from './types'
-import { pool } from './pool'
+import { pool, channels } from './pool'
 
 export const blacklist: Writable<Array<string>> = writable([
     '887645fef0ce0c3c1218d2f5d8e6132a19304cdc57cd20281d082f38cfea0072'
 ])
 
+export const hasEventTag = (tag: Array<string>) => tag[0] === 'e'
+
 export const queue: Writable<Array<string>> = writable([])
 
 export const loading: Writable<boolean> = writable(false)
-
-export function listen(since? :number): Subscription {
-    const subscriptionId = 'listenToMoi';
-    loading.set(true)
-
-    if (!since) {
-        since = now()
-    }
-
-    let filter: Filter = {
-        since: since,
-    }
-
-    const subscription: Subscription = pool.sub(
-        //@ts-ignore
-        {
-            //@ts-ignore
-            cb: onEvent,
-            filter: filter,
-        },
-        subscriptionId,
-        //@ts-ignore
-        (url: string) => {
-            //numRelays
-            console.log('EOSE from relay: ', url)
-            loading.set(false)
-        }
-    )
-
-    return subscription
-}
 
 export function getContacts(): Subscription | null {
     const subscriptionId = Math.random().toString().slice(2);
@@ -85,7 +56,6 @@ export function getContacts(): Subscription | null {
     return subscription
 }
 
-
 function handleMetadata(evt: Event, relay: string) {
     try {
         const content = JSON.parse(evt.content);
@@ -96,9 +66,41 @@ function handleMetadata(evt: Event, relay: string) {
     }
 }
 
-function handleTextNote(evt: Event, relay: string) {
+async function handleTextNote(evt: Event, relay: string) {
     let note: Note = evt
     note.relays = [relay]
+    let $users = get(users)
+    let user:User = $users.find((u:User) => u.pubkey == evt.pubkey)
+    if (user) {
+        note.user = user
+    }
+
+    if (note.tags.some(hasEventTag)) {
+        let tags = note.tags.find((item: Array<string>) => item[0] == 'e' && item[3] == 'reply')
+        if (tags) {
+            let eventId: string = tags[1]
+            let $notes = get(notes)
+            let reply:Note = $notes.find((n:Note) => n.id == eventId)
+            if (reply) {
+                let user:User = $users.find((u:User) => u.pubkey == reply.pubkey)
+                if (user) {
+                    reply.user = user
+                }
+
+                if (note.replies?.length){
+                    note.replies.push(reply)
+                } else {
+                    note.replies = [reply]
+                }
+            } else {
+                const replies = await channels.getter.all({
+                    kinds: [1],
+                    '#e': [pluck('id', evt)],
+                  })
+                console.log(replies)  
+            }
+        }
+    }
     updateNotes(note)
 }
 
@@ -107,11 +109,30 @@ function handleReaction(evt: Event, relay: string) {
     note.relays = [relay]
 }
 
+export class Listener {
+    filter: Filter
+    sub:{unsub:Function}
+
+    constructor(filter:Filter) {
+      this.filter = filter
+    }
+
+    async start() {
+        this.sub = await channels.listener.sub(
+            this.filter,
+            onEvent
+        )
+    }
+    stop() {
+        if (this.sub) {
+            this.sub.unsub()
+        }
+    }
+} 
 
 export function onEvent(evt: Event, relay: string) {
     switch (evt.kind) {
         case 0:
-            console.log(`Received msg ${evt.content}`)
             handleMetadata(evt, relay)
             break
         case 1:
@@ -147,8 +168,10 @@ function setMetadata(evt: Event, relay: string, content: any) {
     }
     //Update user metadata (foundUser should be a reference, so update should work like this)
     if (foundUser && foundUser.refreshed < (now() - 60 * 10)) {
-        if (foundUser.relays.find((r: string) => r != relay)) {
+        if (foundUser.relays && foundUser.relays.length && foundUser.relays.find((r: string) => r != relay)) {
             foundUser.relays.push(relay)
+        } else {
+            foundUser.relays = [relay]
         }
         foundUser = {
             foundUser,

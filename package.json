@@ -39,6 +39,7 @@
     "nostr-tools": "github:fiatjaf/nostr-tools#12be5a5338f1b8c643411c196f8b90dad12335f6",
     "ramda": "^0.28.0",
     "svelte-infinite-loading": "^1.3.8",
+    "svelte-modals": "^1.2.0",
     "svelte-routing": "^1.6.0",
     "throttle-debounce": "^5.0.0",
     "vite-plugin-node-polyfills": "^0.5.0"

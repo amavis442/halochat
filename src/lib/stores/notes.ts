@@ -1,5 +1,5 @@
 import { writable, get } from 'svelte/store'
-import { queue } from '../state/app'
+import { queue, hasEventTag } from '../state/app'
 import type { Note } from '../state/types'
 import { setLocalJson, getLocalJson } from '../util/storage'
 
@@ -7,7 +7,6 @@ export const notes = writable(getLocalJson('halonostr/notes') || [])
 
 export const noteReplyPubKeys = []
 export let since = 0
-const hasEventTag = (tag:Array<string>) => tag[0] === 'e'
 
 export function updateNotes(note: Note) {
     const q = get(queue)

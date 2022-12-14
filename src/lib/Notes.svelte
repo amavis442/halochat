@@ -1,8 +1,7 @@
 <script lang="ts">
   import { publish, publishReply, relays } from "./state/pool";
-  import type { Subscription } from "nostr-tools";
   import { onMount, afterUpdate, onDestroy } from "svelte";
-  import { listen, getContacts, loading } from "./state/app";
+  import { getContacts, loading, Listener } from "./state/app";
   import { throttle } from "throttle-debounce";
   import type { Note as NoteEvent } from "./state/types";
   import { account } from "./stores/account";
@@ -11,10 +10,12 @@
   import { prop, sort, descend } from "ramda";
   import { now } from "./util/time";
   import Note from "./Note.svelte";
+  import { Modals, closeModal } from "svelte-modals";
   import Spinner from "./Spinner.svelte";
   import Button from "./partials/Button.svelte";
   import Text from "./partials/Text.svelte";
   import Anchor from "./partials/Anchor.svelte";
+
   //import { setLocalJson,getLocalJson } from './util/storage'
   let msg = "";
   let replyTo: NoteEvent | null = null;
@@ -56,48 +57,46 @@
     }
   });
 
-  let subscription: Subscription;
-  let notesToShow:Array<Note> = []
+  let tagsWithReply = []
 
+  let notesToShow: Array<Note> = [];
+  let listener: Listener;
   onMount(async () => {
     if ($relays.length) {
-      /** Reset data 
-      users.set([])
-      setLocalJson('halonostr/users', [])
-      notes.set([])
-      setLocalJson('halonostr/notes', [])
-      */
-      
-      let byCreatedAt = descend<Note>(prop('created_at'))
-      notesToShow = sort(byCreatedAt, $notes)
+      listener = new Listener({ since: now() - 60 * 60 });
+      listener.start();
 
-
-      let since: number = now();
       if ($notes.length) {
         const lastStoredNote: Note = $notes[0];
-        const firstStoredNote = $notes[$notes.length-1].created_at;
-        console.log('Last ',lastStoredNote.created_at, ' First ', firstStoredNote)
-        //since = lastStoredNote.created_at - 1;
+        const firstStoredNote = $notes[$notes.length - 1].created_at;
+        console.log(
+          "Last ",
+          lastStoredNote.created_at,
+          " First ",
+          firstStoredNote
+        );
+        let byCreatedAt = descend<Note>(prop("created_at"));
+        notesToShow = sort(byCreatedAt, $notes); //.slice(0,50);
       }
-      subscription = listen(since)
-
-      //users.set([])
-      //delay(500)
-      //getContacts(10);
     }
   });
 
   onDestroy(() => {
-    if (subscription) {
-      subscription.unsub();
+    if (listener) {
+      listener.stop();
     }
   });
 
   afterUpdate(async () => {
     page++;
   });
-</script>
 
+  function hasData(note: Note): boolean {
+    return $notes.find((n: Note) => note.reply_id == n.id) ? true : false;
+  }
+
+  
+</script>
 <div class="flex flex-col gap-4 h-screen">
   <div class="h-85p">
     {#if $relays.length}
@@ -109,10 +108,16 @@
       >
         {#if notesToShow.length}
           {#each notesToShow as note (note.id)}
-            <Note {note} cbReply={onReply} />
-            {#if note.reply_id}
-              <span>Is reply {note.reply_id}</span>
+          <div class="Note flex flex-col items-start">
+            <Note {note} />
+            {#if note?.replies}
+              {#each note.replies as reply (reply.id)}
+                <div class="reply border-l-4 border-indigo-500/100" >
+                  <Note note={reply} />
+                </div>
+              {/each}
             {/if}
+          </div>
           {/each}
         {/if}
         {#if $loading}
@@ -146,3 +151,18 @@
     {/if}
   </div>
 </div>
+
+<Modals>
+  <div slot="backdrop" class="backdrop" on:click={closeModal} />
+</Modals>
+
+<style>
+  .backdrop {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    background: rgba(0, 0, 0, 0.5);
+  }
+</style>
