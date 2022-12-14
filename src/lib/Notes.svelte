@@ -32,15 +32,6 @@
     msg = "";
   }
 
-  function onReply(note: NoteEvent) {
-    replyTo = note;
-    console.log(note);
-  }
-
-  function removeReply() {
-    replyTo = null;
-  }
-
   const throttleFunc = throttle(5000, () => {
     console.log("Bouncy");
     loading.set(true);
@@ -57,30 +48,18 @@
     }
   });
 
-  let userHasAccount:boolean = false
-  let notesToShow: Array<Note> = [];
+  let userHasAccount: boolean = false;
   let listener: Listener;
   onMount(async () => {
     if ($relays.length) {
       listener = new Listener({ since: now() - 4 * 60 * 60 });
       listener.start();
-
-      if ($notes.length) {
-        const lastStoredNote: Note = $notes[0];
-        const firstStoredNote = $notes[$notes.length - 1].created_at;
-        console.log(
-          "Last ",
-          lastStoredNote.created_at,
-          " First ",
-          firstStoredNote
-        );
-        let byCreatedAt = descend<Note>(prop("created_at"));
-        notesToShow = sort(byCreatedAt, $notes); //.slice(0,50);
-      }
-      let $account:Account = get(account)
+      let byCreatedAt = descend<Note>(prop("created_at"));
+      //notes.update($notes => sort(byCreatedAt, $notes))
+ 
+      let $account: Account = get(account);
       if ($account.pubkey) {
-        userHasAccount = true
-        console.log('Account:', $account)
+        userHasAccount = true;
       }
     }
   });
@@ -94,13 +73,8 @@
   afterUpdate(async () => {
     page++;
   });
-
-  function hasData(note: Note): boolean {
-    return $notes.find((n: Note) => note.reply_id == n.id) ? true : false;
-  }
-
-  
 </script>
+
 <div class="flex flex-col gap-4 h-screen">
   <div class="h-85p">
     {#if $relays.length}
@@ -110,20 +84,18 @@
         dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1 ring-black/5
         rounded-xl divide-y dark:divide-slate-200/5 ml-4 mr-4 h-full max-h-full"
       >
-        {#if notesToShow.length}
-          {#each notesToShow as note (note.id)}
+        {#each notes ? $notes : [] as n (n.id)}
           <div class="Note flex flex-col items-start">
-            <Note {note} {userHasAccount} />
-            {#if note?.replies}
-              {#each note.replies as reply (reply.id)}
-                <div class="reply border-l-4 border-indigo-500/100" >
+            <Note note={n} {userHasAccount} />
+            {#if n?.replies}
+              {#each n.replies as reply (reply.id)}
+                <div class="reply border-l-4 border-indigo-500/100">
                   <Note note={reply} {userHasAccount} />
                 </div>
               {/each}
             {/if}
           </div>
-          {/each}
-        {/if}
+        {/each}
         {#if $loading}
           <Spinner />
         {/if}
@@ -138,11 +110,6 @@
     {#if $relays.length && $account.privkey}
       <div class="block max-w-full flex justify-center">
         <div class="w-4/5 mr-2">
-          {#if replyTo}
-            <button on:click={removeReply}>
-              Reply to {replyTo.content.slice(0, 10)}
-            </button>
-          {/if}
           <Text bind:value={msg} id="msg" placeholder="Message to send" />
         </div>
         <Button type="button" click={sendMessage}>Send</Button>
@@ -157,7 +124,12 @@
 </div>
 
 <Modals>
-  <div slot="backdrop" class="backdrop" on:click={closeModal} />
+  <div
+    slot="backdrop"
+    class="backdrop"
+    on:click={closeModal}
+    on:keyup={closeModal}
+  />
 </Modals>
 
 <style>
