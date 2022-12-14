@@ -197,7 +197,6 @@ export async function publishReply(content: string, replyToEvent: Event) {
  */
 export async function publish(kind: number, content = '', tags = []): Promise<any> {
   const sendEvent = await createEvent(kind, content, tags)
-  console.log(sendEvent)
   return pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
 }
 

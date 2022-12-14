@@ -4,7 +4,7 @@ import { notes, updateNotes } from '../stores/notes'
 import type { Subscription } from 'nostr-tools'
 import { now } from "../util/time"
 import { uniq, pluck, difference } from 'ramda'
-import type { Event, User, Filter, Note } from './types'
+import type { Event, User, Filter, Note, Reaction } from './types'
 import { pool, channels } from './pool'
 
 export const blacklist: Writable<Array<string>> = writable([
@@ -74,7 +74,6 @@ async function fetchMetaDataUser(pubkey: string, relay: string): Promise<User> {
     const fetchUsers: Array<Event> = await channels.getter.all(filter)
     if (fetchUsers.length) {
         let formattedUser: User = formatUser(fetchUsers[0], relay)
-        console.log(formattedUser)
         addUser(formattedUser)
         return formattedUser
     }
@@ -123,7 +122,36 @@ async function handleTextNote(evt: Event, relay: string) {
                     kinds: [1],
                     '#e': [evt.id],
                 })
-                console.log(replies)
+                let queue = []
+                if (replies && replies.length) {
+                    replies.forEach((r: Note) => {
+                        let user: User = $users.find((u: User) => u.pubkey == r.pubkey)
+                        if (!user) {
+                            queue.push(r.pubkey)
+                        }
+                    })
+                    if (queue) {
+                        let filter: Filter = {
+                            kinds: [0],
+                            authors: queue
+                        }
+                        let newUsers = await channels.getter.all(filter)
+                        let u = {}
+                        if (newUsers) {
+                            newUsers.forEach(newUser => {
+                                let formattedUser: User = formatUser(newUser, relay)
+                                u[newUser.pubkey] = formattedUser
+                                addUser(formattedUser)
+                            })
+                        }
+                        replies.forEach((r: Note) => {
+                            if (!r.user) {
+                                r.user = u[r.pubkey]
+                            }
+                        })
+                        note.replies = replies
+                    }
+                }
             }
         }
     }
@@ -131,8 +159,29 @@ async function handleTextNote(evt: Event, relay: string) {
 }
 
 function handleReaction(evt: Event, relay: string) {
-    let note: Note = evt
-    note.relays = [relay]
+    
+    let $notes = get(notes)
+    let note: Note = $notes.find((n: Note) => {
+        let eIds = evt.tags.filter(t => t[0] == 'e')
+        return n.id == eIds[0][1]
+    })
+ 
+    if (note) {
+        let reaction:Reaction = evt
+        note.relays = [relay]
+
+        if (note.reactions && !note.reactions.find(r => {
+            return r.id == evt.id
+        })) {
+            note.reactions.push(reaction)
+        }
+
+        if (!note.reactions) {
+            note.reactions = [reaction]
+        }
+        if (evt.content == '+') note.upvotes = note.upvotes + 1
+        if (evt.content == '-') note.downvotes = note.downvotes + 1
+    }
 }
 
 export class Listener {

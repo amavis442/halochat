@@ -38,6 +38,11 @@ export function updateNotes(note: Note) {
                 }
             }
         }
+        if (!note.reactions) note.reactions = []
+        if (!note.replies) note.replies = []
+        if (!note.upvotes) note.upvotes = 0
+        if (!note.downvotes) note.downvotes = 0
+        
         data.unshift(note)
         data = sort(byCreatedAt, data);
 

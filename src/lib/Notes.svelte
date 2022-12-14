@@ -1,13 +1,12 @@
 <script lang="ts">
-  import { publish, publishReply, relays } from "./state/pool";
-  import { onMount, afterUpdate, onDestroy } from "svelte";
+  import { channels, publish, publishReply, relays } from "./state/pool";
+  import { onMount, onDestroy } from "svelte";
   import { get } from "svelte/store";
-  import { getContacts, loading, Listener } from "./state/app";
-  import { throttle } from "throttle-debounce";
+  import { loading, Listener } from "./state/app";
+  import { debounce } from "throttle-debounce";
   import type { Note as NoteEvent, Account } from "./state/types";
   import { account } from "./stores/account";
   import { notes } from "./stores/notes";
-  import { delay } from "./util/time";
   import { now } from "./util/time";
   import Note from "./Note.svelte";
   import { Modals, closeModal } from "svelte-modals";
@@ -31,27 +30,54 @@
     msg = "";
   }
 
-  const throttleFunc = throttle(5000, () => {
-    console.log("Bouncy");
-    loading.set(true);
-    getContacts();
-  });
-
+  /*
   let page = 0;
   let action = "";
   loading.subscribe((value) => {
     if (!value && page > 1 && action != "contacts") {
       delay(500); // Just to be sure and fire once with debounce
-      throttleFunc();
+      debounceFunc();
       action = "contacts";
     }
   });
+  */
+  function getSyncTimeStamps() {
+    let firstNote: Note = $notes[0];
+    let lastNote: Note = $notes[$notes.length - 1];
+    let start = firstNote.created_at;
+    let end = lastNote.created_at;
+
+    if (firstNote.created_at > lastNote.created_at) {
+      end = firstNote.created_at;
+      start = lastNote.created_at;
+    }
+    return { start: start, end: end };
+  }
 
   let userHasAccount: boolean = false;
   let listener: Listener;
   onMount(async () => {
     if ($relays.length) {
-      listener = new Listener({ since: now() - 4 * 60 * 60 });
+      let lastSync: number = now() - 60;
+      notes.update(data => {
+        data.forEach($note => {
+        if (!$note.reactions) $note.reactions = []
+        if (!$note.replies) $note.replies = []
+        if (!$note.upvotes) $note.upvotes = 0
+        if (!$note.downvotes) $note.downvotes = 0
+        })
+        return data
+      })
+
+      if ($notes) {
+        let firstNote: Note = $notes[0];
+        let lastNote: Note = $notes[$notes.length - 1];
+        lastSync = firstNote.created_at - 60;
+        if (firstNote.created_at < lastNote.created_at) {
+          lastSync = lastNote.created_at - 60;
+        }
+      }
+      listener = new Listener({ since: lastSync });
       listener.start();
 
       let $account: Account = get(account);
@@ -67,9 +93,29 @@
     }
   });
 
-  afterUpdate(async () => {
-    page++;
+  /**
+   * Todo: fix scroller
+   */
+  const debounceFunc = debounce(2000, () => {
+    if ($loading) {
+      return;
+    }
+    loading.set(true);
+    const {start, end} = getSyncTimeStamps()
+    async() => {
+      let oldNotes:any = await channels.getter.all({until:start, limit:20})
+      loading.set(false)
+    }
+    console.log(start, end)
+    console.log("Bouncy");
   });
+
+  function scrollHandler(e: any) {
+    const { scrollTop, scrollHeight, clientHeight } = e.target;
+    if (scrollTop + clientHeight >= scrollHeight - 15) {
+      //debounceFunc();
+    }
+  }
 </script>
 
 <div class="flex flex-col gap-4 h-screen">
@@ -80,6 +126,7 @@
         class="cointainer overflow-y-auto relative max-w-full mx-auto bg-white
         dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1 ring-black/5
         rounded-xl divide-y dark:divide-slate-200/5 ml-4 mr-4 h-full max-h-full"
+        on:scroll={scrollHandler}
       >
         {#each notes ? $notes : [] as n (n.id)}
           <div class="Note flex flex-col items-start">
@@ -87,7 +134,7 @@
             {#if n?.replies}
               {#each n.replies as reply (reply.id)}
                 <div class="reply border-l-4 border-indigo-500/100">
-                  <Note note={reply} {userHasAccount} />
+                  <Note note={reply} {userHasAccount} isReply />
                 </div>
               {/each}
             {/if}
