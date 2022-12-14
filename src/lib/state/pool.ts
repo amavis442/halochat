@@ -31,6 +31,15 @@ export const createEvent = async (kind: number, content: string = '', tags: stri
   const publicKey = $account.pubkey
   const createdAt = now()
 
+  let clientTag:Array<string> = ['client', 'halochat']
+  if (!tags) {
+    tags.push(clientTag)
+  }
+  if(tags) {
+    tags = tags.filter((t) => t[0] != 'client')
+    tags = [...tags, clientTag]
+  }
+
   let note: Event = { kind: kind, content: content, tags: tags, pubkey: publicKey, created_at: createdAt }
   let sig: any = await signEvent(note, $account.privkey)
   return { ...note, sig }
@@ -164,10 +173,6 @@ export async function publishReply(content: string, replyToEvent: Event) {
     //if (tag[3] == "root"){
     //  hasRoot = true
     //}
-
-    if (tag[0] == 'client') {
-      t = ['client', 'halochat']
-    }
     if (tag[0] == 'p' && tag[1] == replyToEvent.pubkey) {
       add = false
     }
@@ -180,7 +185,6 @@ export async function publishReply(content: string, replyToEvent: Event) {
 
   const tags: string[][] = newtags
   const sendEvent = await createEvent(1, content, tags)
-
   pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
 }
 
@@ -193,6 +197,7 @@ export async function publishReply(content: string, replyToEvent: Event) {
  */
 export async function publish(kind: number, content = '', tags = []): Promise<any> {
   const sendEvent = await createEvent(kind, content, tags)
+  console.log(sendEvent)
   return pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
 }
 
