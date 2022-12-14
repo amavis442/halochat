@@ -41,15 +41,15 @@ export const createEvent = async (kind: number, content: string = '', tags: stri
  * @see https://github.com/staab/coracle/blob/master/src/state/nostr.js
  */
 export class Channel {
-  name:string
-  p:Promise<any>
-  
-  constructor(name:string) {
+  name: string
+  p: Promise<any>
+
+  constructor(name: string) {
     this.name = name
     this.p = Promise.resolve()
   }
-  
-  async sub(filter: Filter, cb, onEose = (r:string) => {}) {
+
+  async sub(filter: Filter, cb: Function, onEose: Function | null) {
     // Make sure callers have to wait for the previous sub to be done
     // before they can get a new one.
     await this.p
@@ -60,22 +60,22 @@ export class Channel {
     if (get(relays).length === 0) {
       setTimeout(onEose)
 
-      return {unsub: () => {}}
+      return { unsub: () => { } }
     }
 
     let resolve: (value: any) => void
     const eoseRelays = []
     const sub = pool.sub(
-      {filter, cb}, 
-      this.name, 
+      { filter, cb },
+      this.name,
       //@ts-ignore
-      (r:string) => {
+      (r: string) => {
         eoseRelays.push(r)
 
         if (eoseRelays.length === get(relays).length) {
           onEose(r)
         }
-    })
+      })
 
     this.p = new Promise(r => {
       resolve = r
@@ -89,7 +89,7 @@ export class Channel {
       }
     }
   }
-  all(filter: Filter):Promise<Array<Event>> {
+  all(filter: Filter): Promise<Array<Event>> {
     /**
      * @see https://eslint.org/docs/latest/rules/no-async-promise-executor
      */
@@ -99,8 +99,9 @@ export class Channel {
 
       const sub = await this.sub(
         filter,
-        (e:Event) => result.push(e),
-        (r:string) => {
+        (e: Event) => result.push(e),
+        (r: string) => {
+          console.log('Eose from ', r)
           sub.unsub()
 
           resolve(result)
@@ -149,25 +150,25 @@ export async function publishReply(content: string, replyToEvent: Event) {
   console.log(r)
 
   let newtags = [];
-  let hasRoot = false
+  //let hasRoot = false
   replyToEvent.tags.forEach((tag) => {
     let t = [];
     let add = true
-    
+
 
     if (tag[3] == "reply") {
       t = [tag[0], tag[1], tag[2]];
     } else {
       t = tag;
     }
-    if (tag[3] == "root"){
-      hasRoot = true
-    }
-    
-    if(tag[0] == 'client') {
+    //if (tag[3] == "root"){
+    //  hasRoot = true
+    //}
+
+    if (tag[0] == 'client') {
       t = ['client', 'halochat']
     }
-    if(tag[0] == 'p' && tag[1] == replyToEvent.pubkey) {
+    if (tag[0] == 'p' && tag[1] == replyToEvent.pubkey) {
       add = false
     }
     if (add) {
@@ -178,7 +179,7 @@ export async function publishReply(content: string, replyToEvent: Event) {
   newtags.push(["p", replyToEvent.pubkey, head(get(relays))]);
 
   const tags: string[][] = newtags
-  const sendEvent = await createEvent(1, content, newtags)
+  const sendEvent = await createEvent(1, content, tags)
 
   pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
 }
