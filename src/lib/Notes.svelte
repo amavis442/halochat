@@ -8,7 +8,6 @@
   import { account } from "./stores/account";
   import { notes } from "./stores/notes";
   import { delay } from "./util/time";
-  import { prop, sort, descend } from "ramda";
   import { now } from "./util/time";
   import Note from "./Note.svelte";
   import { Modals, closeModal } from "svelte-modals";
@@ -54,9 +53,7 @@
     if ($relays.length) {
       listener = new Listener({ since: now() - 4 * 60 * 60 });
       listener.start();
-      let byCreatedAt = descend<Note>(prop("created_at"));
-      //notes.update($notes => sort(byCreatedAt, $notes))
- 
+
       let $account: Account = get(account);
       if ($account.pubkey) {
         userHasAccount = true;
