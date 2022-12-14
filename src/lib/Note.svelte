@@ -7,18 +7,12 @@
   import { onMount } from "svelte";
 
   export let note: Note;
-  export let isReply: boolean = false;
   export let userHasAccount:boolean = false;
 
   let upvote: boolean = false;
   let user: User;
-  let hasReplies: boolean = false;
-  let replyClass: string = "";
 
   onMount(() => {
-    if (isReply || hasReplies) {
-      replyClass = "border-l-4 border-indigo-500 border-b-0";
-    }
     user = note?.user
   });
 
