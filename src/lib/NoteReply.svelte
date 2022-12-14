@@ -1,22 +1,21 @@
 <script lang="ts">
-  import { get } from "svelte/store";
   import { closeModal } from "svelte-modals";
   import Button from "./partials/Button.svelte";
   import TextArea from "./partials/TextArea.svelte";
   import type { Note } from "./state/types";
-  import { last, head, uniqBy, prop } from "ramda";
-  import { relays, publishReply } from "./state/pool";
+  import { publishReply } from "./state/pool";
 
   // provided by Modals
-  export let isOpen;
+  export let isOpen:boolean;
 
   export let title: string;
   export let note: Note;
 
-  async function onSubmit(e) {
-    const formData = new FormData(e.target);
+  async function onSubmit(e:Event) {
+    const target = e.target as HTMLFormElement;
+    const formData = new FormData(target);
 
-    const data = {};
+    const data:{replyText?: string} = {};
     for (let field of formData) {
       const [key, value] = field;
       data[key] = value;
