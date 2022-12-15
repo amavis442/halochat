@@ -1,5 +1,4 @@
 import { writable, get } from 'svelte/store'
-import { queue, hasEventTag } from '../state/app'
 import type { Note } from '../state/types'
 import { setLocalJson, getLocalJson } from '../util/storage'
 import { prop, sort, descend } from "ramda";
@@ -15,7 +14,7 @@ export function updateNotes(note: Note) {
         notes.set([])
     }
 
-    let byCreatedAt = descend<Note>(prop("created_at"));    
+    let byCreatedAt = descend<Note>(prop("created_at"));
     notes.update((data: Array<Note>) => {
         try {
             if (data.length && data.find((item: Note) => item.id == note.id)) {

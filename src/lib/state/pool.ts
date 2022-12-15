@@ -6,7 +6,7 @@ import {
   type Relay
 } from "nostr-tools";
 import { now } from "../util/time";
-import { head, uniq } from 'ramda';
+import { head } from 'ramda';
 import { account } from '../stores/account';
 import type { Event, Filter } from './types'
 import { hasEventTag } from './app';
@@ -32,11 +32,11 @@ export const createEvent = async (kind: number, content: string = '', tags: stri
   const publicKey = $account.pubkey
   const createdAt = now()
 
-  let clientTag:Array<string> = ['client', 'halochat']
+  let clientTag: Array<string> = ['client', 'halochat']
   if (!tags) {
     tags.push(clientTag)
   }
-  if(tags) {
+  if (tags) {
     tags = tags.filter((t) => t[0] != 'client')
     tags = [...tags, clientTag]
   }
@@ -176,11 +176,11 @@ export async function publishReply(content: string, replyToEvent: Event) {
       newtags.push(t);
     }
   });
-  
+
   newtags.push(["p", replyToEvent.pubkey, head(get(relays))]);
   if (isRoot) {
     newtags.push(["e", replyToEvent.id, head(get(relays)), "root"]);
-  } 
+  }
   newtags.push(["e", replyToEvent.id, head(get(relays)), "reply"]);
   const tags: string[][] = newtags
   const sendEvent = await createEvent(1, content, tags)

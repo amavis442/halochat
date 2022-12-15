@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { channels, publish, publishReply, relays } from "./state/pool";
+  import { publish, publishReply, relays } from "./state/pool";
   import { onMount, onDestroy } from "svelte";
   import { get } from "svelte/store";
   import { loading, Listener } from "./state/app";
-  import { debounce } from "throttle-debounce";
   import type { Note as NoteEvent, Account } from "./state/types";
   import { account } from "./stores/account";
   import { notes } from "./stores/notes";
@@ -31,39 +30,9 @@
     msg = "";
   }
 
-  /*
-  let page = 0;
-  let action = "";
-  loading.subscribe((value) => {
-    if (!value && page > 1 && action != "contacts") {
-      delay(500); // Just to be sure and fire once with debounce
-      debounceFunc();
-      action = "contacts";
-    }
-  });
-  */
-  function getSyncTimeStamps() {
-    let firstNote: Note = $notes[0];
-    let lastNote: Note = $notes[$notes.length - 1];
-    let start = firstNote.created_at;
-    let end = lastNote.created_at;
-
-    if (firstNote.created_at > lastNote.created_at) {
-      end = firstNote.created_at;
-      start = lastNote.created_at;
-    }
-    return { start: start, end: end };
-  }
-
   let userHasAccount: boolean = false;
   let listener: Listener;
   onMount(async () => {
-    //let $notes:Array<Note> = get(notes)
-    //console.log($notes)
-
-    //listener = new Listener({ since: now()- 60 * 60 });
-    //  listener.start();
-    //return
     if ($relays.length) {
       let lastSync: number = now() - 60;
       if ($notes.length) {
@@ -90,33 +59,12 @@
     }
   });
 
-  /**
-   * Todo: fix scroller
-   */
-  const debounceFunc = debounce(2000, () => {
-    if ($loading) {
-      return;
-    }
-    loading.set(true);
-    const { start, end } = getSyncTimeStamps();
-    async () => {
-      let oldNotes: any = await channels.getter.all({
-        until: start,
-        limit: 20,
-      });
-      loading.set(false);
-    };
-    console.log(start, end);
-    console.log("Bouncy");
-  });
-
   function scrollHandler(e: any) {
     const { scrollTop, scrollHeight, clientHeight } = e.target;
     if (scrollTop + clientHeight >= scrollHeight - 15) {
       //debounceFunc();
     }
   }
-
 </script>
 
 <div class="flex flex-col gap-4 h-screen">
@@ -136,11 +84,11 @@
               <Slide classes="flex items-top gap-4 p-4 ml-16 w-6/12">
                 <span slot="show">
                   View {n.replies.length} replies
-                </span> 
+                </span>
                 <span slot="hide">
                   Hide {n.replies.length} replies
-                </span> 
-                
+                </span>
+
                 <div id={n.id} slot="content">
                   {#each n.replies as reply (reply.id)}
                     <div class="reply border-l-4 border-indigo-500/100">

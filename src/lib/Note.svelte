@@ -2,15 +2,12 @@
   import { getTime } from "./util/time";
   import type { User, Note } from "./state/types";
   import { toHtml } from "./util/html";
-  import { openModal } from "svelte-modals";
-  import Modal from "./NoteReply.svelte";
   import { beforeUpdate, onMount } from "svelte";
   import { publish } from "./state/pool";
   import TextArea from "./partials/TextArea.svelte";
   import Button from "./partials/Button.svelte";
   import { fade } from "svelte/transition";
   import { publishReply } from "./state/pool";
-  import { get } from "svelte/store";
 
   export let note: Note;
   export let userHasAccount: boolean = false;
@@ -22,9 +19,6 @@
 
   onMount(async () => {
     user = note?.user;
-   
-    let upvotes = note.upvotes
-console.log(upvotes)
   });
 
   function normalizeName(data: User): string {
@@ -34,23 +28,22 @@ console.log(upvotes)
     );
   }
 
-
   function makeLikeTags() {
-    let tags = note.tags.length ? note.tags : []
-    tags.push(["e", note.id])
-    tags.push(["p", note.pubkey])
-    return tags
+    let tags = note.tags.length ? note.tags : [];
+    tags.push(["e", note.id]);
+    tags.push(["p", note.pubkey]);
+    return tags;
   }
 
   async function upvoteHandler() {
     if (isReply) return;
-    let tags = makeLikeTags()
+    let tags = makeLikeTags();
     publish(7, "+", tags);
   }
 
   async function downvoteHandler() {
     if (isReply) return;
-    let tags = makeLikeTags()
+    let tags = makeLikeTags();
     publish(7, "-", tags);
   }
 
@@ -64,7 +57,7 @@ console.log(upvotes)
       data[key] = value;
     }
     let v = Object.values(data);
-    publishReply(v[0], note)
+    publishReply(v[0], note);
     showElement = false;
   }
   let showElement: boolean = false;
@@ -113,7 +106,10 @@ console.log(upvotes)
     </div>
   </div>
   {#if showElement}
-    <div transition:fade={{ delay: 250, duration: 300 }} class="gap-4 p-4 ml-16 w-6/12">
+    <div
+      transition:fade={{ delay: 250, duration: 300 }}
+      class="gap-4 p-4 ml-16 w-6/12"
+    >
       <form on:submit|preventDefault={onSubmit}>
         <TextArea id="reply{note.id}" placeholder="Add reply" cols="20" />
         <div class="actions">

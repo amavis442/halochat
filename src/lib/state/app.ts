@@ -1,6 +1,6 @@
 import { get, writable, type Writable } from 'svelte/store'
 import { users, addUser, formatUser } from '../stores/users'
-import { notes, updateNotes } from '../stores/notes'
+import { notes } from '../stores/notes'
 import type { Subscription } from 'nostr-tools'
 import { now } from "../util/time"
 import { uniq, pluck, difference, uniqBy } from 'ramda'
@@ -90,29 +90,6 @@ function initNote(note: Note) {
     return note
 }
 
-/**
- * @see https://stackoverflow.com/questions/9133500/how-to-find-a-node-in-a-tree-with-javascript
- * 
- * @param parentNode 
- * @param searchEventId 
- * @param depth 
- * @returns 
- */
-function searchTree(parentNode: Note, searchEventId: string, depth: number = 1): Note | null {
-    if (depth > 4) return null
-    if (parentNode.id == searchEventId) {
-        return parentNode;
-    } else if (parentNode.replies != null) {
-        let i: number;
-        let result: Note | null = null;
-        for (i = 0; result == null && i < parentNode.replies.length; i++) {
-            result = searchTree(parentNode.replies[i], searchEventId, ++depth);
-        }
-        return result;
-    }
-    return null;
-}
-
 async function handleTextNote(evt: Event, relay: string) {
     let note: Note = evt
     note.relays = [relay]
@@ -134,15 +111,15 @@ async function handleTextNote(evt: Event, relay: string) {
         let tags = evt.tags.find((item: Array<string>) => item[0] == 'e' && item[3] == 'reply')
         let rootTag = evt.tags.find((item: Array<string>) => item[0] == 'e' && item[3] == 'root')
         if (rootTag) {
-            let rootId = rootTag[1] 
+            let rootId = rootTag[1]
             if (get(notes).length) {
                 parentNote = get(notes).find((n: Note) => n.id == rootId)
             }
         }
 
-        let parentEventId: string = tags[1]        
+        let parentEventId: string = tags[1]
         if (tags) {
-           
+
             if (!parentNote && get(notes).length) {
                 parentNote = get(notes).find((n: Note) => n.id == parentEventId)
             }
@@ -213,7 +190,7 @@ function handleReaction(evt: Event, relay: string) {
         }
         if (!note.upvotes) note.upvotes = 0
         if (!note.downvotes) note.downvotes = 0
-        
+
         if (evt.content == '+') note.upvotes = note.upvotes + 1
         if (evt.content == '-') note.downvotes = note.downvotes + 1
     }
