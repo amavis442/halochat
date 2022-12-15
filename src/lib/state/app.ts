@@ -3,9 +3,10 @@ import { users, addUser, formatUser } from '../stores/users'
 import { notes, updateNotes } from '../stores/notes'
 import type { Subscription } from 'nostr-tools'
 import { now } from "../util/time"
-import { uniq, pluck, difference } from 'ramda'
+import { uniq, pluck, difference, uniqBy } from 'ramda'
 import type { Event, User, Filter, Note, Reaction } from './types'
 import { pool, channels } from './pool'
+import { prop, sort, descend } from "ramda";
 
 export const blacklist: Writable<Array<string>> = writable([
     '887645fef0ce0c3c1218d2f5d8e6132a19304cdc57cd20281d082f38cfea0072'
@@ -81,93 +82,124 @@ async function fetchMetaDataUser(pubkey: string, relay: string): Promise<User> {
     return null
 }
 
+function initNote(note: Note) {
+    note.replies = []
+    note.downvotes = 0
+    note.upvotes = 0
+    note.reactions = []
+    return note
+}
+
+/**
+ * @see https://stackoverflow.com/questions/9133500/how-to-find-a-node-in-a-tree-with-javascript
+ * 
+ * @param parentNode 
+ * @param searchEventId 
+ * @param depth 
+ * @returns 
+ */
+function searchTree(parentNode: Note, searchEventId: string, depth: number = 1): Note | null {
+    if (depth > 4) return null
+    if (parentNode.id == searchEventId) {
+        return parentNode;
+    } else if (parentNode.replies != null) {
+        let i: number;
+        let result: Note | null = null;
+        for (i = 0; result == null && i < parentNode.replies.length; i++) {
+            result = searchTree(parentNode.replies[i], searchEventId, ++depth);
+        }
+        return result;
+    }
+    return null;
+}
+
 async function handleTextNote(evt: Event, relay: string) {
     let note: Note = evt
     note.relays = [relay]
-    let $users = get(users)
-    let user: User = $users.find((u: User) => u.pubkey == evt.pubkey)
-    if (user) {
-        note.user = user
-    } else {
-        let u = await fetchMetaDataUser(evt.pubkey, relay)
-        if (u) {
-            note.user = u
+    let parentNote: Note
+
+    if (!evt.tags.some(hasEventTag)) {
+        let user: User
+        if (get(users).length) {
+            user = get(users).find((u: User) => u.pubkey == evt.pubkey)
         }
+        if (!user) {
+            user = await fetchMetaDataUser(evt.pubkey, relay)
+        }
+        parentNote = note
+        parentNote.user = user
     }
 
-    if (note.tags.some(hasEventTag)) {
-        let tags = note.tags.find((item: Array<string>) => item[0] == 'e' && item[3] == 'reply')
+    if (evt.tags.some(hasEventTag)) {
+        let tags = evt.tags.find((item: Array<string>) => item[0] == 'e' && item[3] == 'reply')
+        let rootTag = evt.tags.find((item: Array<string>) => item[0] == 'e' && item[3] == 'root')
+        if (rootTag) {
+            let rootId = rootTag[1] 
+            if (get(notes).length) {
+                parentNote = get(notes).find((n: Note) => n.id == rootId)
+            }
+        }
+
+        let parentEventId: string = tags[1]        
         if (tags) {
-            let eventId: string = tags[1]
-            let $notes = get(notes)
-            let reply: Note = $notes.find((n: Note) => n.id == eventId)
-            if (reply) {
-                let user: User = $users.find((u: User) => u.pubkey == reply.pubkey)
-                if (user) {
-                    reply.user = user
-                } else {
-                    let u = await fetchMetaDataUser(evt.pubkey, relay)
-                    if (u) {
-                        reply.user = u
-                    }
+           
+            if (!parentNote && get(notes).length) {
+                parentNote = get(notes).find((n: Note) => n.id == parentEventId)
+            }
+
+            if (typeof parentNote == 'undefined') {
+                let filter: Filter = {
+                    kinds: [0],
+                    '#e': [parentEventId]
+                }
+                let result: Array<Event> = await channels.getter.all(filter)
+                if (result.length) {
+                    parentNote = result[0]
                 }
 
-                if (note.replies?.length) {
-                    note.replies.push(reply)
-                } else {
-                    note.replies = [reply]
-                }
+                if (typeof parentNote == 'undefined') return
+                parentNote = initNote(parentNote)
+            }
+            if (!parentNote.user) {
+                let user: User = get(users).find((u: User) => u.pubkey == parentNote.pubkey)
+                parentNote.user = user
+            }
+            if (parentNote.replies?.length) {
+                parentNote.replies.push(note)
+                parentNote.replies = uniqBy(prop('id'), parentNote.replies)
+                let byCreatedAt = descend<Note>(prop("created_at"));
+                parentNote.replies = sort(byCreatedAt, parentNote.replies);
             } else {
-                const replies = await channels.getter.all({
-                    kinds: [1],
-                    '#e': [evt.id],
-                })
-                let queue = []
-                if (replies && replies.length) {
-                    replies.forEach((r: Note) => {
-                        let user: User = $users.find((u: User) => u.pubkey == r.pubkey)
-                        if (!user) {
-                            queue.push(r.pubkey)
-                        }
-                    })
-                    if (queue) {
-                        let filter: Filter = {
-                            kinds: [0],
-                            authors: queue
-                        }
-                        let newUsers = await channels.getter.all(filter)
-                        let u = {}
-                        if (newUsers) {
-                            newUsers.forEach(newUser => {
-                                let formattedUser: User = formatUser(newUser, relay)
-                                u[newUser.pubkey] = formattedUser
-                                addUser(formattedUser)
-                            })
-                        }
-                        replies.forEach((r: Note) => {
-                            if (!r.user) {
-                                r.user = u[r.pubkey]
-                            }
-                        })
-                        note.replies = replies
-                    }
-                }
+                parentNote.replies = [note]
             }
         }
     }
-    updateNotes(note)
+
+    if (typeof parentNote !== 'undefined' && parentNote) {
+        notes.update((data: Array<Note>) => {
+            if (!data.length) {
+                data = []
+            }
+            if (data.find(n => n.id == parentNote.id)) {
+                return data
+            }
+            data.push(parentNote)
+            return uniqBy(prop('id'), data)
+        })
+    }
 }
 
 function handleReaction(evt: Event, relay: string) {
-    
     let $notes = get(notes)
+    if (!$notes || !$notes.length) return
+
     let note: Note = $notes.find((n: Note) => {
         let eIds = evt.tags.filter(t => t[0] == 'e')
         return n.id == eIds[0][1]
     })
- 
+
     if (note) {
-        let reaction:Reaction = evt
+        let reaction: Reaction = evt
         note.relays = [relay]
 
         if (note.reactions && !note.reactions.find(r => {

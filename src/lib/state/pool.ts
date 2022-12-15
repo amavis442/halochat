@@ -6,9 +6,10 @@ import {
   type Relay
 } from "nostr-tools";
 import { now } from "../util/time";
-import { head, values } from 'ramda';
+import { head, uniq } from 'ramda';
 import { account } from '../stores/account';
 import type { Event, Filter } from './types'
+import { hasEventTag } from './app';
 
 export const pool = relayPool();
 
@@ -152,27 +153,22 @@ export async function publishAccount() {
 }
 
 export async function publishReply(content: string, replyToEvent: Event) {
-  const $account = get(account)
-  console.log($account.privkey)
-  const r = head(values(pool.getRelayList()))
-
-  console.log(r)
+  let isRoot = false
+  if (!replyToEvent.tags.some(hasEventTag)) {
+    // then this will be the start
+    isRoot = true
+  }
 
   let newtags = [];
-  //let hasRoot = false
   replyToEvent.tags.forEach((tag) => {
     let t = [];
     let add = true
-
 
     if (tag[3] == "reply") {
       t = [tag[0], tag[1], tag[2]];
     } else {
       t = tag;
     }
-    //if (tag[3] == "root"){
-    //  hasRoot = true
-    //}
     if (tag[0] == 'p' && tag[1] == replyToEvent.pubkey) {
       add = false
     }
@@ -180,11 +176,16 @@ export async function publishReply(content: string, replyToEvent: Event) {
       newtags.push(t);
     }
   });
-  newtags.push(["e", replyToEvent.id, head(get(relays)), "reply"]);
+  
   newtags.push(["p", replyToEvent.pubkey, head(get(relays))]);
-
+  if (isRoot) {
+    newtags.push(["e", replyToEvent.id, head(get(relays)), "root"]);
+  } 
+  newtags.push(["e", replyToEvent.id, head(get(relays)), "reply"]);
   const tags: string[][] = newtags
   const sendEvent = await createEvent(1, content, tags)
+
+  console.log(sendEvent)
   pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
 }
 

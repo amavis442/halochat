@@ -10,7 +10,6 @@ export const noteReplyPubKeys = []
 export let since = 0
 
 export function updateNotes(note: Note) {
-    const q = get(queue)
     let $notes = get(notes)
     if (!$notes.length) {
         notes.set([])
@@ -26,26 +25,8 @@ export function updateNotes(note: Note) {
             console.log('Error: ', error, data, note)
             throw error
         }
-
-        if (note.tags.some(hasEventTag)) {
-            let tags = note.tags.find((item: Array<string>) => item[0] == 'e' && item[3] == 'reply')
-            if (tags) {
-                note.reply_id = tags[1]
-                //note.replies.push(tags[1])
-                if (!data[tags[1]]) {
-                    // else we need to fetch it somehow
-                    q.push(tags[1])
-                }
-            }
-        }
-        if (!note.reactions) note.reactions = []
-        if (!note.replies) note.replies = []
-        if (!note.upvotes) note.upvotes = 0
-        if (!note.downvotes) note.downvotes = 0
-        
         data.unshift(note)
         data = sort(byCreatedAt, data);
-
         return data
     })
 }

@@ -14,6 +14,7 @@
   import Button from "./partials/Button.svelte";
   import Text from "./partials/Text.svelte";
   import Anchor from "./partials/Anchor.svelte";
+  import Slide from "./partials/Slide.svelte";
 
   let msg = "";
   let replyTo: NoteEvent | null = null;
@@ -57,19 +58,15 @@
   let userHasAccount: boolean = false;
   let listener: Listener;
   onMount(async () => {
+    //let $notes:Array<Note> = get(notes)
+    //console.log($notes)
+
+    //listener = new Listener({ since: now()- 60 * 60 });
+    //  listener.start();
+    //return
     if ($relays.length) {
       let lastSync: number = now() - 60;
-      notes.update(data => {
-        data.forEach($note => {
-        if (!$note.reactions) $note.reactions = []
-        if (!$note.replies) $note.replies = []
-        if (!$note.upvotes) $note.upvotes = 0
-        if (!$note.downvotes) $note.downvotes = 0
-        })
-        return data
-      })
-
-      if ($notes) {
+      if ($notes.length) {
         let firstNote: Note = $notes[0];
         let lastNote: Note = $notes[$notes.length - 1];
         lastSync = firstNote.created_at - 60;
@@ -101,12 +98,15 @@
       return;
     }
     loading.set(true);
-    const {start, end} = getSyncTimeStamps()
-    async() => {
-      let oldNotes:any = await channels.getter.all({until:start, limit:20})
-      loading.set(false)
-    }
-    console.log(start, end)
+    const { start, end } = getSyncTimeStamps();
+    async () => {
+      let oldNotes: any = await channels.getter.all({
+        until: start,
+        limit: 20,
+      });
+      loading.set(false);
+    };
+    console.log(start, end);
     console.log("Bouncy");
   });
 
@@ -116,6 +116,7 @@
       //debounceFunc();
     }
   }
+
 </script>
 
 <div class="flex flex-col gap-4 h-screen">
@@ -132,11 +133,22 @@
           <div class="Note flex flex-col items-start">
             <Note note={n} {userHasAccount} />
             {#if n?.replies}
-              {#each n.replies as reply (reply.id)}
-                <div class="reply border-l-4 border-indigo-500/100">
-                  <Note note={reply} {userHasAccount} isReply />
+              <Slide classes="flex items-top gap-4 p-4 ml-16 w-6/12">
+                <span slot="show">
+                  View {n.replies.length} replies
+                </span> 
+                <span slot="hide">
+                  Hide {n.replies.length} replies
+                </span> 
+                
+                <div id={n.id} slot="content">
+                  {#each n.replies as reply (reply.id)}
+                    <div class="reply border-l-4 border-indigo-500/100">
+                      <Note note={reply} {userHasAccount} isReply />
+                    </div>
+                  {/each}
                 </div>
-              {/each}
+              </Slide>
             {/if}
           </div>
         {/each}

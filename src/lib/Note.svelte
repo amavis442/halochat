@@ -6,16 +6,18 @@
   import Modal from "./NoteReply.svelte";
   import { beforeUpdate, onMount } from "svelte";
   import { publish } from "./state/pool";
+  import TextArea from "./partials/TextArea.svelte";
+  import Button from "./partials/Button.svelte";
+  import { fade } from "svelte/transition";
+  import { publishReply } from "./state/pool";
 
   export let note: Note;
   export let userHasAccount: boolean = false;
-  export let isReply:boolean = false;
+  export let isReply: boolean = false;
 
   let user: User;
 
-  beforeUpdate(async () => {
-
-  });
+  beforeUpdate(async () => {});
 
   onMount(async () => {
     user = note?.user;
@@ -29,7 +31,7 @@
   }
 
   async function upvoteHandler() {
-    if (isReply) return
+    if (isReply) return;
     let tags = [
       ["p", note.pubkey],
       ["e", note.id],
@@ -38,7 +40,7 @@
   }
 
   async function downvoteHandler() {
-    if (isReply) return
+    if (isReply) return;
     let tags = [
       ["p", note.pubkey],
       ["e", note.id],
@@ -46,9 +48,20 @@
     publish(7, "-", tags);
   }
 
-  function handleReplyClick() {
-    openModal(Modal, { title: note.content.slice(0, 20), note: note });
+  async function onSubmit(e: Event) {
+    const target = e.target as HTMLFormElement;
+    const formData = new FormData(target);
+
+    const data: { replyText?: string } = {};
+    for (let field of formData) {
+      const [key, value] = field;
+      data[key] = value;
+    }
+    let v = Object.values(data);
+    publishReply(v[0], note)
+    showElement = false;
   }
+  let showElement: boolean = false;
 </script>
 
 {#if note && note.kind == 1}
@@ -69,9 +82,6 @@
       </span>
       {#if userHasAccount}
         <p class="mt-4 flex space-x-4 w-max p-1">
-          <button type="button" on:click={handleReplyClick}>
-            <i class="fa-regular fa-comment-dots" />
-          </button>
           <span>
             <button type="button" on:click={downvoteHandler}>
               <i class="fa-solid fa-thumbs-down" />
@@ -84,8 +94,29 @@
             </button>
             {note?.upvotes ? note.upvotes : 0}
           </span>
+          <span>
+            <button type="button" on:click={() => (showElement = !showElement)}>
+              <i class="fa-regular fa-comment-dots" />
+            </button>
+            {#if note.replies}
+              {note.replies.length}
+            {/if}
+          </span>
         </p>
       {/if}
     </div>
   </div>
+  {#if showElement}
+    <div transition:fade={{ delay: 250, duration: 300 }} class="gap-4 p-4 ml-16 w-6/12">
+      <form on:submit|preventDefault={onSubmit}>
+        <TextArea id="reply{note.id}" placeholder="Add reply" cols="20" />
+        <div class="actions">
+          <Button type="button" click={() => (showElement = !showElement)}
+            >Cancel</Button
+          > |
+          <Button type="submit">Send</Button>
+        </div>
+      </form>
+    </div>
+  {/if}
 {/if}
