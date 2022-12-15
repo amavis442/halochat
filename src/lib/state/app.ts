@@ -117,7 +117,7 @@ async function handleTextNote(evt: Event, relay: string) {
             }
         }
 
-        
+
         if (tags) {
             let parentEventId: string = tags[1]
             if (!parentNote && get(notes).length) {
@@ -153,6 +153,7 @@ async function handleTextNote(evt: Event, relay: string) {
     }
 
     if (typeof parentNote !== 'undefined' && parentNote) {
+        let byCreatedAt = descend<Note>(prop("created_at"));
         notes.update((data: Array<Note>) => {
             if (!data.length) {
                 data = []
@@ -160,8 +161,10 @@ async function handleTextNote(evt: Event, relay: string) {
             if (data.find(n => n.id == parentNote.id)) {
                 return data
             }
-            data.push(parentNote)
-            return uniqBy(prop('id'), data)
+            data.unshift(parentNote)
+            data = uniqBy(prop('id'), data)
+            data = sort(byCreatedAt, data)
+            return data
         })
     }
 }
@@ -185,9 +188,15 @@ function handleReaction(evt: Event, relay: string) {
             note.reactions.push(reaction)
         }
 
+        if (note.reactions) {
+            if (note.reactions.find(r => r.id == evt.id)) {
+                return // Already processed this reaction from another relay. Not gonna count it twice, thrice
+            }
+        }
         if (!note.reactions) {
             note.reactions = [reaction]
         }
+
         if (!note.upvotes) note.upvotes = 0
         if (!note.downvotes) note.downvotes = 0
 
