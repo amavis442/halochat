@@ -117,9 +117,9 @@ async function handleTextNote(evt: Event, relay: string) {
             }
         }
 
-        let parentEventId: string = tags[1]
+        
         if (tags) {
-
+            let parentEventId: string = tags[1]
             if (!parentNote && get(notes).length) {
                 parentNote = get(notes).find((n: Note) => n.id == parentEventId)
             }

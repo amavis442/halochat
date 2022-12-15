@@ -6,7 +6,8 @@
   import Button from "./partials/Button.svelte";
   import Text from "./partials/Text.svelte";
   import { getKeys } from "./util/keys";
-  import { publishAccount } from "./state/pool";
+  import { channels, publishAccount } from "./state/pool";
+  import type { Filter, Event } from './state/types'
 
   let pubkey: string = $account.pubkey;
   let privkey: string = $account.privkey;
@@ -59,6 +60,24 @@
     });
   }
 
+  async function checkPubkey() {
+    let filter:Filter = {
+      kinds: [0],
+      authors: [pubkey]
+    }
+    let result:Array<Event> = await channels.getter.all(filter)
+    if (result.length)
+    {
+      let data = result[0]
+      const content = JSON.parse(data.content);
+      name = content.name
+      about = content.about
+      picture = content.picture
+    }
+    console.log(result, pubkey)
+  }
+
+
   onMount(async () => {
     name = $account.name;
     about = $account.about;
@@ -73,7 +92,7 @@
 </script>
 
 <Toasts />
-<div class="block p-6 rounded-lg shadow-lg bg-white w-full ml-6 mt-6">
+<div class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6">
   <form on:submit|preventDefault={onSubmit}>
     <div class="form-group mb-6">
       <label for="pubKey" class="form-label inline-block mb-2 text-gray-700">
@@ -156,14 +175,14 @@
         somewhere on the net. Pictures are not stored in relays.
       </small>
     </div>
-
+    <Button type="button" click={checkPubkey}>Check pubkey</Button> | 
     <Button type="submit">Submit</Button>
   </form>
 </div>
 
 {#if $account.pubkey}
   <div
-    class="block p-6 rounded-lg shadow-lg bg-white w-full ml-6 mt-6 text-left"
+    class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6 text-left"
   >
     <ul class="bg-white rounded-lg border border-gray-200 w-full text-gray-900">
       <li class="px-6 py-2 border-b border-gray-200 w-full rounded-t-lg">

@@ -74,7 +74,7 @@
         id="Notes"
         class="cointainer overflow-y-auto relative max-w-full mx-auto bg-white
         dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1 ring-black/5
-        rounded-xl divide-y dark:divide-slate-200/5 ml-4 mr-4 h-full max-h-full"
+        rounded-xl divide-y dark:divide-slate-200/5 ml-4 mr-4 h-full max-h-full md:w-6/12 ms:w-full"
         on:scroll={scrollHandler}
       >
         {#each notes ? $notes : [] as n (n.id)}
@@ -110,7 +110,7 @@
       <Anchor href="relays">relays</Anchor>
     {/if}
   </div>
-  <div class="h-15p">
+  <div class="h-15p md:w-6/12 ms:w-full">
     {#if $relays.length && $account.privkey}
       <div class="block max-w-full flex justify-center">
         <div class="w-4/5 mr-2">
