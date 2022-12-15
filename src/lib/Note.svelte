@@ -10,6 +10,7 @@
   import Button from "./partials/Button.svelte";
   import { fade } from "svelte/transition";
   import { publishReply } from "./state/pool";
+  import { get } from "svelte/store";
 
   export let note: Note;
   export let userHasAccount: boolean = false;
@@ -21,6 +22,9 @@
 
   onMount(async () => {
     user = note?.user;
+   
+    let upvotes = note.upvotes
+console.log(upvotes)
   });
 
   function normalizeName(data: User): string {
@@ -30,21 +34,23 @@
     );
   }
 
+
+  function makeLikeTags() {
+    let tags = note.tags.length ? note.tags : []
+    tags.push(["e", note.id])
+    tags.push(["p", note.pubkey])
+    return tags
+  }
+
   async function upvoteHandler() {
     if (isReply) return;
-    let tags = [
-      ["p", note.pubkey],
-      ["e", note.id],
-    ];
+    let tags = makeLikeTags()
     publish(7, "+", tags);
   }
 
   async function downvoteHandler() {
     if (isReply) return;
-    let tags = [
-      ["p", note.pubkey],
-      ["e", note.id],
-    ];
+    let tags = makeLikeTags()
     publish(7, "-", tags);
   }
 

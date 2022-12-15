@@ -211,9 +211,13 @@ function handleReaction(evt: Event, relay: string) {
         if (!note.reactions) {
             note.reactions = [reaction]
         }
+        if (!note.upvotes) note.upvotes = 0
+        if (!note.downvotes) note.downvotes = 0
+        
         if (evt.content == '+') note.upvotes = note.upvotes + 1
         if (evt.content == '-') note.downvotes = note.downvotes + 1
     }
+    notes.update(data => data) // make sure the view is updated without this, it will not
 }
 
 export class Listener {
