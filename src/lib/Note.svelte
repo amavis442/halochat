@@ -8,29 +8,29 @@
   import Button from "./partials/Button.svelte";
   import { fade } from "svelte/transition";
   import { publishReply } from "./state/pool";
-  import {account } from  './stores/account'
-  import { pluck } from 'ramda'
+  import { account } from "./stores/account";
+  import { pluck } from "ramda";
 
   export let note: Note;
   export let userHasAccount: boolean = false;
   export let isReply: boolean = false;
 
   let user: User;
-  let votedFor:string = ''
+  let votedFor: string = "";
 
-  beforeUpdate(async () => {});
+  beforeUpdate(() => {
+    if (note.reactions && $account) {
+      let pubkeys = pluck("pubkey", note.reactions);
+      let fp = pubkeys.find((pk) => pk == $account.pubkey);
+      if (fp) {
+        let voted = note.reactions.find((r) => r.pubkey == $account.pubkey);
+        votedFor = voted.content;
+      }
+    }
+  });
 
   onMount(async () => {
     user = note?.user;
-    if (note.reactions && $account) {
-      let pubkeys = pluck('pubkey', note.reactions)
-      let fp = pubkeys.find(pk => pk == $account.pubkey)
-      if (fp) {
-        let voted = note.reactions.find(r => r.pubkey == $account.pubkey)
-        votedFor = voted.content
-      }
-    }
-  
   });
 
   function normalizeName(data: User): string {
@@ -93,15 +93,15 @@
       </span>
       {#if userHasAccount}
         <p class="mt-4 flex space-x-4 w-max p-1">
-          <span class="{votedFor == '-' ? 'text-blue-700' : ''}">
-            <button type="button" on:click={downvoteHandler} >
+          <span class={votedFor == "-" ? "text-blue-700" : ""}>
+            <button type="button" on:click={downvoteHandler}>
               <i class="fa-solid fa-thumbs-down" />
             </button>
             {note?.downvotes ? note.downvotes : 0}
           </span>
-          <span class="{votedFor == '+' ? 'text-blue-700' : ''}">
-            <button type="button" on:click={upvoteHandler} >
-              <i class="fa-solid fa-thumbs-up "/>
+          <span class={votedFor == "+" ? "text-blue-700" : ""}>
+            <button type="button" on:click={upvoteHandler}>
+              <i class="fa-solid fa-thumbs-up " />
             </button>
             {note?.upvotes ? note.upvotes : 0}
           </span>
