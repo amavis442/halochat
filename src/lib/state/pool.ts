@@ -204,14 +204,19 @@ export async function publish(kind: number, content = '', tags = []): Promise<an
 export const relays = writable(getLocalJson("halonostr/relays") || [])
 
 relays.subscribe($relays => {
-  //@ts-ignore
-  Object.keys(pool.relays).forEach((url: string) => {
-    if (!$relays.includes(url)) {
-      //@ts-ignore
-      pool.removeRelay(url)
-      console.log('Remove relay form pool:', url)
-    }
-  })
+  try {
+    //@ts-ignore
+    Object.keys(pool.relays).forEach((url: string) => {
+      if (!$relays.includes(url)) {
+        //@ts-ignore
+        pool.removeRelay(url)
+        console.log('Remove relay form pool:', url)
+      }
+    })
+  } catch (error) {
+    console.error(error)
+  }
+
 
   $relays.forEach((url: string) => {
     //@ts-ignore
