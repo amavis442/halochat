@@ -142,6 +142,14 @@ async function handleTextNote(evt: Event, relay: string) {
                 parentNote.user = user
             }
             if (parentNote.replies?.length) {
+                let user: User
+                if (get(users).length) {
+                    user = get(users).find((u: User) => u.pubkey == evt.pubkey)
+                }
+                if (!user) {
+                    user = await fetchMetaDataUser(evt.pubkey, relay)
+                }
+                note.user = user
                 parentNote.replies.push(note)
                 parentNote.replies = uniqBy(prop('id'), parentNote.replies)
                 let byCreatedAt = descend<Note>(prop("created_at"));
@@ -173,26 +181,31 @@ function handleReaction(evt: Event, relay: string) {
     let $notes = get(notes)
     if (!$notes || !$notes.length) return
 
+    console.debug('Reaction: ', evt)
     let note: Note = $notes.find((n: Note) => {
         let eIds = evt.tags.filter(t => t[0] == 'e')
         return n.id == eIds[0][1]
     })
+    console.log('Reaction found parent node: ', note)
 
     if (note) {
         let reaction: Reaction = evt
         note.relays = [relay]
 
+        if (note.reactions) {
+            if (note.reactions.find(r => r.id == evt.id)) {
+                console.debug('Already added this reaction')
+                return // Already processed this reaction from another relay. Not gonna count it twice, thrice
+            }
+        }
+
         if (note.reactions && !note.reactions.find(r => {
             return r.id == evt.id
         })) {
             note.reactions.push(reaction)
+            console.debug('Added reaction', reaction)
         }
 
-        if (note.reactions) {
-            if (note.reactions.find(r => r.id == evt.id)) {
-                return // Already processed this reaction from another relay. Not gonna count it twice, thrice
-            }
-        }
         if (!note.reactions) {
             note.reactions = [reaction]
         }
