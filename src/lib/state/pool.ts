@@ -152,15 +152,9 @@ export async function publishAccount() {
   })
 }
 
-export async function publishReply(content: string, replyToEvent: Event) {
-  let isRoot = false
-  if (!replyToEvent.tags.some(hasEventTag)) {
-    // then this will be the start
-    isRoot = true
-  }
-
+function copyTags(evt: Event) {
   let newtags = [];
-  replyToEvent.tags.forEach((tag) => {
+  evt.tags.forEach((tag) => {
     let t = [];
     let add = true
 
@@ -169,7 +163,7 @@ export async function publishReply(content: string, replyToEvent: Event) {
     } else {
       t = tag;
     }
-    if (tag[0] == 'p' && tag[1] == replyToEvent.pubkey) {
+    if (tag[0] == 'p' && tag[1] == evt.pubkey) {
       add = false
     }
     if (add) {
@@ -177,15 +171,25 @@ export async function publishReply(content: string, replyToEvent: Event) {
     }
   });
 
-  newtags.push(["p", replyToEvent.pubkey, head(get(relays))]);
-  if (isRoot) {
-    newtags.push(["e", replyToEvent.id, head(get(relays)), "root"]);
-  }
-  newtags.push(["e", replyToEvent.id, head(get(relays)), "reply"]);
-  const tags: string[][] = newtags
+  newtags.push(["p", evt.pubkey, head(get(relays))]);
+  newtags.push(["e", evt.id, head(get(relays)), "reply"]);
+  
+  return newtags
+}
+
+export async function publishReply(content: string, evt: Event) {
+  const tags: string[][] = copyTags(evt)
   const sendEvent = await createEvent(1, content, tags)
 
-  console.log(sendEvent)
+  console.debug(sendEvent)
+  pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
+}
+
+export async function publishReaction(content: string, evt: Event) {
+  const tags: string[][] = copyTags(evt)
+  const sendEvent = await createEvent(7, content, tags)
+
+  console.debug(sendEvent)
   pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
 }
 

@@ -80,7 +80,7 @@
         {#each notes ? $notes : [] as n (n.id)}
           <div class="Note flex flex-col items-start">
             <Note note={n} {userHasAccount} />
-            {#if n?.replies}
+            {#if n?.replies && n.replies.length > 0}
               <Slide classes="flex items-top gap-4 p-4 ml-16 w-6/12">
                 <span slot="show">
                   View {n.replies.length} replies
@@ -92,7 +92,7 @@
                 <div id={n.id} slot="content">
                   {#each n.replies as reply (reply.id)}
                     <div class="reply border-l-4 border-indigo-500/100">
-                      <Note note={reply} {userHasAccount} isReply />
+                      <Note note={reply} {userHasAccount} />
                     </div>
                   {/each}
                 </div>

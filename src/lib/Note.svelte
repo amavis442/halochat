@@ -3,17 +3,16 @@
   import type { User, Note } from "./state/types";
   import { toHtml } from "./util/html";
   import { beforeUpdate, onMount } from "svelte";
-  import { publish } from "./state/pool";
+  import { publishReaction } from "./state/pool";
   import TextArea from "./partials/TextArea.svelte";
   import Button from "./partials/Button.svelte";
   import { fade } from "svelte/transition";
   import { publishReply } from "./state/pool";
   import { account } from "./stores/account";
-  import { pluck } from "ramda";
+  import { flatten, pluck } from "ramda";
 
   export let note: Note;
   export let userHasAccount: boolean = false;
-  export let isReply: boolean = false;
 
   let user: User;
   let votedFor: string = "";
@@ -40,23 +39,12 @@
     );
   }
 
-  function makeLikeTags() {
-    let tags = note.tags.length ? note.tags : [];
-    tags.push(["e", note.id]);
-    tags.push(["p", note.pubkey]);
-    return tags;
-  }
-
   async function upvoteHandler() {
-    if (isReply) return;
-    let tags = makeLikeTags();
-    publish(7, "+", tags);
+    await publishReaction('+', note)
   }
 
   async function downvoteHandler() {
-    if (isReply) return;
-    let tags = makeLikeTags();
-    publish(7, "-", tags);
+    await publishReaction('-', note)
   }
 
   async function onSubmit(e: Event) {
@@ -89,7 +77,7 @@
         <small class="text-gray">{getTime(note.created_at)}</small>
       </strong>
       <span class="text-slate-500 text-sm font-medium dark:text-slate-400">
-        {@html toHtml(note.content)}
+        {@html toHtml(note.content)} 
       </span>
       {#if userHasAccount}
         <p class="mt-4 flex space-x-4 w-max p-1">
