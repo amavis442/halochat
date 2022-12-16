@@ -47,6 +47,10 @@
     await publishReaction('-', note)
   }
 
+  function showInfo() {
+    console.debug('Debug note info from mouseover: ', note)
+  }
+
   async function onSubmit(e: Event) {
     const target = e.target as HTMLFormElement;
     const formData = new FormData(target);
@@ -70,6 +74,8 @@
       src={user && user.picture ? user.picture : "profile-placeholder.png"}
       alt={user ? user.about : note.pubkey}
       title={user ? user.name : note.pubkey}
+      on:mouseover={showInfo}
+      on:focus={showInfo}
     />
     <div class="flex flex-col text-left">
       <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">
