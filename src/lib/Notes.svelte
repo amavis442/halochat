@@ -8,6 +8,8 @@
   import { notes } from "./stores/notes";
   import { now } from "./util/time";
   import Note from "./Note.svelte";
+  import TreeNote from "./TreeNote.svelte";
+
   import { Modals, closeModal } from "svelte-modals";
   import Spinner from "./Spinner.svelte";
   import Button from "./partials/Button.svelte";
@@ -34,7 +36,7 @@
   let userHasAccount: boolean = false;
   let listener: Listener;
   onMount(async () => {
-    runWorker()
+    runWorker();
     if ($relays.length) {
       let lastSync: number = now() - 60 * 60;
       if ($notes.length) {
@@ -79,36 +81,17 @@
         rounded-xl divide-y dark:divide-slate-200/5 ml-4 mr-4 h-full max-h-full md:w-8/12 ms:w-full"
         on:scroll={scrollHandler}
       >
-        {#each notes ? $notes : [] as n (n.id)}
-          <div class="Note flex flex-col items-start">
-            <Note note={n} {userHasAccount} />
-            {#if n?.replies && n.replies.length > 0}
-              <Slide classes="flex items-top gap-4 p-4 ml-16 w-6/12">
-                <span slot="show">
-                  View {n.replies.length} replies
-                </span>
-                <span slot="hide">
-                  Hide {n.replies.length} replies
-                </span>
-
-                <div id={n.id} slot="content">
-                  {#each n.replies as reply (reply.id)}
-                    <div class="reply border-l-4 border-indigo-500/100">
-                      <Note note={reply} {userHasAccount} />
-                      {#if reply?.replies.length}
-                          {#each reply.replies as subreply (subreply.id)}
-                            <div class="border-l-4 border-indigo-800/100">
-                            <Note note={subreply} {userHasAccount} />
-                            </div>
-                          {/each}
-                      {/if}
-                    </div>
-                  {/each}
-                </div>
-              </Slide>
-            {/if}
-          </div>
+        {#each notes ? $notes : [] as note (note.id)}
+          <ul>
+            <li>
+              <Note {note} {userHasAccount} />
+              {#if note?.replies && note.replies.length > 0}
+                <TreeNote notes={note.replies} {userHasAccount} expanded={false} num={note.replies.length} level={0}/>
+              {/if}
+            </li>
+          </ul>
         {/each}
+
         {#if $loading}
           <Spinner />
         {/if}
@@ -119,7 +102,7 @@
       <Anchor href="relays">relays</Anchor>
     {/if}
   </div>
-  <div class="h-15p md:w-6/12 ms:w-full">
+  <div class="h-15p md:w-8/12 ms:w-full">
     {#if $relays.length && $account.privkey}
       <div class="block max-w-full flex justify-center">
         <div class="w-4/5 mr-2">
