@@ -14,6 +14,7 @@
   import Text from "./partials/Text.svelte";
   import Anchor from "./partials/Anchor.svelte";
   import Slide from "./partials/Slide.svelte";
+  import { runWorker } from "../worker";
 
   let msg = "";
   let replyTo: NoteEvent | null = null;
@@ -33,6 +34,7 @@
   let userHasAccount: boolean = false;
   let listener: Listener;
   onMount(async () => {
+    runWorker()
     if ($relays.length) {
       let lastSync: number = now() - 60 * 60;
       if ($notes.length) {
@@ -74,7 +76,7 @@
         id="Notes"
         class="cointainer overflow-y-auto relative max-w-full mx-auto bg-white
         dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1 ring-black/5
-        rounded-xl divide-y dark:divide-slate-200/5 ml-4 mr-4 h-full max-h-full md:w-6/12 ms:w-full"
+        rounded-xl divide-y dark:divide-slate-200/5 ml-4 mr-4 h-full max-h-full md:w-8/12 ms:w-full"
         on:scroll={scrollHandler}
       >
         {#each notes ? $notes : [] as n (n.id)}
