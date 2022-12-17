@@ -48,7 +48,7 @@
   }
 
   function showInfo() {
-    console.debug('Debug note info from mouseover: ', note)
+    console.info('Debug note info from mouseover: ', note)
   }
 
   async function onSubmit(e: Event) {
