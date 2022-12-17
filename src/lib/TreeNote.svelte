@@ -32,12 +32,10 @@
     {#each notes ? notes : [] as note (note.id)}
       <li>
         {#if note.replies.length > 0}
-        {level}  
         <Note {note} {userHasAccount} />
 
           <svelte:self notes={note.replies} {userHasAccount} num={note.replies.length} level={level} />
         {:else}
-        {level}
           <Note {note} {userHasAccount} />
         {/if}
       </li>
