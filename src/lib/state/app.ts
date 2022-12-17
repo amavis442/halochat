@@ -8,7 +8,7 @@ import type { Event, User, Filter, Note, Reaction } from './types'
 import { pool, channels } from './pool'
 import { prop, sort, descend } from "ramda";
 import { setLocalJson, getLocalJson } from '../util/storage'
-
+import { getRootTag, getReplyTag } from '../util/tags';
 
 export const blacklist: Writable<Array<string>> = writable([
     '887645fef0ce0c3c1218d2f5d8e6132a19304cdc57cd20281d082f38cfea0072'
@@ -167,36 +167,10 @@ noteStack.subscribe($stack => {
     setLocalJson('halonostr/notestack', $stack)
 })
 
-function getRootTag(tags: string[][]): string[] {
-    let rootTag = head(tags.filter(t => t[0] == 'e' && t[3] == 'root'))
-    if (rootTag) return rootTag
-    for (let i = 0; i < tags.length; i++) {
-        if (tags[i][0] == 'e') {
-            return tags[i]
-        }
-    }
-
-    return []
-}
-
-function getReplyTag(tags: string[][]): string[] {
-    let replyTag = head(tags.filter(t => t[0] == 'e' && t[3] == 'reply'))
-    if (replyTag) return replyTag
-
-    for (let i = tags.length - 1; i >= 0; i--) {
-        if (tags[i][0] == 'e') {
-            return tags[i]
-        }
-    }
-
-    return []
-}
-
-
-async function processReplyFeed(replies:Array<Event> , relay:string = ''):Promise<Note|null> {
+async function processReplyFeed(evt, replies: Array<Event>, relay: string = ''): Promise<Note | null> {
     let $noteStack = get(noteStack)
     let rootTag = []
-    let rootNote:Note
+    let rootNote: Note
 
     if (replies.length > 0) {
         let rootNoteId: string = ''
@@ -221,7 +195,7 @@ async function processReplyFeed(replies:Array<Event> , relay:string = ''):Promis
 
         rootNote = $noteStack[rootTag[1]]
         if (!rootNote) {
-            console.debug('No root note for our replies')
+            console.debug(evt.id, ':: No root note for our replies')
             return null
         }
         // get all the events under this eventId
@@ -275,7 +249,7 @@ async function handleTextNote(evt: Event, relay: string) {
     let $noteStack = get(noteStack)
 
     if ($noteStack[evt.id]) {
-        console.debug('Already processed ', evt)
+        console.debug(evt.id, ':: Already processed ', evt)
         // already processed
         return
     }
@@ -294,15 +268,15 @@ async function handleTextNote(evt: Event, relay: string) {
         kinds: [1],
         '#e': [evt.id]
     }
-    console.debug('Filter to get replies ', filter)
+    console.debug(evt.id, ':: Filter to get replies ', filter)
     let replies: Array<Event> = []
     replies = await channels.getter.all(filter) // This should give all replies.
-    console.debug('Replies: ', replies)
-   
+    console.debug(evt.id, ':: Replies: ', replies)
+
     if (replies.length) {
-        let result:Note|null = await processReplyFeed(replies, relay)
+        let result: Note | null = await processReplyFeed(evt, replies, relay)
         if (!result) {
-            console.log('no root note')
+            console.log(evt.id, ':: No root note')
         }
         rootNote = result
     }
@@ -324,33 +298,44 @@ async function handleTextNote(evt: Event, relay: string) {
     let numETags = count(t => t[0] == 'e', evt.tags)
 
     if (numETags) {
-
         let rootTag = getRootTag(evt.tags)
         let replyTag = getReplyTag(evt.tags)
-        console.debug('Id: ', evt.id, 'Content:', evt.content, 'Root: ', rootTag, 'Reply: ', replyTag)
+        console.debug(evt.id, ':: Content: [', evt.content, ']\n Root: ', rootTag, 'Reply: ', replyTag)
 
         if (replies.length == 0) {
             // We asume that there has not been any replies on this one so the reply Id will be the root 
             let rootNoteId = rootTag[1]
-            console.debug('No replies, root id:', rootNoteId)
+            console.debug(evt.id, ':: No replies, root id:', rootNoteId)
             rootNote = $noteStack[rootNoteId]
-            console.debug('Check the rootNote ', rootNote)
+            console.debug(evt.id, ':: Check the rootNote ', rootNote)
+            console.debug(evt.id, ':: Stack ', $noteStack)
+            
             if (!rootNote) {
                 await getNotes([rootNoteId], relay)
                 rootNote = $noteStack[rootNoteId] // Try again
                 if (!rootNote) return // We give up
             }
-            rootNote.replies.push($noteStack[note.id])
-            rootNote.replies = uniqBy(prop('id'), rootNote.replies)
-            console.debug('No replies, so this will be the first and the tag event id will be the root:', rootNote)
+            // a -> b
+            if (rootTag[1] == replyTag[1]) {
+                rootNote.replies.push($noteStack[note.id])
+                rootNote.replies = uniqBy(prop('id'), rootNote.replies)
+
+                console.debug(evt.id, ':: No replies, so this will be the first and the tag event id will be the root:', rootNote)
+            }
+            // a -> b -> c
+            if (rootTag[1] != replyTag[1]) {
+                let c = rootNote.replies.find(n => n.id == replyTag[1])
+                c.replies.push($noteStack[note.id])
+                c.replies = uniqBy(prop('id'), c.replies)
+                console.debug(evt.id, ':: No replies, but reply id != root id so reply id is likely a child of root. child of root:', c)
+            }
         }
-       
     }
 
     console.debug('Current stack: ', $noteStack)
 
     if (typeof rootNote !== 'undefined' && rootNote) {
-        console.debug('Add/update a note: ', rootNote)
+        console.debug(evt.id, ':: Add/update a note: ', rootNote)
         let byCreatedAt = descend<Note>(prop("created_at"));
         notes.update((data: Array<Note>) => {
             if (!data.length) {
@@ -359,7 +344,7 @@ async function handleTextNote(evt: Event, relay: string) {
             let note: Note = data.find(n => n.id == rootNote.id)
             if (note) {
                 note = rootNote //replace it with updated data
-                console.debug('Updated note ', note)
+                console.debug(evt.id, ':: Updated note ', note)
                 return data
             }
             data.unshift(rootNote)
@@ -373,6 +358,8 @@ async function handleTextNote(evt: Event, relay: string) {
 function handleReaction(evt: Event, relay: string) {
     let $notes = get(notes)
     if (!$notes || !$notes.length) return
+    let rootTag = getRootTag(evt.tags)
+    let replyTag = getReplyTag(evt.tags)
 
     const eventTags = evt.tags.filter(hasEventTag);
     let replies = eventTags.filter((e) => e[3] ? e[3] === 'reply' : false);
@@ -381,22 +368,22 @@ function handleReaction(evt: Event, relay: string) {
     }
 
     if (replies.length != 1) {
-        console.debug('Old style or no reply tag')
+        console.debug(evt.id, ':: Reaction Old style or no reply tag')
         return
     }
     const eventId: string = replies[0][1];
 
-    console.debug('Reaction: ', eventId)
+    console.debug(evt.id, ':: Reaction: ', eventId)
 
     let note: Note
     let result = $notes.filter((n: Note) => n.id == eventId)
     if (result.length) {
         note = result[0]
-        console.debug('Root ', note)
+        console.debug(evt.id, ':: Reaction Root ', note)
     }
 
     if (!result.length) {
-        console.debug('Is not root ;)')
+        console.debug(evt.id, ':: Reaction Is not root ;)')
         for (let i = 0; i < $notes.length; i++) {
             let rootNote: Note = $notes[i]
             result = rootNote.replies.filter((n: Note) => n.id == eventId)
@@ -405,10 +392,36 @@ function handleReaction(evt: Event, relay: string) {
                 break
             }
         }
-        console.debug('Is not root ;)')
+        console.debug(evt.id, ':: Reaction Is not root ;)')
     }
 
-    console.debug('Reaction found parent node: ', note)
+    if (!note && rootTag) {
+        let rootNote = $notes.find((n: Note) => n.id == rootTag[1])
+        if (rootNote.id == replyTag[1]) note = rootNote
+
+        let replies: Array<Note> = Object.values(rootNote.replies)
+        let v = replies.find(n => n.id == replyTag[1])
+        if (v) {
+            console.debug(evt.id, " :: Reaction replies ", v)
+            note = v
+        }
+
+        if (!note) {
+            for (let index in replies) {
+                if (replies[index].replies) {
+                    let n = replies[index].replies.find(n => n.id == replyTag[1])
+                    if (n) {
+                        note = n
+                        console.debug(evt.id, " :: Reaction  replies of the replies", n)
+                        break
+                    }
+                }
+            }
+        }
+
+        console.debug('---------', rootTag, evt.tags)
+    }
+    console.debug(evt.id, ':: Reaction found node: ', note)
 
     if (note) {
         let reaction: Reaction = evt
@@ -416,7 +429,7 @@ function handleReaction(evt: Event, relay: string) {
 
         if (note.reactions) {
             if (note.reactions.find(r => r.id == evt.id)) {
-                console.debug('Already added this reaction')
+                console.debug(evt.id, ':: Reaction Already added this reaction')
                 return // Already processed this reaction from another relay. Not gonna count it twice, thrice
             }
         }
@@ -425,7 +438,7 @@ function handleReaction(evt: Event, relay: string) {
             return r.id == evt.id
         })) {
             note.reactions.push(reaction)
-            console.debug('Added reaction', reaction)
+            console.debug(evt.id, ':: Reaction Added reaction', reaction)
         }
 
         if (!note.reactions) {

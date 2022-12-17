@@ -9,7 +9,7 @@ import { now } from "../util/time";
 import { head } from 'ramda';
 import { account } from '../stores/account';
 import type { Event, Filter } from './types'
-import { hasEventTag } from './app';
+import { getRootTag, getReplyTag } from '../util/tags';
 
 export const pool = relayPool();
 
@@ -40,7 +40,7 @@ export const createEvent = async (kind: number, content: string = '', tags: stri
     tags = tags.filter((t) => t[0] != 'client')
     tags = [...tags, clientTag]
   }
-
+  
   let note: Event = { kind: kind, content: content, tags: tags, pubkey: publicKey, created_at: createdAt }
   let sig: any = await signEvent(note, $account.privkey)
   return { ...note, sig }
@@ -174,6 +174,13 @@ function copyTags(evt: Event) {
   newtags.push(["p", evt.pubkey, head(get(relays))]);
   newtags.push(["e", evt.id, head(get(relays)), "reply"]);
   
+  let rootTag = getRootTag(newtags)
+  let replyTag = getReplyTag(newtags)
+  if (rootTag[1] != replyTag[1] && rootTag[3] != 'root') {
+    let t = newtags.find(t => t[1] == rootTag[1] && t[0] == 'e')
+    t[3] = 'root'
+  }
+
   return newtags
 }
 

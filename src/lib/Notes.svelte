@@ -33,7 +33,6 @@
   let userHasAccount: boolean = false;
   let listener: Listener;
   onMount(async () => {
-  
     if ($relays.length) {
       let lastSync: number = now() - 60 * 60;
       if ($notes.length) {
@@ -94,6 +93,13 @@
                   {#each n.replies as reply (reply.id)}
                     <div class="reply border-l-4 border-indigo-500/100">
                       <Note note={reply} {userHasAccount} />
+                      {#if reply?.replies.length}
+                          {#each reply.replies as subreply (subreply.id)}
+                            <div class="border-l-4 border-indigo-800/100">
+                            <Note note={subreply} {userHasAccount} />
+                            </div>
+                          {/each}
+                      {/if}
                     </div>
                   {/each}
                 </div>
