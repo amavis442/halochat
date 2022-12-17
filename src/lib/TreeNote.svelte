@@ -28,9 +28,9 @@
 </button>
 
 {#if expanded}
-  <ul>
+  <ul class="border-l-4 border-l-indigo-{color}/100">
     {#each notes ? notes : [] as note (note.id)}
-      <li class="border-l-4 border-l-indigo-{color}">
+      <li>
         {#if note.replies.length > 0}
         {level}  
         <Note {note} {userHasAccount} />
