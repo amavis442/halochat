@@ -16,7 +16,7 @@ export const pool = relayPool();
 //@ts-ignore does exist just not in index.d.ts
 pool.onNotice((message: string, relay?: Relay) => {
   const url: string = relay.url
-  console.debug(`Got an notice event from relay ${url}: ${message}`);
+  console.debug(`onNotice: Got a notice event from relay ${url}: ${message}`);
 })
 
 /**
@@ -137,17 +137,17 @@ export async function publishAccount() {
   const metadata = { name: $account.name, about: $account.about, picture: $account.picture }
 
   let event = await createEvent(0, JSON.stringify(metadata))
-
+  console.debug('publishAccount: ', event)
   await pool.publish(event, (status: number, url: string) => {
     switch (status) {
       case 0:
-        console.info(`Account request send to ${url}`)
+        console.info(`publishAccount: Account request send to ${url}`)
         break
       case 1:
-        console.info(`Account published by ${url}`)
+        console.info(`publishAccount: Account published by ${url}`)
         break
       default:
-        console.error(`Unknown status ${status} while publishing account`)
+        console.error(`publishAccount: Unknown status ${status} while publishing account`)
     }
   })
 }
@@ -188,7 +188,7 @@ export async function publishReply(content: string, evt: Event) {
   const tags: string[][] = copyTags(evt)
   const sendEvent = await createEvent(1, content, tags)
 
-  console.debug(sendEvent)
+  console.debug('publishReply: ', sendEvent)
   pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
 }
 
@@ -196,7 +196,7 @@ export async function publishReaction(content: string, evt: Event) {
   const tags: string[][] = copyTags(evt)
   const sendEvent = await createEvent(7, content, tags)
 
-  console.debug(sendEvent)
+  console.debug('publishReaction: ',sendEvent)
   pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
 }
 
@@ -209,6 +209,7 @@ export async function publishReaction(content: string, evt: Event) {
  */
 export async function publish(kind: number, content = '', tags = []): Promise<any> {
   const sendEvent = await createEvent(kind, content, tags)
+  console.debug('publish: ', sendEvent)
   return pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
 }
 

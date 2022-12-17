@@ -157,7 +157,7 @@ async function getNotes(ids: Array<string>, relay: string): Promise<void> {
         kinds: [1],
         'ids': ids
     }
-    console.debug('getNotes -> filter ', filter)
+    console.debug('getNotes: filter ', filter)
 
     if (!ids.length) return
     let result = await channels.getter.all(filter)
@@ -216,7 +216,7 @@ async function processReplyFeed(evt, replies: Array<Event>, relay: string = ''):
 
         rootNote = $noteStack[rootTag[1]]
         if (!rootNote) {
-            console.debug(evt.id, ':: No root note for our replies')
+            console.debug('processReplyFeed: No root note for our replies.', evt.id)
             return null
         }
         // get all the events under this eventId
@@ -255,7 +255,7 @@ async function processReplyFeed(evt, replies: Array<Event>, relay: string = ''):
  */
 function syncNoteTree(rootNote: Note) {
     if (typeof rootNote !== 'undefined' && rootNote) {
-        console.debug('syncNoteTree -> Add/update a note: ', rootNote)
+        console.debug('syncNoteTree: Add/update a note: ', rootNote)
         let byCreatedAt = descend<Note>(prop("created_at"));
         notes.update((data: Array<Note>) => {
             if (!data.length) {
@@ -264,7 +264,7 @@ function syncNoteTree(rootNote: Note) {
             let note: Note = data.find(n => n.id == rootNote.id)
             if (note) {
                 note = rootNote //replace it with updated data
-                console.debug('syncNoteTree -> Updated note ', note)
+                console.debug('syncNoteTree: Updated note ', note)
                 return data
             }
             data.unshift(rootNote)
@@ -291,10 +291,14 @@ function initUser(relay: string) {
 }
 
 function getUser(note: Note, relay: string) {
-    console.debug('getUser -> User ', note.pubkey)
+    console.debug('getUser: User ', note.pubkey)
     let result = get(users).filter((u: User) => u.pubkey == note.pubkey)
     if (result == undefined) {
-        return initUser(relay)
+        let user:User = initUser(relay)
+        fetchMetaDataUser(note.pubkey, relay).then((userData) =>{
+            user = userData // Hope it uses references and we do not have to wait for it to finish
+        })
+        return user
     }
     return result[0]
 }
@@ -346,9 +350,9 @@ async function handleTextNote(evt: Event, relay: string) {
     let $noteStack = get(noteStack)
 
 
-    console.debug('handleTextNote -> input ', evt)
+    console.debug('handleTextNote: input ', evt)
     if ($noteStack[evt.id]) {
-        console.debug('handleTextNote -> Already added this input ', evt)
+        console.debug('handleTextNote: Already added this input ', evt)
     }
     $noteStack[evt.id] = note
 
@@ -363,7 +367,7 @@ async function handleTextNote(evt: Event, relay: string) {
     }
     // Reply to root only 1 e tag
     if (rootTag.length && replyTag.length && replyTag[1] == rootTag[1]) {
-        console.debug("handleTextNote -> Replytag and RootTag are the same", rootTag, replyTag, evt)
+        console.debug("handleTextNote: Replytag and RootTag are the same", rootTag, replyTag, evt)
         let rootNote = get(notes).find((n: Note) => n.id == rootTag[1])
         if (rootNote) { // Put getting extra data in a WebWorker for speed.
             rootNote.user = getUser(rootNote, relay)
@@ -381,7 +385,7 @@ async function handleTextNote(evt: Event, relay: string) {
         let rootNote = get(notes).find(n => n.id == rootTag[1])
         if (rootNote && rootNote.replies && rootNote.replies.length) {
             let replyNote: Note | null = findRecursive(rootNote, replyTag)
-            if (!replyNote) console.debug('handleTextNote -> Need to do expensive stuff and get the whole tree from a relay.', evt)
+            if (!replyNote) console.debug('handleTextNote: Need to do expensive stuff and get the whole tree from a relay.', evt)
             if (replyNote) {
                 note.user = getUser(note, relay)
                 replyNote.replies.push(note)
@@ -397,23 +401,23 @@ async function handleTextNote(evt: Event, relay: string) {
         kinds: [1],
         '#e': [evt.id]
     }
-    console.debug('handleTextNote -> Filter to get replies ', filter)
+    console.debug('handleTextNote: Filter to get replies ', filter)
     let replies: Array<Event> | any = []
 
     replies = await new Promise((resolve, reject) => {
-        setTimeout(() => reject('Process takes longer then 5 seconds. Filter content: ' + JSON.stringify(filter)), 5000) // relays can be very busy  
+        setTimeout(() => reject('handleTextNote: Process takes longer then 5 seconds. Filter content: ' + JSON.stringify(filter)), 5000) // relays can be very busy  
         channels.getter.all(filter)
             .then((result) => { resolve(result) }) // This should give all replies. It will get stuck when a relay does not send an EOSE. Have to find a workaround for this.
     }).catch((e) => {
         console.error(e)
     })
     if (!replies || !replies.length) replies = []
-    console.debug(evt.id, ':: Replies: ', replies)
+    console.debug('handleTextNote: Replies: ', replies)
 
     if (replies && replies.length) {
         let result: Note | null = await processReplyFeed(evt, replies, relay)
         if (!result) {
-            console.log('handleTextNote -> No root note', evt)
+            console.log('handleTextNote: No root note', evt)
         }
         rootNote = result
     }
@@ -423,15 +427,15 @@ async function handleTextNote(evt: Event, relay: string) {
     if (numETags) {
         let rootTag = getRootTag(evt.tags)
         let replyTag = getReplyTag(evt.tags)
-        console.debug('handleTextNote ->  Content: [', evt.content, ']\n Root: ', rootTag, 'Reply: ', replyTag)
+        console.debug('handleTextNote: Content: [', evt.content, ']\n Root: ', rootTag, 'Reply: ', replyTag)
 
         if (replies && replies.length == 0) {
             // We asume that there has not been any replies on this one so the reply Id will be the root 
             let rootNoteId = rootTag[1]
-            console.debug('handleTextNote -> No replies, root id:', rootNoteId)
+            console.debug('handleTextNote: No replies, root id:', rootNoteId)
             rootNote = $noteStack[rootNoteId]
-            console.debug('handleTextNote ->  Check the rootNote ', rootNote)
-            console.debug('handleTextNote ->  Stack ', $noteStack)
+            console.debug('handleTextNote: Check the rootNote ', rootNote)
+            console.debug('handleTextNote: Stack ', $noteStack)
 
             if (!rootNote) {
                 await getNotes([rootNoteId], relay)
@@ -443,7 +447,7 @@ async function handleTextNote(evt: Event, relay: string) {
                 rootNote.replies.push($noteStack[note.id])
                 rootNote.replies = uniqBy(prop('id'), rootNote.replies)
 
-                console.debug('handleTextNote ->  No replies, so this will be the first and the tag event id will be the root:', rootNote)
+                console.debug('handleTextNote: No replies, so this will be the first and the tag event id will be the root:', rootNote)
             }
             // a -> b -> c
             if (rootTag[1] != replyTag[1]) {
@@ -451,13 +455,13 @@ async function handleTextNote(evt: Event, relay: string) {
                 if (c?.replies) {
                     c.replies.push($noteStack[note.id])
                     c.replies = uniqBy(prop('id'), c.replies)
-                    console.debug('handleTextNote ->  No replies, but reply id != root id so reply id is likely a child of root. child of root:', c)
+                    console.debug('handleTextNote: No replies, but reply id != root id so reply id is likely a child of root. child of root:', c)
                 }
             }
         }
     }
 
-    console.debug('handleTextNote ->  Current stack: ', $noteStack)
+    console.debug('handleTextNote: Current stack: ', $noteStack)
 
     syncNoteTree(rootNote)
 }
