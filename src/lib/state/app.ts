@@ -363,7 +363,7 @@ async function handleTextNote(evt: Event, relay: string) {
     }
     // Reply to root only 1 e tag
     if (rootTag.length && replyTag.length && replyTag[1] == rootTag[1]) {
-        console.debug(evt.id, "  :: handleTextNote -> Replytag and RootTag are the same", rootTag, replyTag)
+        console.debug("handleTextNote -> Replytag and RootTag are the same", rootTag, replyTag, evt)
         let rootNote = get(notes).find((n: Note) => n.id == rootTag[1])
         if (rootNote) { // Put getting extra data in a WebWorker for speed.
             rootNote.user = getUser(rootNote, relay)
