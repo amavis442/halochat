@@ -33,8 +33,9 @@
   let userHasAccount: boolean = false;
   let listener: Listener;
   onMount(async () => {
+  
     if ($relays.length) {
-      let lastSync: number = now() - 60;
+      let lastSync: number = now() - 60 * 60;
       if ($notes.length) {
         let firstNote: Note = $notes[0];
         let lastNote: Note = $notes[$notes.length - 1];
@@ -43,7 +44,7 @@
           lastSync = lastNote.created_at - 60;
         }
       }
-      listener = new Listener({ since: lastSync });
+      listener = new Listener({ since: lastSync, limit: 30 });
       listener.start();
 
       let $account: Account = get(account);
