@@ -3,7 +3,7 @@ import { users, addUser, formatUser } from '../stores/users'
 import { notes } from '../stores/notes'
 import type { Subscription } from 'nostr-tools'
 import { now } from "../util/time"
-import { uniq, pluck, difference, uniqBy, head, count } from 'ramda'
+import { uniq, pluck, difference, uniqBy, head, count, reject } from 'ramda'
 import type { Event, User, Filter, Note, Reaction } from './types'
 import { pool, channels } from './pool'
 import { prop, sort, descend } from "ramda";
@@ -227,6 +227,51 @@ async function processReplyFeed(evt, replies: Array<Event>, relay: string = ''):
     return rootNote
 }
 
+function syncNotes(evt: Event, rootNote: Note) {
+    if (typeof rootNote !== 'undefined' && rootNote) {
+        console.debug(evt.id, ':: Add/update a note: ', rootNote)
+        let byCreatedAt = descend<Note>(prop("created_at"));
+        notes.update((data: Array<Note>) => {
+            if (!data.length) {
+                data = []
+            }
+            let note: Note = data.find(n => n.id == rootNote.id)
+            if (note) {
+                note = rootNote //replace it with updated data
+                console.debug(evt.id, ':: Updated note ', note)
+                return data
+            }
+            data.unshift(rootNote)
+            data = uniqBy(prop('id'), data)
+            data = sort(byCreatedAt, data)
+            return data
+        })
+    }
+
+    notes.update(data => data) // make sure the view is updated without this, it will not
+}
+
+function initUser(relay: string) {
+    let user: User = {
+        pubkey: 'unknown',
+        name: 'unknown',
+        about: '',
+        picture: 'profile-placeholder.png',
+        content: '',
+        refreshed: now(),
+        relays: [relay]
+    }
+    return user;
+}
+
+function getUser(note: Note, relay: string) {
+    console.debug('Get user ', note.pubkey)
+    let result = get(users).filter((u: User) => u.pubkey == note.pubkey)
+    if (result == undefined) {
+        return initUser(relay)
+    }
+    return result[0]
+}
 
 /**
  * fiatjaf
@@ -248,19 +293,30 @@ async function handleTextNote(evt: Event, relay: string) {
     let rootNote: Note
     let $noteStack = get(noteStack)
 
-    if ($noteStack[evt.id]) {
-        console.debug(evt.id, ':: Already processed ', evt)
-        // already processed
+    console.debug(evt.id, ':: handleTextNote got this ', evt)
+    $noteStack[evt.id] = note
+
+    let rootTag = getRootTag(evt.tags)
+    let replyTag = getReplyTag(evt.tags)
+    // Root, no need to look up replies
+    if (rootTag.length == 0 && replyTag.length == 0) {
+        note.user = getUser(note, relay)
+        rootNote = note
+        syncNotes(evt, rootNote)
         return
     }
-
-    if (!$noteStack[evt.id]) {
-        let user: User = get(users).find((u: User) => u.pubkey == evt.pubkey)
-        if (!user) {
-            user = await fetchMetaDataUser(note.pubkey, relay)
+    // Reply to root only 1 e tag
+    if (rootTag.length && replyTag.length && replyTag[1] == rootTag[1]) {
+        console.debug(evt.id, "  :: Replytag and RootTag are the same", rootTag, replyTag)
+        let rootNote = get(notes).find((n: Note) => n.id == rootTag[1])
+        if (rootNote) { // Put getting extra data in a WebWorker for speed.
+            rootNote.user = getUser(rootNote, relay)
+            if (!rootNote.replies) rootNote.replies = []
+            rootNote.replies.push(note)
+            rootNote.replies = uniqBy(prop('id'), rootNote.replies)
+            syncNotes(evt, rootNote)
+            return
         }
-        note.user = user
-        $noteStack[evt.id] = note
     }
 
     // get all the events under this eventId
@@ -269,11 +325,19 @@ async function handleTextNote(evt: Event, relay: string) {
         '#e': [evt.id]
     }
     console.debug(evt.id, ':: Filter to get replies ', filter)
-    let replies: Array<Event> = []
-    replies = await channels.getter.all(filter) // This should give all replies.
+    let replies: Array<Event>|any = []
+
+    replies = await new Promise((resolve, reject) => {
+        setTimeout(() => reject('Process takes longer then 5 seconds. Filter content: ' + JSON.stringify(filter)), 5000) // relays can be very busy  
+        channels.getter.all(filter)
+            .then((result) => { resolve(result) }) // This should give all replies. It will get stuck when a relay does not send an EOSE. Have to find a workaround for this.
+    }).catch((e) => {
+        console.error(e)
+    })
+    if (!replies || !replies.length) replies = []
     console.debug(evt.id, ':: Replies: ', replies)
 
-    if (replies.length) {
+    if (replies && replies.length) {
         let result: Note | null = await processReplyFeed(evt, replies, relay)
         if (!result) {
             console.log(evt.id, ':: No root note')
@@ -282,6 +346,7 @@ async function handleTextNote(evt: Event, relay: string) {
     }
 
     // This will always be the root Note. Level 1
+    /*
     if (!evt.tags.some(hasEventTag)) {
         let user: User
         if (get(users).length) {
@@ -294,6 +359,7 @@ async function handleTextNote(evt: Event, relay: string) {
         rootNote = initNote(rootNote)
         rootNote.user = user
     }
+    */
 
     let numETags = count(t => t[0] == 'e', evt.tags)
 
@@ -302,14 +368,14 @@ async function handleTextNote(evt: Event, relay: string) {
         let replyTag = getReplyTag(evt.tags)
         console.debug(evt.id, ':: Content: [', evt.content, ']\n Root: ', rootTag, 'Reply: ', replyTag)
 
-        if (replies.length == 0) {
+        if (replies && replies.length == 0) {
             // We asume that there has not been any replies on this one so the reply Id will be the root 
             let rootNoteId = rootTag[1]
             console.debug(evt.id, ':: No replies, root id:', rootNoteId)
             rootNote = $noteStack[rootNoteId]
             console.debug(evt.id, ':: Check the rootNote ', rootNote)
             console.debug(evt.id, ':: Stack ', $noteStack)
-            
+
             if (!rootNote) {
                 await getNotes([rootNoteId], relay)
                 rootNote = $noteStack[rootNoteId] // Try again
@@ -325,34 +391,18 @@ async function handleTextNote(evt: Event, relay: string) {
             // a -> b -> c
             if (rootTag[1] != replyTag[1]) {
                 let c = rootNote.replies.find(n => n.id == replyTag[1])
-                c.replies.push($noteStack[note.id])
-                c.replies = uniqBy(prop('id'), c.replies)
-                console.debug(evt.id, ':: No replies, but reply id != root id so reply id is likely a child of root. child of root:', c)
+                if (c?.replies) {
+                    c.replies.push($noteStack[note.id])
+                    c.replies = uniqBy(prop('id'), c.replies)
+                    console.debug(evt.id, ':: No replies, but reply id != root id so reply id is likely a child of root. child of root:', c)
+                }
             }
         }
     }
 
     console.debug('Current stack: ', $noteStack)
 
-    if (typeof rootNote !== 'undefined' && rootNote) {
-        console.debug(evt.id, ':: Add/update a note: ', rootNote)
-        let byCreatedAt = descend<Note>(prop("created_at"));
-        notes.update((data: Array<Note>) => {
-            if (!data.length) {
-                data = []
-            }
-            let note: Note = data.find(n => n.id == rootNote.id)
-            if (note) {
-                note = rootNote //replace it with updated data
-                console.debug(evt.id, ':: Updated note ', note)
-                return data
-            }
-            data.unshift(rootNote)
-            data = uniqBy(prop('id'), data)
-            data = sort(byCreatedAt, data)
-            return data
-        })
-    }
+    syncNotes(evt, rootNote)
 }
 
 function handleReaction(evt: Event, relay: string) {
@@ -397,7 +447,8 @@ function handleReaction(evt: Event, relay: string) {
 
     if (!note && rootTag) {
         let rootNote = $notes.find((n: Note) => n.id == rootTag[1])
-        if (rootNote.id == replyTag[1]) note = rootNote
+        if (!rootNote) return
+        if (rootNote && rootNote.id == replyTag[1]) note = rootNote
 
         let replies: Array<Note> = Object.values(rootNote.replies)
         let v = replies.find(n => n.id == replyTag[1])
