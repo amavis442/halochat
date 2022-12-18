@@ -277,10 +277,10 @@ function syncNoteTree(rootNote: Note) {
     notes.update(data => data) // make sure the view is updated without this, it will not
 }
 
-function initUser(relay: string) {
+function initUser(note:Note, relay: string) {
     let user: User = {
-        pubkey: 'unknown',
-        name: 'unknown',
+        pubkey: note.pubkey,
+        name: note.pubkey,
         about: '',
         picture: 'profile-placeholder.png',
         content: '',
@@ -293,10 +293,19 @@ function initUser(relay: string) {
 function getUser(note: Note, relay: string) {
     console.debug('getUser: User ', note.pubkey)
     let result = get(users).filter((u: User) => u.pubkey == note.pubkey)
-    if (result == undefined) {
-        let user:User = initUser(relay)
-        fetchMetaDataUser(note.pubkey, relay).then((userData) =>{
-            user = userData // Hope it uses references and we do not have to wait for it to finish
+    if (result == undefined || result[0].refreshed < now() - (60 * 30)) {
+        let user: User
+        if (!result) {
+            user = initUser(note, relay)
+        }
+        if (result) {
+            user = result[0]
+        }
+        fetchMetaDataUser(note.pubkey, relay).then((userData) => {
+            user = { ...userData } // Hope it uses references and we do not have to wait for it to finish
+            console.debug('getUser: Promise result: ', userData, ', Updated user data: ', user)
+            //Promise.resolve(user)
+            addUser(user)
         })
         return user
     }
@@ -447,7 +456,7 @@ async function handleTextNote(evt: Event, relay: string) {
                 rootNote.replies.push($noteStack[note.id])
                 rootNote.replies = uniqBy(prop('id'), rootNote.replies)
 
-                console.debug('handleTextNote: No replies, so this will be the first and the tag event id will be the root:', rootNote)
+                console.debug('handleTextNote: No replies and  rootTag = replyTag.', rootNote)
             }
             // a -> b -> c
             if (rootTag[1] != replyTag[1]) {

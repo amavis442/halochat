@@ -5,16 +5,16 @@ import { now } from '../util/time';
 
 export const users = writable(getLocalJson('halonostr/users') || []);
 
-export function addUser(user: User) {
+export function addUser(user: User, forceRefresh = false) {
   users.update(data => {
     let foundUser = data.find((item: User) => user.pubkey == item.pubkey)
     if (foundUser) {
-      if (foundUser.refreshed < now() - 60 * 10) {
+      if (foundUser.refreshed < now() - 60 * 10 || forceRefresh) {
         foundUser = {
           ...foundUser,
           user
         }
-        console.log('Updated user ', foundUser)
+        console.log('addUser: update user ', foundUser)
       }
       return data
     }
