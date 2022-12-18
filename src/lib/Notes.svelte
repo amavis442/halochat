@@ -15,7 +15,6 @@
   import Button from "./partials/Button.svelte";
   import Text from "./partials/Text.svelte";
   import Anchor from "./partials/Anchor.svelte";
-  import Slide from "./partials/Slide.svelte";
   import { runWorker } from "../worker";
 
   let msg = "";
@@ -71,7 +70,7 @@
   }
 </script>
 
-<div class="flex flex-col gap-4 h-screen ">
+<div class="flex flex-col gap-4 h-screen">
   <div class="h-85p">
     {#if $relays.length}
       <div
@@ -104,7 +103,9 @@
   </div>
   <div class="h-15p md:w-8/12 ms:w-full">
     {#if $relays.length && $account.privkey}
-      <div class="block max-w-full flex justify-center">
+      <div class="block max-w-full flex justify-center bg-white
+      dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1 ring-black/5
+      rounded-xl divide-y dark:divide-slate-200/5 p-2 w-full ml-4 mr-4 bg-blue-200">
         <div class="w-4/5 mr-2">
           <Text bind:value={msg} id="msg" placeholder="Message to send" />
         </div>
