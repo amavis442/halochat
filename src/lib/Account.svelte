@@ -7,10 +7,10 @@
   import Text from "./partials/Text.svelte";
   import { getKeys } from "./util/keys";
   import { channels, publishAccount } from "./state/pool";
-  import type { Filter, Event, User } from './state/types'
+  import type { Filter, Event, User } from "./state/types";
   import { addUser } from "./stores/users";
   import { now } from "./util/time";
-
+  import Spinner from "./Spinner.svelte";
   let pubkey: string = $account.pubkey;
   let privkey: string = $account.privkey;
   let name: string = $account.name;
@@ -52,17 +52,21 @@
       }
     }
     updateAccount(pubkey, privkey, name, about, picture);
-    let user:User
-    user.about = about
-    user.name = name
-    user.picture = picture
-    user.content = JSON.stringify({name:name, about:about,picture:picture})
-    user.pubkey = pubkey
-    user.relays = ['none']
-    user.refreshed = now()
-    
+    let user: User;
+    user.about = about;
+    user.name = name;
+    user.picture = picture;
+    user.content = JSON.stringify({
+      name: name,
+      about: about,
+      picture: picture,
+    });
+    user.pubkey = pubkey;
+    user.relays = ["none"];
+    user.refreshed = now();
+
     publishAccount();
-    addUser(user, true)
+    addUser(user, true);
 
     addToast({
       message: "Account updated!",
@@ -72,23 +76,33 @@
     });
   }
 
-  async function checkPubkey() {
-    let filter:Filter = {
-      kinds: [0],
-      authors: [pubkey]
-    }
-    let result:Array<Event> = await channels.getter.all(filter)
-    if (result.length)
-    {
-      let data = result[0]
-      const content = JSON.parse(data.content);
-      name = content.name
-      about = content.about
-      picture = content.picture
-    }
-    console.log(result, pubkey)
-  }
+  let promise: Promise<void>;
 
+  async function checkPubkey() {
+    let filter: Filter = {
+      kinds: [0],
+      authors: [pubkey],
+    };
+    console.debug("Account view:: checkPubkey filter ", filter);
+    promise = channels.getter
+      .all(filter)
+      .then((result: Array<Event> | null) => {
+        if (result.length) {
+          let data = result[0];
+          const content = JSON.parse(data.content);
+          name = content.name;
+          about = content.about;
+          picture = content.picture;
+        }
+        console.debug(
+          "Account view:: checkPubkey ",
+          "Result: ",
+          result,
+          " Pubkey: ",
+          pubkey
+        );
+      });
+  }
 
   onMount(async () => {
     name = $account.name;
@@ -104,12 +118,15 @@
 </script>
 
 <Toasts />
-<div class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6 bg-blue-200">
+<div
+  class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6 bg-blue-200"
+>
   <form on:submit|preventDefault={onSubmit}>
     <div class="form-group mb-6">
       <label for="pubKey" class="form-label inline-block mb-2 text-gray-700">
         Public key
       </label>
+
       <Text
         bind:value={pubkey}
         id="pubkey"
@@ -187,7 +204,11 @@
         somewhere on the net. Pictures are not stored in relays.
       </small>
     </div>
-    <Button type="button" click={checkPubkey}>Check pubkey</Button> | 
+    <Button type="button" click={checkPubkey}
+      >Check pubkey{#await promise}
+        <Spinner size={36} />
+      {/await}</Button
+    > |
     <Button type="submit">Submit</Button>
   </form>
 </div>
