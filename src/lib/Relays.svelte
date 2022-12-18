@@ -63,7 +63,7 @@
 
 <Toasts />
 
-<div class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6">
+<div class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6 bg-blue-200">
   <form on:submit|preventDefault={onSubmit}>
     <div class="form-group mb-6">
       <label for="url" class="form-label inline-block mb-2 text-gray-700">
@@ -87,7 +87,7 @@
 
 {#if $relays.length}
   <div
-    class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6 text-left">
+    class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6 text-left bg-blue-200">
     <ul class="bg-white rounded-lg border border-gray-200 w-full text-gray-900">
       {#each $relays as relay}
         <li class="px-6 py-2 border-b border-gray-200 w-full rounded-t-lg">

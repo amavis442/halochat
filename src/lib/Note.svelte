@@ -9,7 +9,7 @@
   import { fade } from "svelte/transition";
   import { publishReply } from "./state/pool";
   import { account } from "./stores/account";
-  import { flatten, pluck } from "ramda";
+  import { pluck } from "ramda";
 
   export let note: Note;
   export let userHasAccount: boolean = false;
@@ -56,6 +56,7 @@
     const formData = new FormData(target);
 
     const data: { replyText?: string } = {};
+    //@ts-ignore
     for (let field of formData) {
       const [key, value] = field;
       data[key] = value;
@@ -68,11 +69,11 @@
 </script>
 
 {#if note && note.kind == 1}
-  <div class="flex items-top gap-4 p-4">
+  <div class="flex items-top gap-4 p-4  w-full overflow-hidden">
     <img
       class="w-12 h-12 rounded-full"
       src={user && user.picture ? user.picture : "profile-placeholder.png"}
-      alt={user ? user.about : note.pubkey}
+      alt={note.pubkey.slice(0,5)}
       title={user ? user.name : note.pubkey}
       on:mouseover={showInfo}
       on:focus={showInfo}
@@ -118,7 +119,7 @@
     >
       <form on:submit|preventDefault={onSubmit}>
         <TextArea id="reply{note.id}" placeholder="Add reply" cols="20" />
-        <div class="actions">
+        <div class="actions pt-2">
           <Button type="button" click={() => (showElement = !showElement)}
             >Cancel</Button
           > |

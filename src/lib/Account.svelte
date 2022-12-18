@@ -7,7 +7,9 @@
   import Text from "./partials/Text.svelte";
   import { getKeys } from "./util/keys";
   import { channels, publishAccount } from "./state/pool";
-  import type { Filter, Event } from './state/types'
+  import type { Filter, Event, User } from './state/types'
+  import { addUser } from "./stores/users";
+  import { now } from "./util/time";
 
   let pubkey: string = $account.pubkey;
   let privkey: string = $account.privkey;
@@ -50,7 +52,17 @@
       }
     }
     updateAccount(pubkey, privkey, name, about, picture);
+    let user:User
+    user.about = about
+    user.name = name
+    user.picture = picture
+    user.content = JSON.stringify({name:name, about:about,picture:picture})
+    user.pubkey = pubkey
+    user.relays = ['none']
+    user.refreshed = now()
+    
     publishAccount();
+    addUser(user, true)
 
     addToast({
       message: "Account updated!",
@@ -92,7 +104,7 @@
 </script>
 
 <Toasts />
-<div class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6">
+<div class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6 bg-blue-200">
   <form on:submit|preventDefault={onSubmit}>
     <div class="form-group mb-6">
       <label for="pubKey" class="form-label inline-block mb-2 text-gray-700">
@@ -182,7 +194,7 @@
 
 {#if $account.pubkey}
   <div
-    class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6 text-left"
+    class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6 text-left bg-blue-200"
   >
     <ul class="bg-white rounded-lg border border-gray-200 w-full text-gray-900">
       <li class="px-6 py-2 border-b border-gray-200 w-full rounded-t-lg">

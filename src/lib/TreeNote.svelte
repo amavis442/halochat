@@ -18,7 +18,7 @@
   beforeUpdate(() => {
     level = level + 1;
     color = color + level * 100;
-    border = "border-l-4 border-l-indigo-" + color + "/100";
+    border = "w-full border-l-4 border-l-indigo-" + color + "/100";
   });
 </script>
 
