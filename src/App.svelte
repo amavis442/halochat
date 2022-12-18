@@ -6,7 +6,7 @@
   import "@fortawesome/fontawesome-free/css/fontawesome.css";
   import "@fortawesome/fontawesome-free/css/solid.css";
   import { account } from "./lib/stores/account";
-  import Anchor from "./lib/partials/Anchor.svelte";
+
   export let url = "";
 </script>
 

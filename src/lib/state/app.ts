@@ -304,9 +304,12 @@ function getUser(note: Note, relay: string) {
             console.debug('getUser: Promise result: ', userData, ', Updated user data: ', user)
             //Promise.resolve(user)
             addUser(user)
+
+            users.update(data => data)
         })
         return user
     }
+    
     return result[0]
 }
 
@@ -377,7 +380,7 @@ async function handleTextNote(evt: Event, relay: string) {
         console.debug("handleTextNote: Replytag and RootTag are the same", rootTag, replyTag, evt)
         let rootNote = get(notes).find((n: Note) => n.id == rootTag[1])
         if (rootNote) { // Put getting extra data in a WebWorker for speed.
-            rootNote.user = getUser(rootNote, relay)
+            note.user = getUser(note, relay)
             if (!rootNote.replies) rootNote.replies = []
             rootNote.replies.push(note)
             rootNote.replies = uniqBy(prop('id'), rootNote.replies)

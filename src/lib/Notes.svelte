@@ -79,7 +79,8 @@
         id="Notes"
         class="cointainer overflow-y-auto relative max-w-full mx-auto bg-white
         dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1 ring-black/5
-        rounded-xl divide-y dark:divide-slate-200/5 ml-4 mr-4 h-full max-h-full md:w-8/12 ms:w-full bg-blue-200 mt-6 space-y-3 pb-5"
+        rounded-xl divide-y dark:divide-slate-200/5 ml-4 mr-4 h-full max-h-full md:w-8/12 ms:w-full bg-blue-200 mt-6 pb-5
+        space-y-0 place-content-start"
         on:scroll={scrollHandler}
       >
       {#if $relays.length}
@@ -93,7 +94,7 @@
                   {userHasAccount}
                   expanded={false}
                   num={note.replies.length}
-                  level={0}
+                  level={1}
                 />
               {/if}
             </li>
