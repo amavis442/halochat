@@ -14,7 +14,7 @@ export function addUser(user: User, forceRefresh = false) {
           ...foundUser,
           user
         }
-        console.log('addUser: update user ', foundUser)
+        console.debug('addUser: update user ', foundUser)
       }
       return data
     }
