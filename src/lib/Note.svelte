@@ -15,8 +15,8 @@
   import { addToast } from "./stores/toast";
   import { users } from "./stores/users";
   import { notes } from "./stores/notes";
-
-  export let note: Note|any; // Todo: Do not know how to type this correctly to make sure in Notes it does not say Note__SvelteComponent_ <> Note type, very annoying
+  import { filter } from "./util/misc";
+  export let note: Note | any; // Todo: Do not know how to type this correctly to make sure in Notes it does not say Note__SvelteComponent_ <> Note type, very annoying
   export let userHasAccount: boolean = false;
 
   let user: User;
@@ -77,7 +77,7 @@
   }
   let showElement: boolean = false;
 
-  function banUser() {
+  async function banUser() {
     expanded = false;
     $blocklist.push({ pubkey: note.pubkey, added: now() });
     $blocklist = uniqBy(prop("pubkey"), $blocklist);
@@ -85,7 +85,12 @@
     let user: User = $users.find((u) => (u.pubkey = note.pubkey));
     user.name = user.name + "[BLOCKED]";
     users.update((data) => data); // Hopes this triggers the view
-    notes.update((data) => data.filter((n: Note) => n.pubkey != note.pubkey));
+
+    new Promise((resolve, reject) => {
+      resolve(filter($notes, note.pubkey));
+    }).then((filteredNotes) => $notes = filteredNotes);
+
+    //notes.update((data) => data.filter((n: Note) => n.pubkey != note.pubkey));
 
     addToast({
       message: "User " + note.pubkey.slice(0, 10) + " blocked!",
@@ -106,6 +111,7 @@
       timeout: 3000,
     });
   }
+
   function unfollowUser() {
     expanded = false;
     followed = true;
