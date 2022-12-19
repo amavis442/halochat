@@ -16,6 +16,7 @@
   import Text from "./partials/Text.svelte";
   import Anchor from "./partials/Anchor.svelte";
   import { runWorker } from "../worker";
+  import Toasts from "./Toasts.svelte";
 
   let msg = "";
   let replyTo: NoteEvent | null = null;
@@ -71,6 +72,7 @@
     }
   }
 </script>
+<Toasts />
 
 <div class="flex flex-col gap-4 h-screen">
   <div class="h-85p">

@@ -3,7 +3,9 @@ export const allowedKeys = [
     'halonostr/users',
     'halonostr/notes',
     'halonostr/account',
-    'halonostr/notestack'
+    'halonostr/notestack',
+    'halonostr/blocklist',
+    'halonostr/blocktext'
 ]
 
 export function getLocalJson(k: string) {

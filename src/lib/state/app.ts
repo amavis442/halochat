@@ -326,6 +326,17 @@ function findRecursive(note: Note, replyTag: Array<string>, depth: number = 1): 
     return null
 }
 
+export const blocklist = writable(getLocalJson("halonostr/blocklist") || [])
+let $blocklist = get(blocklist)
+blocklist.subscribe((value) => {
+    setLocalJson('halonostr/blocklist', value)
+})
+
+export const blocktext = writable(getLocalJson("halonostr/blocktext") || [])
+let $blocktext = get(blocktext)
+blocklist.subscribe((value) => {
+    setLocalJson('halonostr/blocktext', value)
+})
 
 /**
  * fiatjaf
@@ -342,6 +353,13 @@ function findRecursive(note: Note, replyTag: Array<string>, depth: number = 1): 
  * @returns 
  */
 async function handleTextNote(evt: Event, relay: string): Promise<void> {
+    
+    if ($blocklist.find((b:{pubkey:string,added:number}) => b.pubkey == evt.pubkey)) {
+        console.debug('handleTextNote:: user on blocklist ', evt)
+        return
+    }
+    // TODO: block base on certain text soon to come
+
     let note: Note = initNote(evt)
     note.relays = [relay]
     let rootNote: Note

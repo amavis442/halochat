@@ -9,8 +9,12 @@
   import { fade } from "svelte/transition";
   import { publishReply } from "./state/pool";
   import { account } from "./stores/account";
-  import { pluck } from "ramda";
-
+  import { pluck, uniqBy, prop } from "ramda";
+  import { blocklist } from "./state/app";
+  import { now } from "./util/time";
+  import { addToast } from "./stores/toast";
+  import { users } from "./stores/users";
+  import { notes } from "./stores/notes";
   export let note: Note;
   export let userHasAccount: boolean = false;
 
@@ -40,15 +44,15 @@
   }
 
   async function upvoteHandler() {
-    await publishReaction('+', note)
+    await publishReaction("+", note);
   }
 
   async function downvoteHandler() {
-    await publishReaction('-', note)
+    await publishReaction("-", note);
   }
 
   function showInfo() {
-    console.info('Debug note info from mouseover: ', note)
+    console.info("Debug note info from mouseover: ", note);
   }
 
   async function onSubmit(e: Event) {
@@ -66,6 +70,23 @@
     showElement = false;
   }
   let showElement: boolean = false;
+
+  function banUser() {
+    $blocklist.push({ pubkey: note.pubkey, added: now() });
+    $blocklist = uniqBy(prop("pubkey"), $blocklist);
+
+    let user: User = $users.find((u) => (u.pubkey = note.pubkey));
+    user.name = user.name + "[BLOCKED]";
+    users.update((data) => data); // Hopes this triggers the view
+    notes.update((data) => data.filter((n:Note) => n.pubkey != note.pubkey));
+
+    addToast({
+      message: "User " + note.pubkey.slice(0, 10) + " blocked!",
+      type: "success",
+      dismissible: true,
+      timeout: 3000,
+    });
+  }
 </script>
 
 {#if note && note.kind == 1}
@@ -73,7 +94,7 @@
     <img
       class="w-12 h-12 rounded-full"
       src={user && user.picture ? user.picture : "profile-placeholder.png"}
-      alt={note.pubkey.slice(0,5)}
+      alt={note.pubkey.slice(0, 5)}
       title={user ? user.name : note.pubkey}
       on:mouseover={showInfo}
       on:focus={showInfo}
@@ -84,7 +105,7 @@
         <small class="text-gray">{getTime(note.created_at)}</small>
       </strong>
       <span class="text-slate-500 text-sm font-medium dark:text-slate-400">
-        {@html toHtml(note.content)} 
+        {@html toHtml(note.content)}
       </span>
       {#if userHasAccount}
         <p class="mt-4 flex space-x-4 w-max p-1">
@@ -107,6 +128,11 @@
             {#if note.replies}
               {note.replies.length}
             {/if}
+          </span>
+          <span>
+            <button type="button" on:click={banUser}>
+              <i class="fa-solid fa-ban" />
+            </button>
           </span>
         </p>
       {/if}
