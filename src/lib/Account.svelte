@@ -8,7 +8,7 @@
   import { getKeys } from "./util/keys";
   import { channels, publishAccount } from "./state/pool";
   import type { Filter, Event, User } from "./state/types";
-  import { addUser } from "./stores/users";
+  import { annotateUsers } from "./stores/users";
   import { now } from "./util/time";
   import Spinner from "./Spinner.svelte";
   let pubkey: string = $account.pubkey;
@@ -52,21 +52,22 @@
       }
     }
     updateAccount(pubkey, privkey, name, about, picture);
-    let user: User;
-    user.about = about;
-    user.name = name;
-    user.picture = picture;
-    user.content = JSON.stringify({
-      name: name,
+    let user: User = {
+      pubkey: pubkey,
       about: about,
+      name: name,
       picture: picture,
-    });
-    user.pubkey = pubkey;
-    user.relays = ["none"];
-    user.refreshed = now();
+      content: JSON.stringify({
+        name: name,
+        about: about,
+        picture: picture,
+      }),
+      relays: ["none"],
+      refreshed: now(),
+    };
 
     publishAccount();
-    addUser(user, true);
+    annotateUsers(user);
 
     addToast({
       message: "Account updated!",

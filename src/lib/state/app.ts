@@ -1,9 +1,9 @@
 import { get, writable, type Writable } from 'svelte/store'
-import { users, addUser, formatUser } from '../stores/users'
+import { users, annotateUsers, formatUser } from '../stores/users'
 import { notes } from '../stores/notes'
 import type { Subscription } from 'nostr-tools'
 import { now } from "../util/time"
-import { uniq, pluck, difference, uniqBy, head, count, reject } from 'ramda'
+import { uniq, pluck, difference, uniqBy } from 'ramda'
 import type { Event, User, Filter, Note, Reaction } from './types'
 import { pool, channels } from './pool'
 import { prop, sort, descend } from "ramda";
@@ -61,8 +61,7 @@ export function getContacts(): Subscription | null {
 
 function handleMetadata(evt: Event, relay: string) {
     try {
-        const content = JSON.parse(evt.content);
-        setMetadata(evt, relay, content);
+        setMetadata(evt, relay);
     } catch (err) {
         console.log(evt);
         console.error(err);
@@ -72,54 +71,60 @@ function handleMetadata(evt: Event, relay: string) {
 /**
  * Get user metadata from a relay
  * 
- * @param pubkey 
- * @param relay 
+ * @param pubkey string
+ * @param relay string
  * @returns 
  */
-async function fetchMetaDataUser(pubkey: string, relay: string): Promise<User> {
+async function fetchMetaDataUser(note: Note, relay: string): Promise<void> {
     let filter: Filter = {
         kinds: [0],
-        authors: [pubkey]
+        authors: [note.pubkey]
     }
-    const fetchUsers: Array<Event> = await channels.getter.all(filter)
-    if (fetchUsers.length) {
-        let formattedUser: User = formatUser(fetchUsers[0], relay)
-        addUser(formattedUser)
-        return formattedUser
-    }
-
-    let unkownUser = {
-        pubkey: pubkey,
-        name: pubkey,
-        about: '',
-        picture: 'profile-placeholder.png',
-        content: '',
-        refreshed: now(),
-        relays: [relay]
-    }
-    addUser(unkownUser)
-    return unkownUser
+    return channels.getter.all(filter)
+        .then((fetchResultUsers: Array<Event>) => {
+            let user: User
+            if (fetchResultUsers.length) {
+                user = formatUser(fetchResultUsers[0], relay)
+            }
+            if (fetchResultUsers.length == 0 || !fetchMetaDataUser) {
+                let unkownUser = {
+                    pubkey: note.pubkey,
+                    name: note.pubkey,
+                    about: '',
+                    picture: 'profile-placeholder.png',
+                    content: '',
+                    refreshed: now(),
+                    relays: [relay]
+                }
+                user = unkownUser
+            }
+            annotateUsers(user)
+            note.user = user
+        });
 }
 
-function setMetadata(evt: Event, relay: string, content: any) {
+/**
+ * 
+ * @param evt Event
+ * @param relay string
+ * @param content string
+ */
+function setMetadata(evt: Event, relay: string) {
     const $users = get(users)
     let foundUser: User = $users.find((u: User) => u.pubkey == evt.pubkey)
     if (!foundUser) {
-        const regex = new RegExp('(http(s?):)|([/|.|\w|\s])*\.(?:jpg|gif|png)');
-        if (!regex.test(content.picture)) {
-            content.picture = 'profile-placeholder.png'
-        }
-
         let user: User = {
+            ...JSON.parse(evt.content),
             pubkey: evt.pubkey,
-            name: content.name,
-            about: content.about,
-            picture: content.picture,
-            content: JSON.stringify(content),
+            content: JSON.stringify(evt.content),
             refreshed: now(),
             relays: [relay]
         }
-        addUser(user)
+        const regex = new RegExp('(http(s?):)|([/|.|\w|\s])*\.(?:jpg|gif|png)');
+        if (!regex.test(user.picture)) {
+            user.picture = 'profile-placeholder.png'
+        }
+        annotateUsers(user)
     }
     //Update user metadata (foundUser should be a reference, so update should work like this)
     if (foundUser && foundUser.refreshed < (now() - 60 * 10)) {
@@ -128,12 +133,16 @@ function setMetadata(evt: Event, relay: string, content: any) {
         } else {
             foundUser.relays = [relay]
         }
+        let content = JSON.parse(evt.content)
         foundUser = {
-            foundUser,
-            ...JSON.parse(evt.content),
+            ...foundUser,
+            name: content.name,
+            about: content.about,
+            picture: content.picture,
             content: evt.content,
             refreshed: now(),
         }
+        annotateUsers(foundUser)
     }
 }
 
@@ -152,7 +161,7 @@ function initNote(note: Note) {
  * @param relay 
  * @returns 
  */
-async function getNotes(ids: Array<string>, relay: string): Promise<{[key: string]: Note}|null> {
+async function getNotes(ids: Array<string>, relay: string): Promise<{ [key: string]: Note } | null> {
     let filter: Filter = {
         kinds: [1],
         'ids': ids
@@ -163,17 +172,14 @@ async function getNotes(ids: Array<string>, relay: string): Promise<{[key: strin
     let result = await channels.getter.all(filter)
     if (!result) return null // No result to be found :(
 
-    let data: {[key: string]: Note}|null = null
+    let data: { [key: string]: Note } | null = null
     for (let i = 0; i < result.length; i++) {
         let note: Note = result[i] // We get more of the same, depending on the number of relays.
         note = initNote(note)
         let user: User = get(users).find((u: User) => u.pubkey == note.pubkey)
         note.user = user
         if (!user) {
-            fetchMetaDataUser(note.pubkey, relay).then((u:User) => {
-                note.user = user
-                addUser(u)    
-            })
+            fetchMetaDataUser(note, relay)
         }
         data[note.id] = note
         noteStack[note.id] = note
@@ -194,7 +200,7 @@ noteStack.subscribe($stack => {
  * @param relay 
  * @returns 
  */
-async function processReplyFeed(evt:Event, replies: Array<Event>, relay: string = ''): Promise<Note | null> {
+async function processReplyFeed(evt: Event, replies: Array<Event>, relay: string = ''): Promise<Note | null> {
     let $noteStack = get(noteStack)
     let rootNote: Note
 
@@ -212,10 +218,10 @@ async function processReplyFeed(evt:Event, replies: Array<Event>, relay: string 
                 let user: User = get(users).find((u: User) => u.pubkey == reply.pubkey)
                 reply.user = user // can be undefined, then let the promise get the needed data
                 if (!user) {
-                    fetchMetaDataUser(reply.pubkey, relay).then((userData:User) => reply.user = userData)
+                    fetchMetaDataUser(reply, relay)
                 }
                 rootNote = reply
-                $noteStack[rootNote.id] = rootNote          
+                $noteStack[rootNote.id] = rootNote
             }
             map[replyTag[1]] = reply.id
             list[reply.id] = reply
@@ -226,17 +232,17 @@ async function processReplyFeed(evt:Event, replies: Array<Event>, relay: string 
         }
         //Build the rest of the tree
         let keys = Object.keys(map)
-        for (let i = 0; i < keys.length;i++) {
+        for (let i = 0; i < keys.length; i++) {
             let replyToId = map[keys[i]]
             let replyToNote = list[keys[i]]
             let parent = list[replyToId] ? list[replyToId] : null
             if (parent) {
                 if (!parent.user) {
-                    fetchMetaDataUser(parent.pubkey, relay).then((userData:User) => parent.user = userData)
-                }   
-                if (!replyToNote){
-                    fetchMetaDataUser(replyToNote.pubkey, relay).then((userData:User) => replyToNote.user = userData)
-                }             
+                    fetchMetaDataUser(parent, relay)
+                }
+                if (!replyToNote) {
+                    fetchMetaDataUser(replyToNote, relay)
+                }
                 parent.replies.push(replyToNote)
             }
         }
@@ -271,46 +277,28 @@ function syncNoteTree(rootNote: Note) {
             return data
         })
     }
-
-    notes.update(data => data) // make sure the view is updated without this, it will not
 }
 
-function initUser(note:Note, relay: string) {
-    let user: User = {
-        pubkey: note.pubkey,
-        name: note.pubkey,
-        about: '',
-        picture: 'profile-placeholder.png',
-        content: '',
-        refreshed: now(),
-        relays: [relay]
+/**
+ * Adds user data like name, about , picture when it is available
+ * 
+ * @param note Note
+ * @param relay string
+ * @returns 
+ */
+async function annotateNote(note: Note, relay: string): Promise<void> {
+    console.debug('annotateNote: User ', note.pubkey)
+    if (!note.user) {
+        let result = get(users).filter((u: User) => u.pubkey == note.pubkey)
+        note.user = result && result.length ? result[0] : []
     }
-    return user;
-}
 
-function getUser(note: Note, relay: string) {
-    console.debug('getUser: User ', note.pubkey)
-    let result = get(users).filter((u: User) => u.pubkey == note.pubkey)
-    if (result == undefined || (result && result.length > 0 && result[0].refreshed < now() - (60 * 30))) {
-        let user: User
-        if (!result) {
-            user = initUser(note, relay)
-        }
-        if (result) {
-            user = result[0]
-        }
-        fetchMetaDataUser(note.pubkey, relay).then((userData) => {
-            user = { ...userData } // Hope it uses references and we do not have to wait for it to finish
-            console.debug('getUser: Promise result: ', userData, ', Updated user data: ', user)
-            //Promise.resolve(user)
-            addUser(user)
-
-            users.update(data => data)
+    if (!note.user || note.user.refreshed > now() - (60 * 10)) {
+        console.debug('annotateNote:: fetch user data for ', note.pubkey)
+        fetchMetaDataUser(note, relay).then(() => {
+            console.debug('annotateNote: Promise result by ref ', note.user)
         })
-        return user
     }
-    
-    return result[0]
 }
 
 /**
@@ -353,12 +341,11 @@ function findRecursive(note: Note, replyTag: Array<string>, depth: number = 1): 
  * @param relay 
  * @returns 
  */
-async function handleTextNote(evt: Event, relay: string) {
+async function handleTextNote(evt: Event, relay: string): Promise<void> {
     let note: Note = initNote(evt)
     note.relays = [relay]
     let rootNote: Note
     let $noteStack = get(noteStack)
-
 
     console.debug('handleTextNote: input ', evt)
     if ($noteStack[evt.id]) {
@@ -370,21 +357,26 @@ async function handleTextNote(evt: Event, relay: string) {
     let replyTag = getReplyTag(evt.tags)
     // Root, no need to look up replies
     if (rootTag.length == 0 && replyTag.length == 0) {
-        note.user = getUser(note, relay)
-        rootNote = note
-        syncNoteTree(rootNote)
+        annotateNote(note, relay)
+            .then(() => {
+                rootNote = note
+                syncNoteTree(rootNote)
+            })
         return
     }
+
     // Reply to root only 1 e tag
     if (rootTag.length && replyTag.length && replyTag[1] == rootTag[1]) {
         console.debug("handleTextNote: Replytag and RootTag are the same", rootTag, replyTag, evt)
         let rootNote = get(notes).find((n: Note) => n.id == rootTag[1])
         if (rootNote) { // Put getting extra data in a WebWorker for speed.
-            note.user = getUser(note, relay)
-            if (!rootNote.replies) rootNote.replies = []
-            rootNote.replies.push(note)
-            rootNote.replies = uniqBy(prop('id'), rootNote.replies)
-            syncNoteTree(rootNote)
+            annotateNote(note, relay)
+                .then(() => {
+                    if (!rootNote.replies) rootNote.replies = []
+                    rootNote.replies.push(note)
+                    rootNote.replies = uniqBy(prop('id'), rootNote.replies)
+                    syncNoteTree(rootNote)
+                });
             return
         }
     }
@@ -397,10 +389,12 @@ async function handleTextNote(evt: Event, relay: string) {
             let replyNote: Note | null = findRecursive(rootNote, replyTag)
             if (!replyNote) console.debug('handleTextNote: Need to do expensive stuff and get the whole tree from a relay.', evt)
             if (replyNote) {
-                note.user = getUser(note, relay)
-                replyNote.replies.push(note)
-                replyNote.replies = uniqBy(prop('id'), replyNote.replies)
-                syncNoteTree(rootNote)
+                annotateNote(note, relay)
+                    .then(() => {
+                        replyNote.replies.push(note)
+                        replyNote.replies = uniqBy(prop('id'), replyNote.replies)
+                        syncNoteTree(rootNote)
+                    });
                 return
             }
         }
@@ -412,14 +406,12 @@ async function handleTextNote(evt: Event, relay: string) {
         '#e': [evt.id]
     }
     console.debug('handleTextNote: Filter to get replies ', filter)
-    channels.getter.all(filter).then((replies:Array<Event>) => {
-        return processReplyFeed(evt, replies, relay)
-    })
- 
-
-    console.debug('handleTextNote: Current stack: ', $noteStack)
-
-    syncNoteTree(rootNote)
+    channels.getter.all(filter)
+        .then((replies: Array<Event>) => processReplyFeed(evt, replies, relay))
+        .then(() => {
+            console.debug('handleTextNote: Current stack: ', $noteStack)
+            syncNoteTree(rootNote)
+        })
 }
 
 function handleReaction(evt: Event, relay: string) {

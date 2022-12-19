@@ -5,20 +5,17 @@ import { now } from '../util/time';
 
 export const users = writable(getLocalJson('halonostr/users') || []);
 
-export function addUser(user: User, forceRefresh = false) {
+export function annotateUsers(user: User) {
   users.update(data => {
     let foundUser = data.find((item: User) => user.pubkey == item.pubkey)
     if (foundUser) {
-      if (foundUser.refreshed < now() - 60 * 10 || forceRefresh) {
-        foundUser = {
-          ...foundUser,
-          user
-        }
-        console.debug('addUser: update user ', foundUser)
+      foundUser = {
+        ...foundUser,
+        user
       }
+      console.debug('annotateUsers: ', foundUser)
       return data
     }
-
     data.push(user)
     return data
   })
@@ -33,20 +30,16 @@ export function removeUser(pubkey: string) {
 }
 
 export function formatUser(evt: Event, relay: string) {
-  const content = JSON.parse(evt.content);
-  const regex = new RegExp('(http(s?):)|([/|.|\w|\s])*\.(?:jpg|gif|png)');
-  if (!regex.test(content.picture)) {
-      content.picture = 'profile-placeholder.png'
-  }
-
   let user: User = {
-      pubkey: evt.pubkey,
-      name: content.name,
-      about: content.about,
-      picture: content.picture,
-      content: JSON.stringify(content),
-      refreshed: now(),
-      relays: [relay]
+    ...JSON.parse(evt.content),
+    pubkey: evt.pubkey,
+    content: JSON.stringify(evt.content),
+    refreshed: now(),
+    relays: [relay]
+  }
+  const regex = new RegExp('(http(s?):)|([/|.|\w|\s])*\.(?:jpg|gif|png)');
+  if (!regex.test(user.picture)) {
+    user.picture = 'profile-placeholder.png'
   }
 
   return user
