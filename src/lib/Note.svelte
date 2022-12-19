@@ -15,14 +15,17 @@
   import { addToast } from "./stores/toast";
   import { users } from "./stores/users";
   import { notes } from "./stores/notes";
-  export let note: Note;
+
+  export let note: Note|any; // Todo: Do not know how to type this correctly to make sure in Notes it does not say Note__SvelteComponent_ <> Note type, very annoying
   export let userHasAccount: boolean = false;
 
   let user: User;
   let votedFor: string = "";
+  let followed: boolean = false;
 
   beforeUpdate(() => {
     if (note.reactions && $account) {
+      //@ts-ignore
       let pubkeys = pluck("pubkey", note.reactions);
       let fp = pubkeys.find((pk) => pk == $account.pubkey);
       if (fp) {
@@ -34,6 +37,9 @@
 
   onMount(async () => {
     user = note?.user;
+    if (Object.values($followlist).find((u: User) => u.pubkey == note.pubkey)) {
+      followed = true;
+    }
   });
 
   function normalizeName(data: User): string {
@@ -100,6 +106,23 @@
       timeout: 3000,
     });
   }
+  function unfollowUser() {
+    expanded = false;
+    followed = true;
+
+    followlist.update((data) => {
+      data.filter(
+        (d: { pubkey: string; added: number }) => d.pubkey != note.pubkey
+      );
+    });
+
+    addToast({
+      message: "User " + note.pubkey.slice(0, 10) + " unfollowed!",
+      type: "success",
+      dismissible: true,
+      timeout: 3000,
+    });
+  }
 
   function removeNote() {
     expanded = false;
@@ -145,34 +168,40 @@
                   <i class="fa-solid fa-ellipsis" />
                 </button>
                 {#if expanded}
-                <div role="menu" tabindex="-1" class="dropdown-menu">
-                  <ul class="py-1 w-44 text-left" >
-                    <li>
-                      <button
-                        class="downdown-menu-button"
-                        on:click={banUser}
-                      >
-                        Block user
-                      </button>
-                    </li>
-                    <li>
-                      <button
-                        class="downdown-menu-button"
-                        on:click={followUser}
-                      >
-                        Follow user
-                      </button>
-                    </li>
-                    <li>
-                      <button
-                        class="downdown-menu-button"
-                        on:click={removeNote}
-                      >
-                        Mute post
-                      </button>
-                    </li>
-                  </ul>
-                </div>
+                  <div role="menu" tabindex="-1" class="dropdown-menu">
+                    <ul class="py-1 w-44 text-left">
+                      <li>
+                        <button class="downdown-menu-button" on:click={banUser}>
+                          Block user
+                        </button>
+                      </li>
+                      <li>
+                        {#if !followed}
+                          <button
+                            class="downdown-menu-button"
+                            on:click={followUser}
+                          >
+                            Follow user
+                          </button>
+                        {:else}
+                          <button
+                            class="downdown-menu-button"
+                            on:click={unfollowUser}
+                          >
+                            Unfollow user
+                          </button>
+                        {/if}
+                      </li>
+                      <li>
+                        <button
+                          class="downdown-menu-button"
+                          on:click={removeNote}
+                        >
+                          Mute post
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
                 {/if}
               </div>
             {/if}
