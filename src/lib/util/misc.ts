@@ -35,3 +35,21 @@ export function filter(notes:Array<Note>, pubkey:string) {
 
     return notes.reduce(getNodes, []);
 }
+
+
+export function find(note: Note, pubkey: string, depth: number = 1): Note | null {
+    if (depth > 6) return null
+    if (note) {
+        if (note.id == pubkey) {
+            return note
+        }
+        if (note.replies && note.replies.length) {
+            let result = null
+            for (let i: number = 0; i < note.replies.length; i++) {
+                result = find(note.replies[i], pubkey, ++depth)
+            }
+            return result
+        }
+    }
+    return null
+}

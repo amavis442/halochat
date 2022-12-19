@@ -3,6 +3,7 @@ import { users, annotateUsers, formatUser } from '../stores/users'
 import { notes } from '../stores/notes'
 import type { Subscription } from 'nostr-tools'
 import { now } from "../util/time"
+import { find } from "../util/misc"
 import { uniq, pluck, difference, uniqBy } from 'ramda'
 import type { Event, User, Filter, Note, Reaction } from './types'
 import { pool, channels } from './pool'
@@ -359,8 +360,8 @@ followlist.subscribe((value) => {
  * @returns 
  */
 async function handleTextNote(evt: Event, relay: string): Promise<void> {
-    
-    if ($blocklist.find((b:{pubkey:string,added:number}) => b.pubkey == evt.pubkey)) {
+
+    if ($blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == evt.pubkey)) {
         console.debug('handleTextNote:: user on blocklist ', evt)
         return
     }
@@ -444,70 +445,36 @@ function handleReaction(evt: Event, relay: string) {
     let rootTag = getRootTag(evt.tags)
     let replyTag = getReplyTag(evt.tags)
 
-    const eventTags = evt.tags.filter(hasEventTag);
-    let replies = eventTags.filter((e) => e[3] ? e[3] === 'reply' : false);
-    if (replies.length == 0) {
-        replies = eventTags.filter((tags) => tags[3] === undefined);
+    let note: Note | null = null
+    if (!rootTag.length && !replyTag.length) {
+        console.debug('handleReaction:: Misformed tags.. ignore it', 'RootTag: ', rootTag, 'ReplyTag:', replyTag, 'Event:', evt)
     }
 
-    if (replies.length != 1) {
-        console.debug('handleReaction:: Reaction Old style or no reply tag', evt)
-        return
-    }
-    const eventId: string = replies[0][1];
-
-    console.debug('handleReaction:: :: Reaction: ', eventId)
-
-    let note: Note
-    let result = $notes.filter((n: Note) => n.id == eventId)
-    if (result.length) {
-        note = result[0]
-        console.debug('handleReaction:: Reaction Root ', note)
+    if (rootTag.length && replyTag.length && (rootTag[0] != 'e' || replyTag[0] != 'e')) {
+        console.debug('handleReaction:: Misformed tags.. ignore it', 'RootTag: ', rootTag, 'ReplyTag:', replyTag, 'Event:', evt)
     }
 
-    if (!result.length) {
-        console.debug('handleReaction:: Reaction Is not root ;)', evt)
-        for (let i = 0; i < $notes.length; i++) {
-            let rootNote: Note = $notes[i]
-            result = rootNote.replies.filter((n: Note) => n.id == eventId)
-            if (result.length) {
-                note = result[0]
-                break
-            }
-        }
-        console.debug('handleReaction:: Reaction Is not root ;)'), evt
+    // Is rootNote
+    if (rootTag[1] == replyTag[1]) {
+        note = $notes.find((n: Note) => n.id == replyTag[1])
+        console.debug('handleReaction:: Reaction Root ', 'RootTag: ', rootTag, 'ReplyTag:', replyTag, 'Event:', note)
     }
 
-    if (!note && rootTag) {
+    // Now we are talking
+    if (rootTag[1] != replyTag[1]) {
+        console.debug('handleReaction:: Time for recursive search', 'RootTag: ', rootTag, 'ReplyTag:', replyTag, 'Event:', evt)
         let rootNote = $notes.find((n: Note) => n.id == rootTag[1])
-        if (!rootNote) return
-        if (rootNote && rootNote.id == replyTag[1]) note = rootNote
-
-        let replies: Array<Note> = Object.values(rootNote.replies)
-        let v = replies.find(n => n.id == replyTag[1])
-        if (v) {
-            console.debug("handleReaction:: Reaction replies ", v, evt)
-            note = v
-        }
-
-        if (!note) {
-            for (let index in replies) {
-                if (replies[index].replies) {
-                    let n = replies[index].replies.find(n => n.id == replyTag[1])
-                    if (n) {
-                        note = n
-                        console.debug("handleReaction:: Reaction replies of the replies", n)
-                        break
-                    }
-                }
+        if (rootNote) {
+            let result = find(rootNote, replyTag[1])
+            if (result) {
+                note = result
             }
         }
-
-        console.debug('---------', rootTag, evt.tags)
     }
-    console.debug('handleReaction:: Reaction found node: ', note)
 
     if (note) {
+        console.debug('handleReaction:: Reaction found node: ', note)
+
         let reaction: Reaction = evt
         note.relays = [relay]
 
@@ -522,11 +489,13 @@ function handleReaction(evt: Event, relay: string) {
             return r.id == evt.id
         })) {
             note.reactions.push(reaction)
-            console.debug('handleReaction:: Reaction Added reaction', reaction)
+            note.reactions = uniqBy(prop('id'), note.reactions)
+            console.debug('handleReaction:: Reaction Added reaction', note, reaction)
         }
 
         if (!note.reactions) {
             note.reactions = [reaction]
+            console.debug('handleReaction:: Reaction Added reaction', note, reaction)
         }
 
         if (!note.upvotes) note.upvotes = 0
@@ -534,8 +503,10 @@ function handleReaction(evt: Event, relay: string) {
 
         if (evt.content == '+') note.upvotes = note.upvotes + 1
         if (evt.content == '-') note.downvotes = note.downvotes + 1
+
+        notes.update(data => data) // make sure the view is updated without this, it will not
     }
-    notes.update(data => data) // make sure the view is updated without this, it will not
+
 }
 
 export class Listener {

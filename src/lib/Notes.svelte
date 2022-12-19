@@ -38,6 +38,7 @@
   export let isFollowedView: boolean = false;
 
   beforeUpdate(() => {
+    //notes.set([])
     // Do some housecleaning and remove all notes older then x - 2 days
     let expireTimestamp: number = now() - 60 * 60 * 24 * 2;
     notes.update((notes) =>
