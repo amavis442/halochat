@@ -132,8 +132,10 @@
         {/await}
         <footer id="footer" class="h-5" />
       {:else}
+          <p class="bg-white">
         Please add a relay first. You can do this here
         <Anchor href="relays">relays</Anchor>
+        </p>
       {/if}
     </div>
   </div>

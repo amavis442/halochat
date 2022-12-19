@@ -6,6 +6,7 @@
   import "@fortawesome/fontawesome-free/css/fontawesome.css";
   import "@fortawesome/fontawesome-free/css/solid.css";
   import { account } from "./lib/stores/account";
+  import Anchor from "./lib/partials/Anchor.svelte";
 
   export let url = "";
 </script>
@@ -69,7 +70,7 @@
                 About: {$account.about}
               </p>
             {:else}
-              <span>Not logged in. Use account to create account</span>
+              <span>Not logged in. Use <Anchor href="account">account</Anchor> to create account</span>
             {/if}
           </div>
         </div>
