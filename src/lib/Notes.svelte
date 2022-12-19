@@ -81,7 +81,7 @@
         class="cointainer overflow-y-auto relative max-w-full mx-auto bg-gray-800
         dark:highlight-white/5 shadow-lg ring-1 ring-black/5
         rounded-xl divide-y ml-4 mr-4 h-full max-h-full md:w-8/12 ms:w-full mt-6 pb-5
-        space-y-0 place-content-start "
+        space-y-0 place-content-start"
         on:scroll={scrollHandler}
       >
       {#if $relays.length}

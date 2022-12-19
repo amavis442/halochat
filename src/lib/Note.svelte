@@ -10,7 +10,7 @@
   import { publishReply } from "./state/pool";
   import { account } from "./stores/account";
   import { pluck, uniqBy, prop } from "ramda";
-  import { blocklist } from "./state/app";
+  import { blocklist, followlist } from "./state/app";
   import { now } from "./util/time";
   import { addToast } from "./stores/toast";
   import { users } from "./stores/users";
@@ -72,6 +72,7 @@
   let showElement: boolean = false;
 
   function banUser() {
+    expanded = false;
     $blocklist.push({ pubkey: note.pubkey, added: now() });
     $blocklist = uniqBy(prop("pubkey"), $blocklist);
 
@@ -88,24 +89,41 @@
     });
   }
 
-  function removeNote() {
-    notes.update((data) => data.filter((n: Note) => n.id != note.id));
+  function followUser() {
+    expanded = false;
+    $followlist.push({ pubkey: note.pubkey, added: now() });
+    $followlist = uniqBy(prop("pubkey"), $followlist);
     addToast({
-      message: "Note " + note.id.slice(0, 10) + " has been removed!",
+      message: "User " + note.pubkey.slice(0, 10) + " followed!",
       type: "success",
       dismissible: true,
       timeout: 3000,
     });
   }
+
+  function removeNote() {
+    expanded = false;
+    notes.update((data) => data.filter((n: Note) => n.id != note.id));
+    addToast({
+      message: "Note " + note.id.slice(0, 10) + " has been muted!",
+      type: "success",
+      dismissible: true,
+      timeout: 3000,
+    });
+  }
+  export let expanded: boolean = false;
+  function toggleMenu() {
+    expanded = !expanded;
+  }
 </script>
 
 {#if note && note.kind == 1}
-  <div class="flex items-top gap-4 p-4 w-full overflow-hidden bg-blue-200">
+  <div class="flex items-top gap-4 p-4 w-full overflow-auto bg-blue-200">
     <img
       class="w-12 h-12 rounded-full"
       src={user && user.picture ? user.picture : "profile-placeholder.png"}
       alt={note.pubkey.slice(0, 5)}
-      title={user ? user.name : note.pubkey}
+      title={JSON.stringify(note)}
       on:mouseover={showInfo}
       on:focus={showInfo}
     />
@@ -121,17 +139,51 @@
         </div>
         <div class="flex-end text-right  w-6/12">
           <span class="text-right">
-            <button>
-              <i class="fa-solid fa-ellipsis" />
-            </button>
+            {#if userHasAccount}
+              <div class="relative">
+                <button class="dropdown-toggle" on:click={toggleMenu}>
+                  <i class="fa-solid fa-ellipsis" />
+                </button>
+                {#if expanded}
+                <div role="menu" tabindex="-1" class="dropdown-menu">
+                  <ul class="py-1 w-44 text-left" >
+                    <li>
+                      <button
+                        class="downdown-menu-button"
+                        on:click={banUser}
+                      >
+                        Block user
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        class="downdown-menu-button"
+                        on:click={followUser}
+                      >
+                        Follow user
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        class="downdown-menu-button"
+                        on:click={removeNote}
+                      >
+                        Mute post
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+                {/if}
+              </div>
+            {/if}
           </span>
         </div>
       </div>
       <div class="text-left">
-      <span class="text-slate-500 text-sm font-medium dark:text-slate-400">
-        {@html toHtml(note.content)}
-      </span>
-    </div>
+        <span class="text-slate-500 text-sm font-medium dark:text-slate-400">
+          {@html toHtml(note.content)}
+        </span>
+      </div>
       {#if userHasAccount}
         <p class="mt-4 flex space-x-4 w-max p-1">
           <span class={votedFor == "-" ? "text-blue-700" : ""}>
@@ -154,25 +206,6 @@
             {#if note.replies}
               {note.replies.length}
             {/if}
-          </span>
-
-          <span>
-            <button
-              type="button"
-              on:click={banUser}
-              class="inline-block px-6 py-2 border-2 border-red-600 text-red-600 font-medium text-xs leading-tight uppercase rounded hover:bg-black hover:bg-opacity-5 focus:outline-none focus:ring-0 transition duration-150 ease-in-out"
-            >
-              <i class="fa-solid fa-ban" />
-            </button>
-          </span>
-          <span>
-            <button
-              type="button"
-              on:click={removeNote}
-              class="inline-block px-6 py-2 border-2 border-yellow-500 text-yellow-500 font-medium text-xs leading-tight uppercase rounded hover:bg-black hover:bg-opacity-5 focus:outline-none focus:ring-0 transition duration-150 ease-in-out"
-            >
-              <i class="fa-solid fa-trash" />
-            </button>
           </span>
         </p>
       {/if}

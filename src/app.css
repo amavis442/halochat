@@ -1,3 +1,18 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.dropdown-menu {
+  @apply absolute right-0 
+  origin-top-right
+  bg-white dark:bg-gray-700 text-gray-700 
+  dark:text-gray-200 rounded border-gray-100 dark:border-gray-700 
+  shadow-md z-10 outline-none divide-y divide-gray-100 dark:divide-gray-600 z-50;
+}
+
+
+.downdown-menu-button {
+  @apply pl-2 font-medium text-sm hover:bg-gray-100 dark:hover:bg-gray-600 text-left w-full inline-block;
+}
+
+

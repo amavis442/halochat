@@ -338,6 +338,12 @@ blocklist.subscribe((value) => {
     setLocalJson('halonostr/blocktext', value)
 })
 
+export const followlist = writable(getLocalJson("halonostr/followlist") || [])
+let $followlist = get(followlist)
+followlist.subscribe((value) => {
+    setLocalJson('halonostr/followlist', value)
+})
+
 /**
  * fiatjaf
  * 
