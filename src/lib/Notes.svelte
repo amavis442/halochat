@@ -73,7 +73,7 @@
   }
 </script>
 <Toasts />
-
+{$notes.length}
 <div class="flex flex-col gap-4 h-screen">
   <div class="h-85p">
     
