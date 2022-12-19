@@ -100,7 +100,7 @@
 </script>
 
 {#if note && note.kind == 1}
-  <div class="flex items-top gap-4 p-4  w-full overflow-hidden">
+  <div class="flex items-top gap-4 p-4 w-full overflow-hidden bg-blue-200">
     <img
       class="w-12 h-12 rounded-full"
       src={user && user.picture ? user.picture : "profile-placeholder.png"}
@@ -109,14 +109,29 @@
       on:mouseover={showInfo}
       on:focus={showInfo}
     />
-    <div class="flex flex-col text-left">
-      <strong class="text-slate-900 text-sm font-medium dark:text-slate-200">
-        {normalizeName(user)}
-        <small class="text-gray">{getTime(note.created_at)}</small>
-      </strong>
+    <div class="flex flex-col w-11/12">
+      <div class="flex items-start">
+        <div class="flex-start text-left w-6/12">
+          <strong
+            class="text-slate-900 text-sm font-medium dark:text-slate-200"
+          >
+            {normalizeName(user)}
+            <small class="text-gray">{getTime(note.created_at)}</small>
+          </strong>
+        </div>
+        <div class="flex-end text-right  w-6/12">
+          <span class="text-right">
+            <button>
+              <i class="fa-solid fa-ellipsis" />
+            </button>
+          </span>
+        </div>
+      </div>
+      <div class="text-left">
       <span class="text-slate-500 text-sm font-medium dark:text-slate-400">
         {@html toHtml(note.content)}
       </span>
+    </div>
       {#if userHasAccount}
         <p class="mt-4 flex space-x-4 w-max p-1">
           <span class={votedFor == "-" ? "text-blue-700" : ""}>
@@ -140,7 +155,7 @@
               {note.replies.length}
             {/if}
           </span>
-  
+
           <span>
             <button
               type="button"

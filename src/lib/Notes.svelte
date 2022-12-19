@@ -78,16 +78,19 @@
     
       <div
         id="Notes"
-        class="cointainer overflow-y-auto relative max-w-full mx-auto bg-white
-        dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1 ring-black/5
-        rounded-xl divide-y dark:divide-slate-200/5 ml-4 mr-4 h-full max-h-full md:w-8/12 ms:w-full bg-blue-200 mt-6 pb-5
-        space-y-0 place-content-start"
+        class="cointainer overflow-y-auto relative max-w-full mx-auto bg-gray-800
+        dark:highlight-white/5 shadow-lg ring-1 ring-black/5
+        rounded-xl divide-y ml-4 mr-4 h-full max-h-full md:w-8/12 ms:w-full mt-6 pb-5
+        space-y-0 place-content-start "
         on:scroll={scrollHandler}
       >
       {#if $relays.length}
         {#each notes ? $notes : [] as note (note.id)}
-          <ul>
+          <ul class="items-center w-full mb-2 border-hidden">
             <li>
+              <div
+  class="flex flex-col items-top gap-4 p-4 w-full overflow-hidden rounded-lg bg-blue-200 mb-2"
+>
               <Note {note} {userHasAccount} />
               {#if note?.replies && note.replies.length > 0}
                 <TreeNote
@@ -98,6 +101,7 @@
                   level={1}
                 />
               {/if}
+              </div>
             </li>
           </ul>
         {/each}
