@@ -3,13 +3,16 @@
   import Feed from "./routes/Feed.svelte";
   import Relays from "./routes/Relays.svelte";
   import Account from "./routes/Account.svelte";
+  import Follow from "./routes/Follow.svelte";
   import "@fortawesome/fontawesome-free/css/fontawesome.css";
   import "@fortawesome/fontawesome-free/css/solid.css";
   import { account } from "./lib/stores/account";
   import Anchor from "./lib/partials/Anchor.svelte";
-
+  import Toasts from './lib/Toasts.svelte'
   export let url = "";
 </script>
+
+<Toasts />
 
 <Router {url}>
   <div
@@ -31,6 +34,9 @@
           
           <p class="nav-p">
             <Link to="relays">Relays</Link>
+          </p>
+          <p class="nav-p">
+            <Link to="follow">Follow list</Link>
           </p>
           <p class="nav-p">
             <Link to="account">Account</Link>
@@ -86,6 +92,9 @@
       </Route>
       <Route path="relays">
         <Relays />
+      </Route>
+      <Route path="follow">
+        <Follow />
       </Route>
       <Route path="account">
         <Account />

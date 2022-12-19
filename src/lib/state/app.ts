@@ -77,6 +77,10 @@ function handleMetadata(evt: Event, relay: string) {
  * @returns 
  */
 async function fetchMetaDataUser(note: Note, relay: string): Promise<void> {
+    if (!note || !note.pubkey) {
+        console.debug('fetchMetaDataUser:: No pubkey ', note)
+        return
+    }
     let filter: Filter = {
         kinds: [0],
         authors: [note.pubkey]
