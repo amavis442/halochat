@@ -5,7 +5,8 @@
   import Button from "./partials/Button.svelte";
   import Text from "./partials/Text.svelte";
   import { now } from "./util/time";
-
+  import { prop, uniqBy } from "ramda";
+  
   let pubkey = "";
 
   function unFollow(pubkey: string) {
@@ -21,7 +22,8 @@
 
   function follow() {
     $followlist.push({ pubkey: pubkey, added: now() });
-    $followlist= $followlist
+    $followlist= uniqBy(prop('pubkey'),$followlist)
+
     addToast({
       message: "Following: " + pubkey.slice(0, 10),
       type: "success",
