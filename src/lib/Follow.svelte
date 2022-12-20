@@ -1,16 +1,21 @@
 <script lang="ts">
-  import { relays } from "./state/pool";
+  import { channels, relays } from "./state/pool";
   import { addToast } from "./stores/toast";
   import { followlist } from "./state/app";
   import Button from "./partials/Button.svelte";
   import Text from "./partials/Text.svelte";
   import { now } from "./util/time";
   import { prop, uniqBy } from "ramda";
-  
+  import type { User, Follow } from "./state/types";
+  import { annotateUsers, users } from "./stores/users";
+  import { fetchUser } from "./state/app";
+  import Spinner from "./Spinner.svelte";
+
   let pubkey = "";
+  let petname = "";
 
   function unFollow(pubkey: string) {
-    $followlist = $followlist.filter((f) => f.pubkey != pubkey);
+    $followlist = $followlist.filter((f: Follow) => f.pubkey != pubkey);
 
     addToast({
       message: "Unfollow: " + pubkey.slice(0, 10),
@@ -20,9 +25,48 @@
     });
   }
 
+  let promise: Promise<any>;
+  function fetchUsers() {
+    let user: User | null = null;
+    let f: Array<Follow> = Object.values($followlist);
+
+    promise = new Promise((resolve, reject) => {
+      for (let i = 0; i < f.length; i++) {
+        let fl = $followlist.find((fl: Follow) => fl.pubkey == f[i].pubkey);
+        user = $users.find((u: User) => u.pubkey == fl.pubkey);
+        if (user) {
+          fl.user = user;
+        }
+        if (!user) {
+          fetchUser(fl.pubkey, "").then((user) => {
+            fl.user = user;
+            annotateUsers(user);
+          });
+        }
+      }
+      setTimeout(() => reject("Timeout getting user data (10s)"), 10000);
+    }).catch((e) => {
+      addToast({
+        message: e,
+        type: "error",
+        dismissible: true,
+        timeout: 3000,
+      });
+    });
+  }
+
   function follow() {
-    $followlist.push({ pubkey: pubkey, added: now() });
-    $followlist= uniqBy(prop('pubkey'),$followlist)
+    let followUser: Follow = {
+      pubkey: pubkey,
+      petname: petname,
+      added: now(),
+      user: null,
+    };
+    $followlist.push(followUser);
+    $followlist = uniqBy(prop("pubkey"), $followlist);
+
+    pubkey = "";
+    petname = "";
 
     addToast({
       message: "Following: " + pubkey.slice(0, 10),
@@ -51,6 +95,25 @@
       </label>
       <Text bind:value={pubkey} id="relayUrl" placeholder="pubkey" />
     </div>
+    <div class="form-group mb-6">
+      <label for="privKey" class="form-label inline-block mb-2 text-gray-700">
+        Petname
+      </label>
+      <Text
+        bind:value={petname}
+        id="petname"
+        describedby="petnameHelp"
+        placeholder="petname"
+      />
+      <small id="petnameHelp" class="block mt-1 text-xs text-gray-600">
+        A name so you can remember who is behind the pubkey
+      </small>
+    </div>
+    <Button type="button" click={fetchUsers}
+      >Fetch users{#await promise}
+        <Spinner size={36} />
+      {/await}</Button
+    >
     <Button type="submit">Submit</Button>
   </form>
 </div>
@@ -65,7 +128,8 @@
           <button on:click={() => unFollow(follow.pubkey)}>
             <span class="fa-solid fa-trash" />
           </button>
-          {follow.pubkey.slice(0,10)}....{follow.pubkey.slice(-10)}
+          {follow.pubkey.slice(0, 10)}....{follow.pubkey.slice(-10)} ({follow.petname})
+          {#if follow.user} :: {follow.user.name.slice(0, 10)} {/if}
         </li>
       {/each}
     </ul>

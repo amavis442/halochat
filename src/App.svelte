@@ -29,7 +29,7 @@
             <Link to="/">Feed</Link>
           </p>
           <p class="nav-p">
-            <Link to="/followed">Followed</Link>
+            <Link to="/followed">Follow</Link>
           </p>
           
           <p class="nav-p">

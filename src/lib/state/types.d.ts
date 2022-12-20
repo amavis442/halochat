@@ -32,6 +32,13 @@ export type User = {
     relays?: Array<string>
 }
 
+export type Follow = {
+    pubkey: string;
+    petname: string;
+    added: number;
+    user: User | null;
+}
+
 export type Filter = {
     ids?: string[];
     authors?: string[];

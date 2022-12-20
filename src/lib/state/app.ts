@@ -81,9 +81,18 @@ async function fetchMetaDataUser(note: Note, relay: string): Promise<void> {
         console.debug('fetchMetaDataUser:: No pubkey ', note)
         return
     }
+
+    fetchUser(note.pubkey, relay)
+    .then((user: User) => {
+        annotateUsers(user)
+        note.user = user
+    })
+}
+
+export async function fetchUser(pubkey: string, relay: string): Promise<User> {
     let filter: Filter = {
         kinds: [0],
-        authors: [note.pubkey]
+        authors: [pubkey]
     }
     return channels.getter.all(filter)
         .then((fetchResultUsers: Array<Event>) => {
@@ -91,10 +100,10 @@ async function fetchMetaDataUser(note: Note, relay: string): Promise<void> {
             if (fetchResultUsers.length) {
                 user = formatUser(fetchResultUsers[0], relay)
             }
-            if (fetchResultUsers.length == 0 || !fetchMetaDataUser) {
+            if (fetchResultUsers.length == 0) {
                 let unkownUser = {
-                    pubkey: note.pubkey,
-                    name: note.pubkey,
+                    pubkey: pubkey,
+                    name: pubkey,
                     about: '',
                     picture: 'profile-placeholder.png',
                     content: '',
@@ -103,8 +112,7 @@ async function fetchMetaDataUser(note: Note, relay: string): Promise<void> {
                 }
                 user = unkownUser
             }
-            annotateUsers(user)
-            note.user = user
+            return user
         });
 }
 

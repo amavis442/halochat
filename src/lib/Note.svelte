@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getTime } from "./util/time";
   import type { User, Note } from "./state/types";
-  import { toHtml } from "./util/html";
+  import { toHtml, findLink } from "./util/html";
   import { beforeUpdate, onMount } from "svelte";
   import { publishReaction } from "./state/pool";
   import TextArea from "./partials/TextArea.svelte";
@@ -16,12 +16,15 @@
   import { users } from "./stores/users";
   import { notes } from "./stores/notes";
   import { filter } from "./util/misc";
+  import Preview from './partials/Preview.svelte'
+
   export let note: Note | any; // Todo: Do not know how to type this correctly to make sure in Notes it does not say Note__SvelteComponent_ <> Note type, very annoying
   export let userHasAccount: boolean = false;
 
   let user: User;
   let votedFor: string = "";
   let followed: boolean = false;
+  let link:string|null = null;
 
   beforeUpdate(() => {
     if (note.reactions && $account) {
@@ -40,6 +43,7 @@
     if (Object.values($followlist).find((u: User) => u.pubkey == note.pubkey)) {
       followed = true;
     }
+    link = findLink(note.content)
   });
 
   function normalizeName(data: User): string {
@@ -88,7 +92,7 @@
 
     new Promise((resolve, reject) => {
       resolve(filter($notes, note.pubkey));
-    }).then((filteredNotes) => $notes = filteredNotes);
+    }).then((filteredNotes) => ($notes = filteredNotes));
 
     //notes.update((data) => data.filter((n: Note) => n.pubkey != note.pubkey));
 
@@ -102,7 +106,7 @@
 
   function followUser() {
     expanded = false;
-    $followlist.push({ pubkey: note.pubkey, added: now() });
+    $followlist.push({ pubkey: note.pubkey, petname: "", added: now() });
     $followlist = uniqBy(prop("pubkey"), $followlist);
     addToast({
       message: "User " + note.pubkey.slice(0, 10) + " followed!",
@@ -217,6 +221,12 @@
       <div class="text-left">
         <span class="text-slate-500 text-sm font-medium dark:text-slate-400">
           {@html toHtml(note.content)}
+          {#if link}
+          <!-- svelte-ignore a11y-click-events-have-key-events -->
+          <div class="mt-2" on:click={e => e.stopPropagation()}>
+            <Preview endpoint={`${import.meta.env.VITE_PREVIEW_LINK}/preview/link`} url={link} />
+          </div>
+          {/if}
         </span>
       </div>
       {#if userHasAccount}
