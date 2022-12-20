@@ -41,9 +41,11 @@
     //notes.set([])
     // Do some housecleaning and remove all notes older then x - 2 days
     let expireTimestamp: number = now() - 60 * 60 * 24 * 2;
-    notes.update((notes) =>
-      notes.filter((n: Note) => n.created_at > expireTimestamp)
-    );
+    notes.update((notes) => {
+      if (notes && notes.length) {
+        return notes.filter((n: Note) => n.created_at > expireTimestamp);
+      }
+    });
 
     list = [];
     if (isFollowedView) {
@@ -56,7 +58,9 @@
     if (!isFollowedView) {
       list = $notes;
     }
-    list = list.slice(0, 100);
+    if (list && list.length) {
+      list = list.slice(0, 100);
+    }
   });
 
   let userHasAccount: boolean = false;
@@ -64,7 +68,7 @@
   onMount(async () => {
     if ($relays.length) {
       let lastSync: number = now() - 60 * 60;
-      if ($notes.length) {
+      if ($notes && $notes.length) {
         let firstNote: Note = $notes[0];
         let lastNote: Note = $notes[$notes.length - 1];
         lastSync = firstNote.created_at - 60;

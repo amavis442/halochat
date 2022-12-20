@@ -15,8 +15,9 @@
   import { addToast } from "./stores/toast";
   import { users } from "./stores/users";
   import { notes } from "./stores/notes";
-  import { filter } from "./util/misc";
-  import Preview from './partials/Preview.svelte'
+  import { filter, find, deleteNodeFromTree } from "./util/misc";
+  import Preview from "./partials/Preview.svelte";
+  import { getRootTag } from "./util/tags";
 
   export let note: Note | any; // Todo: Do not know how to type this correctly to make sure in Notes it does not say Note__SvelteComponent_ <> Note type, very annoying
   export let userHasAccount: boolean = false;
@@ -24,7 +25,7 @@
   let user: User;
   let votedFor: string = "";
   let followed: boolean = false;
-  let link:string|null = null;
+  let link: string | null = null;
 
   beforeUpdate(() => {
     if (note.reactions && $account) {
@@ -43,7 +44,7 @@
     if (Object.values($followlist).find((u: User) => u.pubkey == note.pubkey)) {
       followed = true;
     }
-    link = findLink(note.content)
+    link = findLink(note.content);
   });
 
   function normalizeName(data: User): string {
@@ -90,11 +91,7 @@
     user.name = user.name + "[BLOCKED]";
     users.update((data) => data); // Hopes this triggers the view
 
-    new Promise((resolve, reject) => {
-      resolve(filter($notes, note.pubkey));
-    }).then((filteredNotes) => ($notes = filteredNotes));
-
-    //notes.update((data) => data.filter((n: Note) => n.pubkey != note.pubkey));
+    notes.update((data) => data.filter((n: Note) => n.pubkey != note.pubkey));
 
     addToast({
       message: "User " + note.pubkey.slice(0, 10) + " blocked!",
@@ -136,7 +133,20 @@
 
   function removeNote() {
     expanded = false;
-    notes.update((data) => data.filter((n: Note) => n.id != note.id));
+    let rootTag = getRootTag(note.tags);
+    let parentNote = null
+
+    if (rootTag.length) {
+      parentNote = $notes.find((n:Note) => n.id == rootTag[1]);
+    }
+
+    if (!parentNote) {
+      $notes = $notes.filter((n:Note) => n.id != note.id);
+    } else {
+      deleteNodeFromTree(parentNote, note.id);
+      $notes = $notes //trigger update 
+    }
+
     addToast({
       message: "Note " + note.id.slice(0, 10) + " has been muted!",
       type: "success",
@@ -144,6 +154,7 @@
       timeout: 3000,
     });
   }
+
   export let expanded: boolean = false;
   function toggleMenu() {
     expanded = !expanded;
@@ -222,10 +233,13 @@
         <span class="text-slate-500 text-sm font-medium dark:text-slate-400">
           {@html toHtml(note.content)}
           {#if link}
-          <!-- svelte-ignore a11y-click-events-have-key-events -->
-          <div class="mt-2" on:click={e => e.stopPropagation()}>
-            <Preview endpoint={`${import.meta.env.VITE_PREVIEW_LINK}/preview/link`} url={link} />
-          </div>
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
+            <div class="mt-2" on:click={(e) => e.stopPropagation()}>
+              <Preview
+                endpoint={`${import.meta.env.VITE_PREVIEW_LINK}/preview/link`}
+                url={link}
+              />
+            </div>
           {/if}
         </span>
       </div>

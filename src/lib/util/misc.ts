@@ -1,4 +1,4 @@
-import type {Note} from '../state/types'
+import type { Note } from '../state/types'
 
 export function getLocalJson(k: string) {
     const data = localStorage.getItem(k);
@@ -20,8 +20,8 @@ export function setLocalJson(k: string, v: any) {
     }
 }
 
-export function filter(notes:Array<Note>, pubkey:string) {
-    const getNodes = (result:any, object:any) => {
+export function filter(notes: Array<Note>, pubkey: string) {
+    const getNodes = (result: any, object: any) => {
         if (object.pubkey !== pubkey) {
             result.push(object);
             return result;
@@ -37,19 +37,32 @@ export function filter(notes:Array<Note>, pubkey:string) {
 }
 
 
-export function find(note: Note, pubkey: string, depth: number = 1): Note | null {
-    if (depth > 6) return null
-    if (note) {
-        if (note.id == pubkey) {
-            return note
-        }
-        if (note.replies && note.replies.length) {
+export function find(note: Note, nodeId: string): Note | null {
+    if (note.replies != null) {
+        for (let i: number = 0; i < note.replies.length; i++) {
             let result = null
-            for (let i: number = 0; i < note.replies.length; i++) {
-                result = find(note.replies[i], pubkey, ++depth)
+            result = note.replies.find(n => n.id == nodeId)
+            if (result) return result
+            
+            let childNote = note.replies[i]
+            if (childNote && childNote.replies.length > 0) {
+                result = find(childNote, nodeId)
+                return result
             }
-            return result
+        }
+    }     
+    return null
+}
+
+export function deleteNodeFromTree(node:Note, nodeId: string) {
+    if (node.replies != null) {
+        for (let i = 0; i < node.replies.length; i++) {
+            let filtered = node.replies.filter(f => f.id == nodeId);
+            if (filtered && filtered.length > 0) {
+                node.replies = node.replies.filter(f => f.id != nodeId);
+                return;
+            }
+            deleteNodeFromTree(node.replies[i], nodeId);
         }
     }
-    return null
 }

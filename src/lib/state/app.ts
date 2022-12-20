@@ -275,7 +275,7 @@ function syncNoteTree(rootNote: Note) {
         console.debug('syncNoteTree: Add/update a note: ', rootNote)
         let byCreatedAt = descend<Note>(prop("created_at"));
         notes.update((data: Array<Note>) => {
-            if (!data.length) {
+            if (!data || !data.length) {
                 data = []
             }
             let note: Note = data.find(n => n.id == rootNote.id)
