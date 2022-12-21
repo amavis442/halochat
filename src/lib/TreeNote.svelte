@@ -3,6 +3,7 @@
   import Note from "./Note.svelte";
   import { beforeUpdate, onMount } from "svelte";
   import classNames from "classnames";
+  import Button from "./partials/Button.svelte";
 
   export let userHasAccount: boolean = false;
   export let notes: Array<NoteEvent>;
@@ -29,16 +30,13 @@
 
 <div class="flex flex-col">
   <div class="flex items-top gap-4 p-4 ml-16">
-    <button
-      class="text-white font-medium shadow visited:text-purple-600 rounded-lg bg-purple-600 p-2"
-      on:click={toggle}
-    >
+    <Button click={toggle}>
       {#if expanded}
         Hide {num} repl{#if num == 1}y{:else}ies{/if}
       {:else}
         Show {num} repl{#if num == 1}y{:else}ies{/if}
       {/if}
-    </button>
+    </Button>
   </div>
 
   {#if expanded}

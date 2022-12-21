@@ -11,11 +11,19 @@
   import { annotateUsers } from "./stores/users";
   import { now } from "./util/time";
   import Spinner from "./Spinner.svelte";
-  let pubkey: string = $account.pubkey;
-  let privkey: string = $account.privkey;
-  let name: string = $account.name;
-  let about: string = $account.about;
-  let picture: string = $account.picture;
+  let pubkey: string;
+  let privkey: string;
+  let name: string;
+  let about: string;
+  let picture: string;
+
+  if ($account) {
+    pubkey = $account.pubkey;
+    privkey = $account.privkey;
+    name = $account.name;
+    about = $account.about;
+    picture = $account.picture;
+  }
 
   /**
 
@@ -105,15 +113,17 @@
       });
   }
 
-  onMount(async () => {
-    name = $account.name;
-    about = $account.about;
-    picture = $account.picture;
-
+  async function generateKeys() {
     const keys = await getKeys();
-    if (!(privkey && pubkey)) {
-      privkey = keys.priv;
-      pubkey = keys.pub;
+    privkey = keys.priv;
+    pubkey = keys.pub;
+  }
+
+  onMount(async () => {
+    if ($account) {
+      name = $account.name;
+      about = $account.about;
+      picture = $account.picture;
     }
   });
 </script>
@@ -128,18 +138,26 @@
         Public key
       </label>
 
-      <Text
-        bind:value={pubkey}
-        id="pubkey"
-        describedby="emailHelp"
-        placeholder="Public key"
-      />
+      <div class="md:flex md:items-top mb-6">
+        <div class="md:w-3/4">
+          <Text
+            bind:value={pubkey}
+            id="pubkey"
+            describedby="emailHelp"
+            placeholder="Public key"
+          />
+        </div>
+        <div class="md:w-1/4">
+          <Button click={generateKeys}>Keys</Button>
+        </div>
+      </div>
       <small id="pubkeyHelp" class="block mt-1 text-xs text-gray-600">
         This is your username for nostr. You can add more info like name, about
         and a picture which most clients will pickup and show that instead of
         your pubkey.
       </small>
     </div>
+
     <div class="form-group mb-6">
       <label for="privKey" class="form-label inline-block mb-2 text-gray-700">
         Private key
@@ -214,7 +232,7 @@
   </form>
 </div>
 
-{#if $account.pubkey}
+{#if $account && $account.pubkey}
   <div
     class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6 text-left bg-blue-200"
   >

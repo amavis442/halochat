@@ -48,7 +48,7 @@
     });
 
     list = [];
-    if (isFollowedView) {
+    if (isFollowedView && $notes) {
       list = $notes.filter((n: Note) => {
         //@ts-ignore
         let follows: Array<string> = pluck("pubkey", $followlist);
@@ -66,7 +66,7 @@
   let userHasAccount: boolean = false;
   let listener: Listener;
   onMount(async () => {
-    if ($relays.length) {
+    if ($relays && $relays.length) {
       let lastSync: number = now() - 60 * 60;
       if ($notes && $notes.length) {
         let firstNote: Note = $notes[0];
@@ -111,7 +111,7 @@
             space-y-0 place-content-start"
       on:scroll={scrollHandler}
     >
-      {#if $relays.length}
+      {#if $relays && $relays.length}
         {#each list ? list : [] as note (note.id)}
           <ul class="items-center w-full mb-2 border-hidden">
             <li>
@@ -151,7 +151,7 @@
       dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1 ring-black/5
       rounded-xl divide-y dark:divide-slate-200/5 p-2 w-full ml-4 mr-4 bg-blue-200"
     >
-      {#if $relays.length && $account.privkey}
+      {#if $relays && $account && $relays.length && $account.privkey}
         <div class="w-4/5 mr-2">
           <Text bind:value={msg} id="msg" placeholder="Message to send" />
         </div>

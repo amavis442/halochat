@@ -40,7 +40,7 @@ export const createEvent = async (kind: number, content: string = '', tags: stri
     tags = tags.filter((t) => t[0] != 'client')
     tags = [...tags, clientTag]
   }
-  
+
   let note: Event = { kind: kind, content: content, tags: tags, pubkey: publicKey, created_at: createdAt }
   let sig: any = await signEvent(note, $account.privkey)
   return { ...note, sig }
@@ -173,7 +173,7 @@ function copyTags(evt: Event) {
 
   newtags.push(["p", evt.pubkey, head(get(relays))]);
   newtags.push(["e", evt.id, head(get(relays)), "reply"]);
-  
+
   let rootTag = getRootTag(newtags)
   let replyTag = getReplyTag(newtags)
   if (rootTag[1] != replyTag[1] && rootTag[3] != 'root') {
@@ -196,7 +196,7 @@ export async function publishReaction(content: string, evt: Event) {
   const tags: string[][] = copyTags(evt)
   const sendEvent = await createEvent(7, content, tags)
 
-  console.debug('publishReaction: ',sendEvent)
+  console.debug('publishReaction: ', sendEvent)
   pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
 }
 
@@ -219,7 +219,7 @@ relays.subscribe($relays => {
   try {
     //@ts-ignore
     Object.keys(pool.relays).forEach((url: string) => {
-      if (!$relays.includes(url)) {
+      if ($relays && !$relays.includes(url)) {
         //@ts-ignore
         pool.removeRelay(url)
         console.log('Remove relay form pool:', url)
@@ -229,14 +229,15 @@ relays.subscribe($relays => {
     console.error(error)
   }
 
-
-  $relays.forEach((url: string) => {
-    //@ts-ignore
-    if (!pool.relays[url]) {
+  if ($relays && $relays.length) {
+    $relays.forEach((url: string) => {
       //@ts-ignore
-      pool.addRelay(String(url))
-      console.log('Add relay to pool: ', url)
-    }
-  })
+      if (!pool.relays[url]) {
+        //@ts-ignore
+        pool.addRelay(String(url))
+        console.log('Add relay to pool: ', url)
+      }
+    })
+  }
   setLocalJson("halonostr/relays", $relays)
 })

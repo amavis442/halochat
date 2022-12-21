@@ -37,6 +37,7 @@
     }
 
     relays.update((data) => {
+      if (!data) data = []
       const result = data.find((value: string) => value.includes(url))
       if (!result) {
         return [...data, url]
@@ -85,7 +86,7 @@
   </form>
 </div>
 
-{#if $relays.length}
+{#if $relays && $relays.length}
   <div
     class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6 text-left bg-blue-200">
     <ul class="bg-white rounded-lg border border-gray-200 w-full text-gray-900">

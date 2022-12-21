@@ -383,6 +383,7 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
     note.relays = [relay]
     let rootNote: Note
     let $noteStack = get(noteStack)
+    let $notes = get(notes)
 
     console.debug('handleTextNote: input ', evt)
     if ($noteStack[evt.id]) {
@@ -403,9 +404,9 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
     }
 
     // Reply to root only 1 e tag
-    if (rootTag.length && replyTag.length && replyTag[1] == rootTag[1]) {
+    if ($notes && rootTag.length && replyTag.length && replyTag[1] == rootTag[1]) {
         console.debug("handleTextNote: Replytag and RootTag are the same", rootTag, replyTag, evt)
-        let rootNote = get(notes).find((n: Note) => n.id == rootTag[1])
+        let rootNote = $notes.find((n: Note) => n.id == rootTag[1])
         if (rootNote) { // Put getting extra data in a WebWorker for speed.
             annotateNote(note, relay)
                 .then(() => {
@@ -420,8 +421,8 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
 
     // First try to find the parent in the existing tree before more expensive operations
     // are needed
-    if (rootTag.length && replyTag.length && rootTag[1] != replyTag[1]) {
-        let rootNote = get(notes).find(n => n.id == rootTag[1])
+    if ($notes && rootTag.length && replyTag.length && rootTag[1] != replyTag[1]) {
+        let rootNote = $notes.find(n => n.id == rootTag[1])
         if (rootNote && rootNote.replies && rootNote.replies.length) {
             let replyNote: Note | null = findRecursive(rootNote, replyTag)
             if (!replyNote) console.debug('handleTextNote: Need to do expensive stuff and get the whole tree from a relay.', evt)

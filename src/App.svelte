@@ -9,7 +9,22 @@
   import { account } from "./lib/stores/account";
   import Anchor from "./lib/partials/Anchor.svelte";
   import Toasts from './lib/Toasts.svelte'
+  import {notes} from './lib/stores/notes'
+  import {users} from './lib/stores/users'
+  import {relays} from './lib/state/pool'
+  import { followlist,blocklist } from './lib/state/app'
   export let url = "";
+
+  /* big reset for testing and debugging */
+  if (import.meta.env.VITE_APP_MODE == 'debug') {
+    account.set(null)
+    notes.set(null)
+    relays.set(null)
+    users.set(null)
+    followlist.set(null)
+    blocklist.set(null)
+  }
+  
 </script>
 
 <Toasts />
@@ -47,7 +62,7 @@
           <div
             class="w-full max-w-lg mx-auto bg-white rounded-lg shadow-xl from-blue-100 via-blue-300 to-blue-500 bg-gradient-to-br p-2"
           >
-            {#if $account.pubkey}
+            {#if $account && $account.pubkey}
               <div class="text-center">
                 <span
                   class="border-4 border-white rounded-full mx-auto inline-block"

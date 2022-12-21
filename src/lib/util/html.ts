@@ -3,9 +3,14 @@ export function findLink(t: string): string | undefined {
   if (match && match[0]) {
     return match[0];
   }
-  let m = ytVidId(t)
-  
-  return (m ? m : undefined);
+
+  let m = ytVidId(t);
+  if (m) return m;
+
+  let p = imgTag(t);
+  if (p) return p;
+
+  return undefined;
 }
 
 /**
@@ -15,10 +20,18 @@ export function findLink(t: string): string | undefined {
  * @url: https://stackoverflow.com/a/10315969/624466
  */
 function ytVidId(url) {
-  var p = /^(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})(?:\S+)?$/;
-  let match = url.match(p)
+  let p = /^(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})(?:\S+)?$/;
+  let match = url.match(p);
   return (match) ? match[0] : false;
 }
+
+function imgTag(url) {
+  let p = (/\.(gif|jpe?g|tiff?|png|webp|bmp)$/i);
+  let match = url.match(p);
+  return (match) ? match[0] : false;
+}
+
+
 
 export function escapeHtml(html: string): string {
   const div = document.createElement("div");

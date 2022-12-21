@@ -84,6 +84,8 @@
 
   async function banUser() {
     expanded = false;
+
+    if (!$blocklist) $blocklist = []
     $blocklist.push({ pubkey: note.pubkey, added: now() });
     $blocklist = uniqBy(prop("pubkey"), $blocklist);
 
@@ -103,6 +105,8 @@
 
   function followUser() {
     expanded = false;
+    if (!$followlist) $followlist = []
+
     $followlist.push({ pubkey: note.pubkey, petname: "", added: now() });
     $followlist = uniqBy(prop("pubkey"), $followlist);
     addToast({
@@ -118,6 +122,7 @@
     followed = true;
 
     followlist.update((data) => {
+      if (!data) data = []
       data.filter(
         (d: { pubkey: string; added: number }) => d.pubkey != note.pubkey
       );
@@ -193,7 +198,7 @@
                     <ul class="py-1 w-44 text-left">
                       <li>
                         <button class="downdown-menu-button" on:click={banUser}>
-                          Block user
+                          <i class="fa-solid fa-ban"></i> Block user
                         </button>
                       </li>
                       <li>
@@ -202,14 +207,14 @@
                             class="downdown-menu-button"
                             on:click={followUser}
                           >
-                            Follow user
+                          <i class="fa-solid fa-bookmark"></i> Follow user
                           </button>
                         {:else}
                           <button
                             class="downdown-menu-button"
                             on:click={unfollowUser}
                           >
-                            Unfollow user
+                          <i class="fa-solid fa-bookmark-slash"></i> Unfollow user
                           </button>
                         {/if}
                       </li>
@@ -218,7 +223,7 @@
                           class="downdown-menu-button"
                           on:click={removeNote}
                         >
-                          Mute post
+                        <i class="fa-solid fa-comment-slash"></i> Mute post
                         </button>
                       </li>
                     </ul>

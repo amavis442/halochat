@@ -28,7 +28,7 @@
         console.error(err);
       });
 
-    if (json.title) {
+    if (json && json.title) {
       preview = json;
     }
   });

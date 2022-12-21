@@ -25,3 +25,6 @@
   ease-in-out mb-4;
 }
 
+.dropdown-toggle {
+  @apply text-blue-800;
+}
