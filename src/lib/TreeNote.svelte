@@ -43,7 +43,7 @@
     <ul class={ulClasses}>
       {#each notes ? notes : [] as note (note.id)}
         <li>
-          {#if note.replies.length > 0}
+          {#if note.replies && note.replies.length > 0}
             <Note {note} {userHasAccount} />
             <svelte:self
               notes={note.replies}
