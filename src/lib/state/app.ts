@@ -121,6 +121,26 @@ export async function fetchUser(pubkey: string, relay: string): Promise<User> {
         });
 }
 
+export async function fetchUsers(pubkeys: Array<string>, relay: string): Promise<Array<User>> {
+    let filter: Filter = {
+        kinds: [0],
+        authors: pubkeys
+    }
+    let result = []
+    return channels.getter.all(filter)
+        .then((fetchResultUsers: Array<Event>) => {
+            for (let i = 0; i < fetchResultUsers.length; i++) {
+                let user: User
+                if (fetchResultUsers.length) {
+                    user = formatUser(fetchResultUsers[i], relay)
+                    annotateUsers(user)
+                    result.push(user)
+                }
+            }
+            return result;
+        });
+}
+
 /**
  * 
  * @param evt Event
