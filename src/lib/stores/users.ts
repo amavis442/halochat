@@ -2,6 +2,7 @@ import { writable } from 'svelte/store'
 import type { User, Event } from '../state/types'
 import { setLocalJson, getLocalJson } from '../util/storage'
 import { now } from '../util/time';
+import { log } from '../util/misc'
 
 export const users = writable(getLocalJson('halonostr/users') || []);
 
@@ -13,7 +14,7 @@ export function annotateUsers(user: User) {
         ...foundUser,
         user
       }
-      console.debug('annotateUsers: ', foundUser)
+      log('annotateUsers: ', foundUser)
       return data
     }
     data.push(user)

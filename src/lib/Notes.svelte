@@ -17,13 +17,14 @@
   import Anchor from "./partials/Anchor.svelte";
   import Toasts from "./Toasts.svelte";
   import { pluck } from "ramda";
+  import { log } from "./util/misc";
 
   let msg = "";
   let replyTo: NoteEvent | null = null;
 
   function sendMessage() {
     if (replyTo) {
-      console.log(replyTo);
+      log(replyTo);
       publishReply(msg, replyTo);
     }
     if (!replyTo) {

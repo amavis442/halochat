@@ -11,6 +11,8 @@
   import { annotateUsers } from "./stores/users";
   import { now } from "./util/time";
   import Spinner from "./Spinner.svelte";
+  import { log } from "./util/misc";
+
   let pubkey: string;
   let privkey: string;
   let name: string;
@@ -92,7 +94,7 @@
       kinds: [0],
       authors: [pubkey],
     };
-    console.debug("Account view:: checkPubkey filter ", filter);
+    log("Account view:: checkPubkey filter ", filter);
     promise = channels.getter
       .all(filter)
       .then((result: Array<Event> | null) => {
@@ -103,7 +105,7 @@
           about = content.about;
           picture = content.picture;
         }
-        console.debug(
+        log(
           "Account view:: checkPubkey ",
           "Result: ",
           result,

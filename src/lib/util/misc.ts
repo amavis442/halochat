@@ -1,4 +1,4 @@
-import type { Note } from '../state/types'
+import type { Event, Note, Reaction } from '../state/types'
 
 export function getLocalJson(k: string) {
     const data = localStorage.getItem(k);
@@ -64,5 +64,13 @@ export function deleteNodeFromTree(node:Note, nodeId: string) {
             }
             deleteNodeFromTree(node.replies[i], nodeId);
         }
+    }
+}
+
+export function log(...args: any) 
+{
+    if (import.meta.env.DEV) {
+        let e = (new Error())?.stack.split("\n")[2].trim()//.split(" ")[1]
+        console.debug('Caller', e, args)
     }
 }

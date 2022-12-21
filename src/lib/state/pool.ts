@@ -10,13 +10,14 @@ import { head } from 'ramda';
 import { account } from '../stores/account';
 import type { Event, Filter } from './types'
 import { getRootTag, getReplyTag } from '../util/tags';
+import { log } from '../util/misc';
 
 export const pool = relayPool();
 
 //@ts-ignore does exist just not in index.d.ts
 pool.onNotice((message: string, relay?: Relay) => {
   const url: string = relay.url
-  console.debug(`onNotice: Got a notice event from relay ${url}: ${message}`);
+  log(`onNotice: Got a notice event from relay ${url}: ${message}`);
 })
 
 /**
@@ -111,7 +112,7 @@ export class Channel {
         filter,
         (e: Event) => result.push(e),
         (r: string) => {
-          console.log('Eose from ', r)
+          log('Eose from ', r)
           sub.unsub()
 
           resolve(result)
@@ -137,7 +138,7 @@ export async function publishAccount() {
   const metadata = { name: $account.name, about: $account.about, picture: $account.picture }
 
   let event = await createEvent(0, JSON.stringify(metadata))
-  console.debug('publishAccount: ', event)
+  log('publishAccount: ', event)
   await pool.publish(event, (status: number, url: string) => {
     switch (status) {
       case 0:
@@ -188,16 +189,16 @@ export async function publishReply(content: string, evt: Event) {
   const tags: string[][] = copyTags(evt)
   const sendEvent = await createEvent(1, content, tags)
 
-  console.debug('publishReply: ', sendEvent)
-  pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
+  log('publishReply: ', sendEvent)
+  pool.publish(sendEvent, (status: number) => { log('Message published. Status: ', status) })
 }
 
 export async function publishReaction(content: string, evt: Event) {
   const tags: string[][] = copyTags(evt)
   const sendEvent = await createEvent(7, content, tags)
 
-  console.debug('publishReaction: ', sendEvent)
-  pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
+  log('publishReaction: ', sendEvent)
+  pool.publish(sendEvent, (status: number) => { log('Message published. Status: ', status) })
 }
 
 /**
@@ -209,8 +210,8 @@ export async function publishReaction(content: string, evt: Event) {
  */
 export async function publish(kind: number, content = '', tags = []): Promise<any> {
   const sendEvent = await createEvent(kind, content, tags)
-  console.debug('publish: ', sendEvent)
-  return pool.publish(sendEvent, (status: number) => { console.log('Message published. Status: ', status) })
+  log('publish: ', sendEvent)
+  return pool.publish(sendEvent, (status: number) => { log('Message published. Status: ', status) })
 }
 
 export const relays = writable(getLocalJson("halonostr/relays") || [])
@@ -222,7 +223,7 @@ relays.subscribe($relays => {
       if ($relays && !$relays.includes(url)) {
         //@ts-ignore
         pool.removeRelay(url)
-        console.log('Remove relay form pool:', url)
+        log('Remove relay form pool:', url)
       }
     })
   } catch (error) {
@@ -235,7 +236,7 @@ relays.subscribe($relays => {
       if (!pool.relays[url]) {
         //@ts-ignore
         pool.addRelay(String(url))
-        console.log('Add relay to pool: ', url)
+        log('Add relay to pool: ', url)
       }
     })
   }

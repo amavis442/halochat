@@ -1,13 +1,14 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import Link from "./Link.svelte";
-
+  import {log} from '../util/misc';
+  
   export let url: string = "";
   export let endpoint: string;
   let preview;
 
   onMount(async () => {
-    console.debug("Getting preview data");
+    log("Getting preview data");
 
     const json = await fetch(endpoint, {
       method: "POST",
@@ -17,11 +18,11 @@
       },
     })
       .then((res) => {
-        console.debug("Reponse from preview app.");
+        log("Reponse from preview app.");
         return res.json();
       })
       .then((data) => {
-        console.log("Json is ", data);
+        log("Json is ", data);
         return data;
       })
       .catch((err) => {
