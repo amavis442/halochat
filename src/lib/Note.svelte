@@ -15,7 +15,7 @@
   import { addToast } from "./stores/toast";
   import { users } from "./stores/users";
   import { notes } from "./stores/notes";
-  import { filter, find, deleteNodeFromTree } from "./util/misc";
+  import { deleteNodeFromTree, log } from "./util/misc";
   import Preview from "./partials/Preview.svelte";
   import { getRootTag } from "./util/tags";
 
@@ -63,7 +63,7 @@
   }
 
   function showInfo() {
-    console.info("Debug note info from mouseover: ", note);
+    log("info", "Debug note info from mouseover: ", note);
   }
 
   async function onSubmit(e: Event) {
@@ -85,7 +85,7 @@
   async function banUser() {
     expanded = false;
 
-    if (!$blocklist) $blocklist = []
+    if (!$blocklist) $blocklist = [];
     $blocklist.push({ pubkey: note.pubkey, added: now() });
     $blocklist = uniqBy(prop("pubkey"), $blocklist);
 
@@ -105,7 +105,7 @@
 
   function followUser() {
     expanded = false;
-    if (!$followlist) $followlist = []
+    if (!$followlist) $followlist = [];
 
     $followlist.push({ pubkey: note.pubkey, petname: "", added: now() });
     $followlist = uniqBy(prop("pubkey"), $followlist);
@@ -122,7 +122,7 @@
     followed = true;
 
     followlist.update((data) => {
-      if (!data) data = []
+      if (!data) data = [];
       data.filter(
         (d: { pubkey: string; added: number }) => d.pubkey != note.pubkey
       );
@@ -139,17 +139,17 @@
   function removeNote() {
     expanded = false;
     let rootTag = getRootTag(note.tags);
-    let parentNote = null
+    let parentNote = null;
 
     if (rootTag.length) {
-      parentNote = $notes.find((n:Note) => n.id == rootTag[1]);
+      parentNote = $notes.find((n: Note) => n.id == rootTag[1]);
     }
 
     if (!parentNote) {
-      $notes = $notes.filter((n:Note) => n.id != note.id);
+      $notes = $notes.filter((n: Note) => n.id != note.id);
     } else {
       deleteNodeFromTree(parentNote, note.id);
-      $notes = $notes //trigger update 
+      $notes = $notes; //trigger update
     }
 
     addToast({
@@ -198,7 +198,7 @@
                     <ul class="py-1 w-44 text-left">
                       <li>
                         <button class="downdown-menu-button" on:click={banUser}>
-                          <i class="fa-solid fa-ban"></i> Block user
+                          <i class="fa-solid fa-ban" /> Block user
                         </button>
                       </li>
                       <li>
@@ -207,14 +207,14 @@
                             class="downdown-menu-button"
                             on:click={followUser}
                           >
-                          <i class="fa-solid fa-bookmark"></i> Follow user
+                            <i class="fa-solid fa-bookmark" /> Follow user
                           </button>
                         {:else}
                           <button
                             class="downdown-menu-button"
                             on:click={unfollowUser}
                           >
-                          <i class="fa-solid fa-bookmark-slash"></i> Unfollow user
+                            <i class="fa-solid fa-bookmark-slash" /> Unfollow user
                           </button>
                         {/if}
                       </li>
@@ -223,7 +223,7 @@
                           class="downdown-menu-button"
                           on:click={removeNote}
                         >
-                        <i class="fa-solid fa-comment-slash"></i> Mute post
+                          <i class="fa-solid fa-comment-slash" /> Mute post
                         </button>
                       </li>
                     </ul>

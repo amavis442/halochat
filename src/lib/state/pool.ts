@@ -142,13 +142,13 @@ export async function publishAccount() {
   await pool.publish(event, (status: number, url: string) => {
     switch (status) {
       case 0:
-        console.info(`publishAccount: Account request send to ${url}`)
+        log("info", `publishAccount: Account request send to ${url}`)
         break
       case 1:
-        console.info(`publishAccount: Account published by ${url}`)
+        log("info", `publishAccount: Account published by ${url}`)
         break
       default:
-        console.error(`publishAccount: Unknown status ${status} while publishing account`)
+        log("info", `publishAccount: Unknown status ${status} while publishing account`)
     }
   })
 }
@@ -227,7 +227,7 @@ relays.subscribe($relays => {
       }
     })
   } catch (error) {
-    console.error(error)
+    log("error", error)
   }
 
   if ($relays && $relays.length) {

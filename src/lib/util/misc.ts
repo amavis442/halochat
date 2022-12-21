@@ -71,6 +71,16 @@ export function log(...args: any)
 {
     if (import.meta.env.DEV) {
         let e = (new Error())?.stack.split("\n")[2].trim()//.split(" ")[1]
-        console.debug('Caller', e, args)
+        switch(args[0]) {
+        case 'error':
+            console.debug('Caller', e, args.shift())
+            break;
+        case 'info':
+            console.debug('Caller', e, args.shift())
+            break;
+        default: 
+            console.debug('Caller', e, args)
+        }
+        
     }
 }

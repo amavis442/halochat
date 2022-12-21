@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import Link from "./Link.svelte";
-  import {log} from '../util/misc';
-  
+  import { log } from "../util/misc";
+
   export let url: string = "";
   export let endpoint: string;
   let preview;
@@ -26,7 +26,7 @@
         return data;
       })
       .catch((err) => {
-        console.error(err);
+        log("error", err);
       });
 
     if (json && json.title) {
@@ -42,7 +42,7 @@
     >
       <Link href={url}>
         {#if preview.images}
-          <img src={preview.images[0]} alt={preview.description}/>
+          <img src={preview.images[0]} alt={preview.description} />
           <div class="h-px bg-medium" />
         {/if}
         <div class="px-4 py-2 text-black flex flex-col bg-white">

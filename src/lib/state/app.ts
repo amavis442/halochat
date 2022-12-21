@@ -70,7 +70,7 @@ function handleMetadata(evt: Event, relay: string) {
         setMetadata(evt, relay);
     } catch (err) {
         log(evt);
-        console.error(err);
+        log("error", err);
     }
 }
 
@@ -572,8 +572,23 @@ export function onEvent(evt: Event, relay: string) {
         case 7:
             handleReaction(evt, relay)
             break
+        case 40:
+            /**
+             * @see https://github.com/nostr-protocol/nips/blob/master/28.md
+             * channel create
+             */
+            break;
+        case 41: //channel metadata
+            break;
+        case 42: // channel message
+            break;
+        case 43: // hide message
+            break;
+        case 44: //mute user
+            break;
+
         default:
-            console.info(`Got an unhandled kind ${evt.kind}`)
+            log(`Got an unhandled kind ${evt.kind}`)
     }
 }
 
