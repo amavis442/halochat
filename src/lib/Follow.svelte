@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { channels, relays } from "./state/pool";
+  import { relays } from "./state/pool";
   import { addToast } from "./stores/toast";
   import { followlist } from "./state/app";
   import Button from "./partials/Button.svelte";
@@ -8,8 +8,11 @@
   import { prop, uniqBy } from "ramda";
   import type { User, Follow } from "./state/types";
   import { annotateUsers, users } from "./stores/users";
-  import { fetchUser } from "./state/app";
+  import { fetchUsers } from "./state/app";
   import Spinner from "./Spinner.svelte";
+
+  if (!$followlist && !$followlist.length) $followlist = [];
+  if (!$users && !$users.length) $users = [];
 
   let pubkey = "";
   let petname = "";
@@ -26,33 +29,24 @@
   }
 
   let promise: Promise<any>;
-  function fetchUsers() {
-    let user: User | null = null;
+  function getUsers() {
     let f: Array<Follow> = Object.values($followlist);
 
-    promise = new Promise((resolve, reject) => {
-      for (let i = 0; i < f.length; i++) {
-        let fl = $followlist.find((fl: Follow) => fl.pubkey == f[i].pubkey);
-        user = $users.find((u: User) => u.pubkey == fl.pubkey);
-        if (user) {
-          fl.user = user;
-        }
-        if (!user) {
-          fetchUser(fl.pubkey, "").then((user) => {
-            fl.user = user;
-            annotateUsers(user);
-          });
-        }
-      }
-      setTimeout(() => reject("Timeout getting user data (10s)"), 10000);
-    }).catch((e) => {
-      addToast({
-        message: e,
-        type: "error",
-        dismissible: true,
-        timeout: 3000,
+    let ids = [];
+    for (let i = 0; i < f.length; i++) {
+      ids.push(f[i].pubkey);
+    }
+
+    if (ids && ids.length) {
+      promise = fetchUsers(ids, "")
+      .then((users) => {
+        users.forEach((element) => {
+          let followUser = $followlist.find((fl:Follow) => fl.pubkey == element.pubkey);
+          if (followUser) followUser.user = element;
+        });
+        $followlist = $followlist
       });
-    });
+    }
   }
 
   function follow() {
@@ -109,16 +103,12 @@
         A name so you can remember who is behind the pubkey
       </small>
     </div>
-    <Button type="button" click={fetchUsers}
-      >Fetch users{#await promise}
-        <Spinner size={36} />
-      {/await}</Button
-    >
+
     <Button type="submit">Submit</Button>
   </form>
 </div>
 
-{#if $relays && $relays.length}
+{#if $relays && $relays.length && $followlist && $followlist.length}
   <div
     class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6 text-left bg-blue-200"
   >
@@ -129,9 +119,16 @@
             <span class="fa-solid fa-trash" />
           </button>
           {follow.pubkey.slice(0, 10)}....{follow.pubkey.slice(-10)} ({follow.petname})
-          {#if follow.user} :: {follow.user.name.slice(0, 10)} {/if}
+          {#if follow?.user && follow?.user?.name} ::metadata: {follow?.user?.name.slice(0, 10)} {/if}
         </li>
       {/each}
+      <li class="text-right">
+        <Button type="button" click={getUsers}
+          >Fetch users{#await promise}
+            <Spinner size={36} />
+          {/await}</Button
+        >
+      </li>
     </ul>
   </div>
 {/if}
