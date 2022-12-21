@@ -4,12 +4,18 @@ import { notes } from '../stores/notes'
 import type { Subscription } from 'nostr-tools'
 import { now } from "../util/time"
 import { find } from "../util/misc"
-import { uniq, pluck, difference, uniqBy } from 'ramda'
+import { uniq, pluck, difference, uniqBy, not } from 'ramda'
 import type { Event, User, Filter, Note, Reaction } from './types'
 import { pool, channels } from './pool'
 import { prop, sort, descend } from "ramda";
 import { setLocalJson, getLocalJson } from '../util/storage'
 import { getRootTag, getReplyTag } from '../util/tags';
+
+let $users = get(users)
+let $notes = get(notes)
+if (!$users) $users = []
+if (!$notes) $notes = []
+
 
 export const blacklist: Writable<Array<string>> = writable([
     '887645fef0ce0c3c1218d2f5d8e6132a19304cdc57cd20281d082f38cfea0072'
@@ -26,8 +32,6 @@ export function getContacts(): Subscription | null {
     let filter: Filter = {
         kinds: [0],
     }
-    let $users = get(users)
-    let $notes = get(notes)
     //@ts-ignore
     const userPubKeys = uniq(pluck('pubkey', Object.values($users)))
     //@ts-ignore
@@ -83,10 +87,9 @@ async function fetchMetaDataUser(note: Note, relay: string): Promise<void> {
     }
 
     fetchUser(note.pubkey, relay)
-    .then((user: User) => {
-        annotateUsers(user)
-        note.user = user
-    })
+        .then((user: User) => {
+            note.user = user
+        })
 }
 
 export async function fetchUser(pubkey: string, relay: string): Promise<User> {
@@ -103,7 +106,7 @@ export async function fetchUser(pubkey: string, relay: string): Promise<User> {
             if (fetchResultUsers.length == 0) {
                 let unkownUser = {
                     pubkey: pubkey,
-                    name: pubkey,
+                    name: 'unknown',
                     about: '',
                     picture: 'profile-placeholder.png',
                     content: '',
@@ -112,6 +115,7 @@ export async function fetchUser(pubkey: string, relay: string): Promise<User> {
                 }
                 user = unkownUser
             }
+            annotateUsers(user)
             return user
         });
 }
@@ -123,7 +127,6 @@ export async function fetchUser(pubkey: string, relay: string): Promise<User> {
  * @param content string
  */
 function setMetadata(evt: Event, relay: string) {
-    const $users = get(users)
     let foundUser: User = $users.find((u: User) => u.pubkey == evt.pubkey)
     if (!foundUser) {
         let user: User = {
@@ -189,7 +192,7 @@ async function getNotes(ids: Array<string>, relay: string): Promise<{ [key: stri
     for (let i = 0; i < result.length; i++) {
         let note: Note = result[i] // We get more of the same, depending on the number of relays.
         note = initNote(note)
-        let user: User = get(users).find((u: User) => u.pubkey == note.pubkey)
+        let user: User = $users.find((u: User) => u.pubkey == note.pubkey)
         note.user = user
         if (!user) {
             fetchMetaDataUser(note, relay)
@@ -228,7 +231,7 @@ async function processReplyFeed(evt: Event, replies: Array<Event>, relay: string
             let replyTag = getReplyTag(reply.tags)
             if (rootTag && replyTag && rootTag[1] != replyTag[1]) {
                 reply = initNote(reply)
-                let user: User = get(users).find((u: User) => u.pubkey == reply.pubkey)
+                let user: User = $users.find((u: User) => u.pubkey == reply.pubkey)
                 reply.user = user // can be undefined, then let the promise get the needed data
                 if (!user) {
                     fetchMetaDataUser(reply, relay)
@@ -299,10 +302,10 @@ function syncNoteTree(rootNote: Note) {
  * @param relay string
  * @returns 
  */
-async function annotateNote(note: Note, relay: string): Promise<void> {
+async function annotateNote(note: Note, relay: string): Promise<Note> {
     console.debug('annotateNote: User ', note.pubkey)
     if (!note.user) {
-        let result = get(users).filter((u: User) => u.pubkey == note.pubkey)
+        let result = await $users.filter((u: User) => u.pubkey == note.pubkey)
         note.user = result && result.length ? result[0] : []
     }
 
@@ -312,6 +315,8 @@ async function annotateNote(note: Note, relay: string): Promise<void> {
             console.debug('annotateNote: Promise result by ref ', note.user)
         })
     }
+
+    return note
 }
 
 export const blocklist = writable(getLocalJson("halonostr/blocklist") || [])
@@ -370,8 +375,9 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
     let replyTag = getReplyTag(evt.tags)
     // Root, no need to look up replies
     if (rootTag.length == 0 && replyTag.length == 0) {
-        annotateNote(note, relay)
-            .then(() => {
+        handleMentions(note)
+            .then((note) => annotateNote(note, relay))
+            .then((note) => {
                 rootNote = note
                 syncNoteTree(rootNote)
             })
@@ -383,8 +389,9 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
         console.debug("handleTextNote: Replytag and RootTag are the same", rootTag, replyTag, evt)
         let rootNote = $notes.find((n: Note) => n.id == rootTag[1])
         if (rootNote) { // Put getting extra data in a WebWorker for speed.
-            annotateNote(note, relay)
-                .then(() => {
+            handleMentions(note)
+                .then((note) => annotateNote(note, relay))
+                .then((note) => {
                     if (!rootNote.replies) rootNote.replies = []
                     rootNote.replies.push(note)
                     rootNote.replies = uniqBy(prop('id'), rootNote.replies)
@@ -402,8 +409,9 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
             let replyNote: Note | null = find(rootNote, replyTag[1])
             if (!replyNote) console.debug('handleTextNote: Need to do expensive stuff and get the whole tree from a relay.', evt)
             if (replyNote) {
-                annotateNote(note, relay)
-                    .then(() => {
+                handleMentions(note)
+                    .then((note) => annotateNote(note, relay))
+                    .then((note) => {
                         replyNote.replies.push(note)
                         replyNote.replies = uniqBy(prop('id'), replyNote.replies)
                         syncNoteTree(rootNote)
@@ -425,6 +433,39 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
             console.debug('handleTextNote: Current stack: ', $noteStack)
             syncNoteTree(rootNote)
         })
+}
+
+async function handleMentions(note: Note): Promise<Note> {
+    if (note && !note.content) {
+        console.debug('handleMentions:: This should never ever happen, but it did', note)
+        return note
+    }
+    let reg = /#\[[0-9]+\]/
+    let matches = note.content.match(reg)
+    if (matches && matches.length) {
+        console.debug('handleMentions:: ', note)
+        for (let i = 0; i < matches.length; i++) {
+            let tag = Object.values(note.tags)[i]
+            let replaceValue = tag[1].slice(0, 5) + '...' + tag[1].slice(-5)
+
+            if (tag[0] != 'e' && tag[0] != 'p') continue;
+            if (tag[0] == 'p') {
+                let u = $users.find((p: User) => p.pubkey == tag[1])
+                if (!u) {
+                    console.debug('handleMentions::Getting user metadata if there is any')
+                    u = await fetchUser(tag[1], '')
+                    console.debug('handleMentions::Getting user result', u)
+                }
+                if (u && u.name && u.name != 'unknown') {
+                    replaceValue = u.name.slice(0,10)
+                }
+            }
+            console.debug('handleMentions:: replace ', matches[i], ' with ', replaceValue)
+            note.content = note.content.replaceAll(matches[i], replaceValue)
+        }
+        console.debug('handleMentions:: new note content: ', note.content)
+    }
+    return note;
 }
 
 function handleReaction(evt: Event, relay: string) {

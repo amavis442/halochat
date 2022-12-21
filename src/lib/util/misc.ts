@@ -45,7 +45,7 @@ export function find(note: Note, nodeId: string): Note | null {
             if (result) return result
             
             let childNote = note.replies[i]
-            if (childNote && childNote.replies.length > 0) {
+            if (childNote && childNote.replies && childNote.replies.length > 0) {
                 result = find(childNote, nodeId)
                 return result
             }
