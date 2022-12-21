@@ -11,11 +11,17 @@ import { prop, sort, descend } from "ramda";
 import { setLocalJson, getLocalJson } from '../util/storage'
 import { getRootTag, getReplyTag } from '../util/tags';
 import { log } from '../util/misc';
+import { followlist } from '../stores/follow'
+import { blocklist } from '../stores/block'
 
 let $users = get(users)
 let $notes = get(notes)
+let $followlist = get(followlist)
+let $blocklist = get(blocklist)
 if (!$users) $users = []
 if (!$notes) $notes = []
+if (!$followlist) $followlist = []
+if (!$blocklist) $blocklist = []
 
 
 export const blacklist: Writable<Array<string>> = writable([
@@ -27,6 +33,16 @@ export const hasEventTag = (tag: Array<string>) => tag[0] === 'e'
 export const queue: Writable<Array<string>> = writable([])
 
 export const loading: Writable<boolean> = writable(false)
+
+export const blocktext = writable(getLocalJson("halonostr/blocktext") || [])
+blocklist.subscribe((value) => {
+    setLocalJson('halonostr/blocktext', value)
+})
+
+export const noteStack = writable(getLocalJson('halonostr/notestack') || {})
+noteStack.subscribe($stack => {
+    setLocalJson('halonostr/notestack', $stack)
+})
 
 export function getContacts(): Subscription | null {
     const subscriptionId = Math.random().toString().slice(2);
@@ -224,10 +240,7 @@ async function getNotes(ids: Array<string>, relay: string): Promise<{ [key: stri
     return data
 }
 
-export const noteStack = writable(getLocalJson('halonostr/notestack') || {})
-noteStack.subscribe($stack => {
-    setLocalJson('halonostr/notestack', $stack)
-})
+
 
 /**
  * Expensive operation and last resort to get a root to make a tree
@@ -340,23 +353,6 @@ async function annotateNote(note: Note, relay: string): Promise<Note> {
     return note
 }
 
-export const blocklist = writable(getLocalJson("halonostr/blocklist") || [])
-let $blocklist = get(blocklist)
-blocklist.subscribe((value) => {
-    setLocalJson('halonostr/blocklist', value)
-})
-
-export const blocktext = writable(getLocalJson("halonostr/blocktext") || [])
-let $blocktext = get(blocktext)
-blocklist.subscribe((value) => {
-    setLocalJson('halonostr/blocktext', value)
-})
-
-export const followlist = writable(getLocalJson("halonostr/followlist") || [])
-let $followlist = get(followlist)
-followlist.subscribe((value) => {
-    setLocalJson('halonostr/followlist', value)
-})
 
 /**
  * fiatjaf

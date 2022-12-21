@@ -1,24 +1,26 @@
 <script lang="ts">
   import { relays } from "./state/pool";
   import { addToast } from "./stores/toast";
-  import { followlist } from "./state/app";
+  import { getLocalJson } from "./util/storage";
   import Button from "./partials/Button.svelte";
   import Text from "./partials/Text.svelte";
   import { now } from "./util/time";
   import { prop, uniqBy } from "ramda";
-  import type { User, Follow } from "./state/types";
-  import { annotateUsers, users } from "./stores/users";
+  import type { Follow } from "./state/types";
   import { fetchUsers } from "./state/app";
   import Spinner from "./Spinner.svelte";
-
-  if (!$followlist && !$followlist.length) $followlist = [];
-  if (!$users && !$users.length) $users = [];
+  import {
+    followlist,
+    dismissFollow,
+    updateFollow,
+    addFollow,
+  } from "./stores/follow";
 
   let pubkey = "";
   let petname = "";
 
   function unFollow(pubkey: string) {
-    $followlist = $followlist.filter((f: Follow) => f.pubkey != pubkey);
+    dismissFollow(pubkey);
 
     addToast({
       message: "Unfollow: " + pubkey.slice(0, 10),
@@ -29,7 +31,7 @@
   }
 
   let promise: Promise<any>;
-  function getUsers() {
+  async function getUsers() {
     let f: Array<Follow> = Object.values($followlist);
 
     let ids = [];
@@ -38,13 +40,18 @@
     }
 
     if (ids && ids.length) {
-      promise = fetchUsers(ids, "")
-      .then((users) => {
-        users.forEach((element) => {
-          let followUser = $followlist.find((fl:Follow) => fl.pubkey == element.pubkey);
-          if (followUser) followUser.user = element;
+      promise = fetchUsers(ids, "").then((users) => {
+        users = uniqBy(prop('pubkey'), users)
+
+        users.forEach((user) => {
+          console.log(
+            $followlist.filter((f: Follow) => f.pubkey == user.pubkey).map((f:Follow) => {
+              f.user = user
+              updateFollow(f)
+              return f
+            })[0]
+          )
         });
-        $followlist = $followlist
       });
     }
   }
@@ -53,11 +60,8 @@
     let followUser: Follow = {
       pubkey: pubkey,
       petname: petname,
-      added: now(),
-      user: null,
     };
-    $followlist.push(followUser);
-    $followlist = uniqBy(prop("pubkey"), $followlist);
+    addFollow(followUser);
 
     pubkey = "";
     petname = "";
@@ -118,8 +122,10 @@
           <button on:click={() => unFollow(follow.pubkey)}>
             <span class="fa-solid fa-trash" />
           </button>
-          {follow.pubkey.slice(0, 10)}....{follow.pubkey.slice(-10)} ({follow.petname})
-          {#if follow?.user && follow?.user?.name} ::metadata: {follow?.user?.name.slice(0, 10)} {/if}
+          {follow?.pubkey?.slice(0, 10)}....{follow?.pubkey?.slice(-10)} ({follow.petname})
+          {#if follow?.user && follow?.user?.name}
+            ::metadata: {follow?.user?.name.slice(0, 10)}
+          {/if}
         </li>
       {/each}
       <li class="text-right">

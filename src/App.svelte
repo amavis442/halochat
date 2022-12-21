@@ -7,14 +7,15 @@
   import "@fortawesome/fontawesome-free/css/fontawesome.css";
   import "@fortawesome/fontawesome-free/css/solid.css";
   import { account } from "./lib/stores/account";
-  import Anchor from "./lib/partials/Anchor.svelte";
   import AccountInfo from "./lib/partials/AccountInfo.svelte";
 
   import Toasts from "./lib/Toasts.svelte";
   import { notes } from "./lib/stores/notes";
   import { users } from "./lib/stores/users";
   import { relays } from "./lib/state/pool";
-  import { followlist, blocklist } from "./lib/state/app";
+  import { followlist } from './lib/stores/follow'
+  import { blocklist } from './lib/stores/block'
+
   export let url = "";
 
   /* big reset for testing and debugging */

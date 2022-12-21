@@ -2,7 +2,8 @@
   import { publish, publishReply, relays } from "./state/pool";
   import { onMount, beforeUpdate, onDestroy } from "svelte";
   import { get } from "svelte/store";
-  import { Listener, followlist } from "./state/app";
+  import { Listener } from "./state/app";
+  import { followlist } from './stores/follow'
   import type { Note as NoteEvent, Account } from "./state/types";
   import { account } from "./stores/account";
   import { notes } from "./stores/notes";

@@ -35,8 +35,8 @@ export type User = {
 export type Follow = {
     pubkey: string;
     petname: string;
-    added: number;
-    user: User | null;
+    added?: number;
+    user?: User | null;
 }
 
 export type Filter = {

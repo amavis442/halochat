@@ -10,7 +10,8 @@
   import { publishReply } from "./state/pool";
   import { account } from "./stores/account";
   import { pluck, uniqBy, prop } from "ramda";
-  import { blocklist, followlist } from "./state/app";
+  import { blocklist } from "./stores/block";
+  import { followlist } from "./stores/follow";
   import { now } from "./util/time";
   import { addToast } from "./stores/toast";
   import { users } from "./stores/users";
