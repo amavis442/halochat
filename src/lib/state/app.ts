@@ -314,31 +314,6 @@ async function annotateNote(note: Note, relay: string): Promise<void> {
     }
 }
 
-/**
- * Make sure this does not run amok and become a bottleneck
- * 
- * @param note 
- * @param replyTag 
- * @param depth 
- * @returns 
- */
-function findRecursive(note: Note, replyTag: Array<string>, depth: number = 1): Note | null {
-    if (depth > 6) return null
-    if (note) {
-        if (note.id == replyTag[1]) {
-            return note
-        }
-        if (note.replies && note.replies.length) {
-            let result = null
-            for (let i: number = 0; i < note.replies.length; i++) {
-                result = findRecursive(note.replies[i], replyTag, ++depth)
-            }
-            return result
-        }
-    }
-    return null
-}
-
 export const blocklist = writable(getLocalJson("halonostr/blocklist") || [])
 let $blocklist = get(blocklist)
 blocklist.subscribe((value) => {
@@ -424,7 +399,7 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
     if ($notes && rootTag.length && replyTag.length && rootTag[1] != replyTag[1]) {
         let rootNote = $notes.find(n => n.id == rootTag[1])
         if (rootNote && rootNote.replies && rootNote.replies.length) {
-            let replyNote: Note | null = findRecursive(rootNote, replyTag)
+            let replyNote: Note | null = find(rootNote, replyTag[1])
             if (!replyNote) console.debug('handleTextNote: Need to do expensive stuff and get the whole tree from a relay.', evt)
             if (replyNote) {
                 annotateNote(note, relay)
