@@ -7,7 +7,7 @@
   import { account } from "./stores/account";
   import { feed } from "./state/app";
   import { now } from "./util/time";
-  import Note from "./Note.svelte";
+  import TextNote from "./TextNote.svelte";
   import TreeNote from "./TreeNote.svelte";
 
   import { Modals, closeModal } from "svelte-modals";
@@ -52,6 +52,7 @@
 
   onDestroy(() => {
     if (listener) {
+      feed.set([])
       listener.stop();
     }
   });
@@ -82,7 +83,7 @@
               <div
                 class="flex flex-col items-top gap-4 p-4 w-full overflow-hidden rounded-lg bg-blue-200 mb-2"
               >
-                <Note {note} {userHasAccount} />
+                <TextNote {note} {userHasAccount} />
                 {#if note?.replies && note.replies.length > 0}
                   <TreeNote
                     notes={note.replies}

@@ -6,7 +6,7 @@ import { now } from "../util/time"
 import { find } from "../util/misc"
 import { uniq, pluck, difference, uniqBy, not } from 'ramda'
 import type { Event, User, Filter, Note, Reaction } from './types'
-import { pool, channels } from './pool'
+import { pool, channels, getData } from './pool'
 import { prop, sort, descend } from "ramda";
 import { setLocalJson, getLocalJson } from '../util/storage'
 import { getRootTag, getReplyTag } from '../util/tags';
@@ -23,7 +23,7 @@ if (!$notes) $notes = []
 if (!$blocklist) $blocklist = []
 
 export const feed: Writable<Array<Note>> = writable([]) // Kind 1 feed 
-
+export const contacts: Writable<{ [key: string]: User }> = writable()
 
 export const blacklist: Writable<Array<string>> = writable([
     '887645fef0ce0c3c1218d2f5d8e6132a19304cdc57cd20281d082f38cfea0072'
@@ -40,27 +40,58 @@ blocklist.subscribe((value) => {
     setLocalJson('halonostr/blocktext', value)
 })
 
-export const noteStack = writable(getLocalJson('halonostr/notestack') || {})
-noteStack.subscribe($stack => {
-    setLocalJson('halonostr/notestack', $stack)
-})
+export const feedStack = writable([])
 
 /**
  * Kind 3
  * 
  * @see https://github.com/nostr-protocol/nips/blob/master/02.md
  */
-export function getContactlist(pubkey):Promise<Array<Event>> {
+export function getContactlist(pubkey): Promise<Array<Event>> {
     let filter: Filter = {
         kinds: [3],
         authors: [pubkey]
     }
-    log('getContactlist' , filter)
+    log('getContactlist', filter)
     if (!pubkey) {
         log('error', 'No account pubkey')
         return Promise.reject('No account pubkey')
     }
     return channels.getter.all(filter)
+}
+
+export async function getFollowList(pubkey: string) {
+    let followList: { [key: string]: User } = {};
+
+    return getContactlist(pubkey)
+        .then((contacts: Array<Event>) => {
+            contacts[0].tags.forEach((tag) => {
+                if (tag[0] == "p") {
+                    followList[tag[1]] = {
+                        pubkey: tag[1],
+                        name: "",
+                        about: "",
+                        picture: "",
+                        content: "",
+                        refreshed: now(),
+                        relays: [],
+                    };
+                }
+            });
+            return followList;
+        })
+        .then((followList) => {
+            const pubkeys: string[] = Object.keys(followList);
+            return { ids: pubkeys, list: followList };
+        })
+        .then((data) => fetchUsers(data.ids, ""))
+        .then((users: Array<User>) => {
+            users.forEach((user: User) => {
+                followList[user.pubkey] = user;
+            });
+            contacts.set(followList)
+            return followList;
+        });
 }
 
 /**
@@ -274,7 +305,7 @@ async function getNotes(ids: Array<string>, relay: string): Promise<{ [key: stri
             fetchMetaDataUser(note, relay)
         }
         data[note.id] = note
-        noteStack[note.id] = note
+        feedStack[note.id] = note
     }
     return data
 }
@@ -290,53 +321,85 @@ async function getNotes(ids: Array<string>, relay: string): Promise<{ [key: stri
  * @returns 
  */
 async function processReplyFeed(evt: Event, replies: Array<Event>, relay: string = ''): Promise<Note | null> {
-    let $noteStack = get(noteStack)
-    let rootNote: Note
+    let $feedStack = get(feedStack)
+    let rootNote: Note | null
 
+    log('processReplyFeed:: start. Based on these replies ', replies)
     if (replies.length > 0) {
         replies = uniqBy(prop('id'), replies)
 
         let map = {}
         let list = {}
+        let rootTag = []
         for (let i = 0; i < replies.length; i++) {
-            let reply: Note = replies[i]
-            let rootTag = getRootTag(reply.tags)
+            let reply: Note = initNote(replies[i])
+
+            if (!rootTag.length) rootTag = getRootTag(reply.tags)
             let replyTag = getReplyTag(reply.tags)
-            if (rootTag && replyTag && rootTag[1] != replyTag[1]) {
-                reply = initNote(reply)
-                let user: User = Array.isArray($users) ? $users.find((u: User) => u.pubkey == reply.pubkey): {}
-                reply.user = user // can be undefined, then let the promise get the needed data
-                if (!user) {
-                    fetchMetaDataUser(reply, relay)
-                }
-                rootNote = reply
-                $noteStack[rootNote.id] = rootNote
+
+            // Search the start of the thread
+            $feedStack[reply.id] = reply
+            if (map[replyTag[1]]) {
+                map[replyTag[1]].push(reply)
+            } else {
+                map[replyTag[1]] = [reply]
             }
-            map[replyTag[1]] = reply.id
             list[reply.id] = reply
         }
-        if (!rootNote) {
-            log('processReplyFeed:: No rootnote found ', replies)
-            return null // No context, so we quit 
-        }
-        //Build the rest of the tree
-        let keys = Object.keys(map)
-        for (let i = 0; i < keys.length; i++) {
-            let replyToId = map[keys[i]]
-            let replyToNote = list[keys[i]]
-            let parent = list[replyToId] ? list[replyToId] : null
-            if (parent) {
-                if (!parent.user) {
-                    fetchMetaDataUser(parent, relay)
-                }
-                if (!replyToNote) {
-                    fetchMetaDataUser(replyToNote, relay)
-                }
-                if (!Array.isArray(parent.replies)) parent.replies = []
-                parent.replies.push(replyToNote)
+
+        log('processReplyFeed:: start of thread rootTag content ', rootTag, rootNote)
+        if (rootTag) { // Try one more time to get the root note
+            let k = Object.keys(list)
+            k.push(rootTag[1])
+            let filter: Filter = {
+                kinds: [1],
+                '#e': k
             }
+            log('processReplyFeed:: Attempt to find rootNote with this filter', filter)
+            rootNote = await channels.getter.all(filter)
+                .then((data: Event | Array<Event> | null) => {
+                    console.log('processReplyFeed:: Return data: ', data)
+                    if (Array.isArray(data)) data = data[0] // Can happen if all of a sudden all relays respond at the same time
+                    if (data && data !== undefined) {
+                        if (!data.id) console.error('processReplyFeed:: unexpected return value ', data)
+                        $feedStack[data.id] = data
+                        let rootNode = initNote(data)
+                        return rootNode
+                    }
+                    return null
+                }).then(rootNode => {
+                    if (!rootNode) return null
+
+                    let keys = Object.keys(map)
+                    console.log('processReplyFeed:: Keys', keys, list, map, rootNode)
+
+                    let parent
+                    for (let i = 0; i < keys.length; i++) {
+                        parent = list[keys[i]] ? list[keys[i]] : null
+                        if (!parent) {
+                            console.log('processReplyFeed:: parent node Not in result set ', keys[i])
+                            getData({ids: [keys[i]], kinds: [1]}).then((data) => {
+                                if (Array.isArray(data)) data = data[0]
+                                parent = data
+                                console.log('processReplyFeed:: parent node Not in result set result get data', data)
+                            })
+                        }
+                        Object.values(map[keys[i]]).forEach((replyId: string) => {
+                            if (parent) {
+                                if (!parent.replies) parent.replies = []
+                                parent.replies.push(list[replyId])
+                            }
+                        })
+
+                        if (keys[i] == rootNode.id && parent) {
+                            rootNode.replies.push(parent)
+                        }
+                    }
+                    return rootNode
+                })
+            return rootNote
         }
-        log('processReplyFeed:: Created list ', list)
+        return null
     }
     log('processReplyFeed:: No replies for ', evt)
     return null
@@ -424,19 +487,16 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
     let $feed = get(feed)
     if ($feed.find(f => f.content == evt.content)) return
 
-
-
-
     let note: Note = initNote(evt)
     note.relays = [relay]
     let rootNote: Note
-    let $noteStack = get(noteStack)
+    let $feedStack = get(feedStack)
 
     log('handleTextNote: input ', evt)
-    if ($noteStack[evt.id]) {
+    if ($feedStack[evt.id]) {
         log('handleTextNote: Already added this input ', evt)
     }
-    $noteStack[evt.id] = note
+    $feedStack[evt.id] = note
 
     let rootTag = getRootTag(evt.tags)
     let replyTag = getReplyTag(evt.tags)
@@ -496,9 +556,9 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
     log('handleTextNote: Filter to get replies ', filter)
     channels.getter.all(filter)
         .then((replies: Array<Event>) => processReplyFeed(evt, replies, relay))
-        .then(() => {
-            log('handleTextNote: Current stack: ', $noteStack)
-            syncNoteTree(rootNote)
+        .then((rootNote: Note | null) => {
+            log('handleTextNote: Current stack: ', $feedStack)
+            if (rootNote) syncNoteTree(rootNote)
         })
 }
 

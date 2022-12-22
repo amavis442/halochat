@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Note as NoteEvent } from "./state/types";
-  import Note from "./Note.svelte";
+  import TextNote from "./TextNote.svelte";
   import { beforeUpdate, onMount } from "svelte";
   import classNames from "classnames";
   import Button from "./partials/Button.svelte";
@@ -44,14 +44,14 @@
       {#each notes ? notes : [] as note (note.id)}
         <li>
           {#if note.replies && note.replies.length > 0}
-            <Note {note} {userHasAccount} />
+            <TextNote {note} {userHasAccount} />
             <svelte:self
               notes={note.replies}
               {userHasAccount}
               num={note.replies.length}
             />
           {:else}
-            <Note {note} {userHasAccount} />
+            <TextNote {note} {userHasAccount} />
           {/if}
         </li>
       {/each}

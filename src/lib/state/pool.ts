@@ -127,6 +127,31 @@ export const channels = {
   getter: new Channel('getter'),
 }
 
+
+export const getData = async (filter: Filter):Promise<Event|Array<Event>> => {
+  return new Promise((resolve, reject) => {
+    let result = []
+    const sub = pool.sub(
+      {
+        filter: filter,
+        cb: (e) => { 
+            result.push(e); 
+            sub.unsub(); 
+            resolve(e) 
+          } // Not gonna wait for the other relays. We got data, so use it.
+      },
+      'getdata' + now(),
+      //@ts-ignore
+      (r: string) => {
+        sub.unsub();
+        resolve(result);
+      }
+    )
+  })
+  .then((data: Event) => {
+    return data
+  })
+}
 /**
  * Update meta data of user account
  * 
