@@ -332,6 +332,7 @@ async function processReplyFeed(evt: Event, replies: Array<Event>, relay: string
                 if (!replyToNote) {
                     fetchMetaDataUser(replyToNote, relay)
                 }
+                if (!Array.isArray(parent.replies)) parent.replies = []
                 parent.replies.push(replyToNote)
             }
         }
