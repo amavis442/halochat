@@ -418,7 +418,15 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
         log('handleTextNote:: user on blocklist ', evt)
         return
     }
+    if (evt.content.match(/followid/)) return
+    if (evt.content.match(/Verifying\ My\ Public\ Key/)) return
+
     let $feed = get(feed)
+    if ($feed.find(f => f.content == evt.content)) return
+
+
+
+
     let note: Note = initNote(evt)
     note.relays = [relay]
     let rootNote: Note
