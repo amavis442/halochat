@@ -19,6 +19,7 @@
   import Toasts from "./Toasts.svelte";
   import { pluck } from "ramda";
   import { log } from "./util/misc";
+  import { getContactlist } from "./state/app";
 
   let msg = "";
   let replyTo: NoteEvent | null = null;

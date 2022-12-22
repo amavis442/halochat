@@ -13,11 +13,13 @@ import { getRootTag, getReplyTag } from '../util/tags';
 import { log } from '../util/misc';
 import { followlist } from '../stores/follow'
 import { blocklist } from '../stores/block'
+import { account } from '../stores/account'
 
 let $users = get(users)
 let $notes = get(notes)
 let $followlist = get(followlist)
 let $blocklist = get(blocklist)
+let $account = get(account);
 if (!$users) $users = []
 if (!$notes) $notes = []
 if (!$followlist) $followlist = []
@@ -43,6 +45,22 @@ export const noteStack = writable(getLocalJson('halonostr/notestack') || {})
 noteStack.subscribe($stack => {
     setLocalJson('halonostr/notestack', $stack)
 })
+
+/**
+ * @see https://github.com/nostr-protocol/nips/blob/master/02.md
+ */
+export function getContactlist(pubkey):Promise<Array<Event>> {
+    let filter: Filter = {
+        kinds: [3],
+        authors: [pubkey]
+    }
+    log('getContactlist' , filter)
+    if (!pubkey) {
+        log('error', 'No account pubkey')
+        return Promise.reject('No account pubkey')
+    }
+    return channels.getter.all(filter)
+}
 
 export function getContacts(): Subscription | null {
     const subscriptionId = Math.random().toString().slice(2);

@@ -203,23 +203,6 @@
                         </button>
                       </li>
                       <li>
-                        {#if !followed}
-                          <button
-                            class="downdown-menu-button"
-                            on:click={followUser}
-                          >
-                            <i class="fa-solid fa-bookmark" /> Follow user
-                          </button>
-                        {:else}
-                          <button
-                            class="downdown-menu-button"
-                            on:click={unfollowUser}
-                          >
-                            <i class="fa-solid fa-bookmark-slash" /> Unfollow user
-                          </button>
-                        {/if}
-                      </li>
-                      <li>
                         <button
                           class="downdown-menu-button"
                           on:click={removeNote}

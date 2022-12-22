@@ -33,6 +33,6 @@ export function setLocalJson(k: string, v: any) {
     try {
         localStorage.setItem(k, JSON.stringify(v))
     } catch (e) {
-        // pass
+        console.error("Local Storage is full, Please empty data");
     }
 }
