@@ -8,6 +8,7 @@ export const users = writable(getLocalJson('halonostr/users') || []);
 
 export function annotateUsers(user: User) {
   users.update(data => {
+    if (!Array.isArray(data)) data = []
     let foundUser = data.find((item: User) => user.pubkey == item.pubkey)
     if (foundUser) {
       foundUser = {

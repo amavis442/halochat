@@ -15,7 +15,7 @@
   import { now } from "./util/time";
   import { addToast } from "./stores/toast";
   import { users } from "./stores/users";
-  import { notes } from "./stores/notes";
+  import { feed } from "./state/app";
   import { deleteNodeFromTree, log } from "./util/misc";
   import Preview from "./partials/Preview.svelte";
   import { getRootTag } from "./util/tags";
@@ -94,7 +94,7 @@
     user.name = user.name + "[BLOCKED]";
     users.update((data) => data); // Hopes this triggers the view
 
-    notes.update((data) => data.filter((n: Note) => n.pubkey != note.pubkey));
+    feed.update((data) => data.filter((n: Note) => n.pubkey != note.pubkey));
 
     addToast({
       message: "User " + note.pubkey.slice(0, 10) + " blocked!",
@@ -143,14 +143,14 @@
     let parentNote = null;
 
     if (rootTag.length) {
-      parentNote = $notes.find((n: Note) => n.id == rootTag[1]);
+      parentNote = $feed.find((n: Note) => n.id == rootTag[1]);
     }
 
     if (!parentNote) {
-      $notes = $notes.filter((n: Note) => n.id != note.id);
+      $feed = $feed.filter((n: Note) => n.id != note.id);
     } else {
       deleteNodeFromTree(parentNote, note.id);
-      $notes = $notes; //trigger update
+      $feed = $feed; //trigger update
     }
 
     addToast({

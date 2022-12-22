@@ -11,19 +11,18 @@ import { prop, sort, descend } from "ramda";
 import { setLocalJson, getLocalJson } from '../util/storage'
 import { getRootTag, getReplyTag } from '../util/tags';
 import { log } from '../util/misc';
-import { followlist } from '../stores/follow'
 import { blocklist } from '../stores/block'
 import { account } from '../stores/account'
 
 let $users = get(users)
 let $notes = get(notes)
-let $followlist = get(followlist)
 let $blocklist = get(blocklist)
 let $account = get(account);
 if (!$users) $users = []
 if (!$notes) $notes = []
-if (!$followlist) $followlist = []
 if (!$blocklist) $blocklist = []
+
+export const feed: Writable<Array<Note>> = writable([]) // Kind 1 feed 
 
 
 export const blacklist: Writable<Array<string>> = writable([
@@ -47,6 +46,8 @@ noteStack.subscribe($stack => {
 })
 
 /**
+ * Kind 3
+ * 
  * @see https://github.com/nostr-protocol/nips/blob/master/02.md
  */
 export function getContactlist(pubkey):Promise<Array<Event>> {
@@ -62,6 +63,12 @@ export function getContactlist(pubkey):Promise<Array<Event>> {
     return channels.getter.all(filter)
 }
 
+/**
+ * Kind 0
+ * 
+ * @see https://github.com/nostr-protocol/nips/blob/master/01.md#basic-event-kinds
+ * @returns 
+ */
 export function getContacts(): Subscription | null {
     const subscriptionId = Math.random().toString().slice(2);
     let filter: Filter = {
@@ -127,6 +134,13 @@ async function fetchMetaDataUser(note: Note, relay: string): Promise<void> {
         })
 }
 
+/**
+ * Kind 0
+ * 
+ * @param pubkey 
+ * @param relay 
+ * @returns 
+ */
 export async function fetchUser(pubkey: string, relay: string): Promise<User> {
     let filter: Filter = {
         kinds: [0],
@@ -155,6 +169,13 @@ export async function fetchUser(pubkey: string, relay: string): Promise<User> {
         });
 }
 
+/**
+ * Kind 0
+ * 
+ * @param pubkeys 
+ * @param relay 
+ * @returns 
+ */
 export async function fetchUsers(pubkeys: Array<string>, relay: string): Promise<Array<User>> {
     let filter: Filter = {
         kinds: [0],
@@ -283,7 +304,7 @@ async function processReplyFeed(evt: Event, replies: Array<Event>, relay: string
             let replyTag = getReplyTag(reply.tags)
             if (rootTag && replyTag && rootTag[1] != replyTag[1]) {
                 reply = initNote(reply)
-                let user: User = $users.find((u: User) => u.pubkey == reply.pubkey)
+                let user: User = Array.isArray($users) ? $users.find((u: User) => u.pubkey == reply.pubkey): {}
                 reply.user = user // can be undefined, then let the promise get the needed data
                 if (!user) {
                     fetchMetaDataUser(reply, relay)
@@ -329,7 +350,7 @@ function syncNoteTree(rootNote: Note) {
     if (typeof rootNote !== 'undefined' && rootNote) {
         log('syncNoteTree: Add/update a note: ', rootNote)
         let byCreatedAt = descend<Note>(prop("created_at"));
-        notes.update((data: Array<Note>) => {
+        feed.update((data: Array<Note>) => {
             if (!data || !data.length) {
                 data = []
             }
@@ -357,7 +378,7 @@ function syncNoteTree(rootNote: Note) {
 async function annotateNote(note: Note, relay: string): Promise<Note> {
     log('annotateNote: User ', note.pubkey)
     if (!note.user) {
-        let result = await $users.filter((u: User) => u.pubkey == note.pubkey)
+        let result = Array.isArray($users) ? $users.filter((u: User) => u.pubkey == note.pubkey) : null
         note.user = result && result.length ? result[0] : []
     }
 
@@ -373,6 +394,10 @@ async function annotateNote(note: Note, relay: string): Promise<Note> {
 
 
 /**
+ * Kind 1
+ * 
+ * @see https://github.com/nostr-protocol/nips/blob/master/01.md#basic-event-kinds
+ * 
  * fiatjaf
  * 
  * e.g. in the thread
@@ -392,13 +417,11 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
         log('handleTextNote:: user on blocklist ', evt)
         return
     }
-    // TODO: block base on certain text soon to come
-
+    let $feed = get(feed)
     let note: Note = initNote(evt)
     note.relays = [relay]
     let rootNote: Note
     let $noteStack = get(noteStack)
-    let $notes = get(notes)
 
     log('handleTextNote: input ', evt)
     if ($noteStack[evt.id]) {
@@ -420,9 +443,9 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
     }
 
     // Reply to root only 1 e tag
-    if ($notes && rootTag.length && replyTag.length && replyTag[1] == rootTag[1]) {
+    if ($feed && rootTag.length && replyTag.length && replyTag[1] == rootTag[1]) {
         log("handleTextNote: Replytag and RootTag are the same", rootTag, replyTag, evt)
-        let rootNote = $notes.find((n: Note) => n.id == rootTag[1])
+        let rootNote = $feed.find((n: Note) => n.id == rootTag[1])
         if (rootNote) { // Put getting extra data in a WebWorker for speed.
             handleMentions(note)
                 .then((note) => annotateNote(note, relay))
@@ -438,8 +461,8 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
 
     // First try to find the parent in the existing tree before more expensive operations
     // are needed
-    if ($notes && rootTag.length && replyTag.length && rootTag[1] != replyTag[1]) {
-        let rootNote = $notes.find(n => n.id == rootTag[1])
+    if ($feed && rootTag.length && replyTag.length && rootTag[1] != replyTag[1]) {
+        let rootNote = $feed.find(n => n.id == rootTag[1])
         if (rootNote && rootNote.replies && rootNote.replies.length) {
             let replyNote: Note | null = find(rootNote, replyTag[1])
             if (!replyNote) log('handleTextNote: Need to do expensive stuff and get the whole tree from a relay.', evt)
@@ -485,7 +508,7 @@ async function handleMentions(note: Note): Promise<Note> {
 
             if (tag[0] != 'e' && tag[0] != 'p') continue;
             if (tag[0] == 'p') {
-                let u = $users.find((p: User) => p.pubkey == tag[1])
+                let u = Array.isArray($users) ? $users.find((p: User) => p.pubkey == tag[1]) : null
                 if (!u) {
                     log('handleMentions::Getting user metadata if there is any')
                     u = await fetchUser(tag[1], '')

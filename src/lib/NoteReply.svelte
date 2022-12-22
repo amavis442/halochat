@@ -16,6 +16,7 @@
     const formData = new FormData(target);
 
     const data:{replyText?: string} = {};
+    //@ts-ignore
     for (let field of formData) {
       const [key, value] = field;
       data[key] = value;

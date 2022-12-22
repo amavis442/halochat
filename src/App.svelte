@@ -1,6 +1,8 @@
 <script lang="ts">
   import { Router, Link, Route } from "svelte-routing";
   import Feed from "./routes/Feed.svelte";
+  import Following from "./routes/Following.svelte";
+
   import Relays from "./routes/Relays.svelte";
   import Account from "./routes/Account.svelte";
   import Follow from "./routes/Follow.svelte";
@@ -47,7 +49,7 @@
             <Link to="/">Feed</Link>
           </p>
           <p class="nav-p">
-            <Link to="/followed">Follow</Link>
+            <Link to="/following">Following</Link>
           </p>
 
           <p class="nav-p">
@@ -65,10 +67,10 @@
 
     <main class="grid-cols-2 text-center justify-items-center max-h-max">
       <Route path="/">
-        <Feed isFollowedView={false} />
+        <Feed />
       </Route>
-      <Route path="/followed">
-        <Feed isFollowedView={true} />
+      <Route path="/following">
+        <Following />
       </Route>
       <Route path="relays">
         <Relays />

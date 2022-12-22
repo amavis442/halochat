@@ -1,6 +1,5 @@
 <script lang="ts">
-    export let isFollowedView:boolean = false;
-    import Notes from '../lib/Notes.svelte'
+    import Feed from '../lib/Feed.svelte'
 </script>
 
-<Notes isFollowedView={isFollowedView} />
+<Feed />
