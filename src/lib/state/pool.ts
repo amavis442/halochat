@@ -39,19 +39,21 @@ export class relayPool {
     }
   }
 
-  publish = (evt: Event) => {
+  publish = async (evt: Event) => {
     console.log(Object.entries(relays))
     for (const [url, relay] of Object.entries(this.relays)) {
-      let pub = relay.publish(evt)
-      pub.on('ok', () => {
-        console.log(`${this.relays[url].url} has accepted our event`)
-      })
-      pub.on('seen', () => {
-        console.log(`we saw the event on ${this.relays[url].url}`)
-      })
-      pub.on('failed', (reason: any) => {
-        console.log(`failed to publish to ${this.relays[url].url}: ${reason}`)
-      })
+      if (get(relays)[url].write) {
+        let pub = relay.publish(evt)
+        pub.on('ok', () => {
+          console.log(`${this.relays[url].url} has accepted our event`)
+        })
+        pub.on('seen', () => {
+          console.log(`we saw the event on ${this.relays[url].url}`)
+        })
+        pub.on('failed', (reason: any) => {
+          console.log(`failed to publish to ${this.relays[url].url}: ${reason}`)
+        })
+      }
     }
     return
   }
@@ -222,10 +224,8 @@ export const relays = writable(getLocalJson("halonostr/relays") || [])
 
 relays.subscribe($relays => {
   try {
-    //@ts-ignore
     Object.keys(pool.getRelays()).forEach((url: string) => {
-      if ($relays && !$relays.includes(url)) {
-        //@ts-ignore
+      if ($relays && !$relays[url]) {
         pool.removeRelay(url)
         log('Remove relay from pool:', url)
       }
@@ -234,15 +234,15 @@ relays.subscribe($relays => {
     log("error", error)
   }
 
-  if ($relays && $relays.length) {
-    $relays.forEach((url: string) => {
-      //@ts-ignore
+  if ($relays) {
+    for (const [url, value] of Object.entries($relays)) {
+      console.log(`${url}: ${value}`);
+
       if (!pool.hasRelay(url)) {
-        //@ts-ignore
         pool.addRelay(url)
         log('Add relay to pool: ', url)
       }
-    })
+    }
   }
   setLocalJson("halonostr/relays", $relays)
 })
