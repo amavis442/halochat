@@ -96,23 +96,22 @@
       authors: [pubkey],
     };
     log("Account view:: checkPubkey filter ", filter);
-    promise = getData(filter)
-      .then((result: Array<Event> | null) => {
-        if (result.length) {
-          let data = result[0];
-          const content = JSON.parse(data.content);
-          name = content.name;
-          about = content.about;
-          picture = content.picture;
-        }
-        log(
-          "Account view:: checkPubkey ",
-          "Result: ",
-          result,
-          " Pubkey: ",
-          pubkey
-        );
-      });
+    promise = getData(filter).then((result: Array<Event> | null) => {
+      if (result.length) {
+        let data = result[0];
+        const content = JSON.parse(data.content);
+        name = content.name;
+        about = content.about;
+        picture = content.picture;
+      }
+      log(
+        "Account view:: checkPubkey ",
+        "Result: ",
+        result,
+        " Pubkey: ",
+        pubkey
+      );
+    });
   }
 
   async function generateKeys() {
@@ -140,7 +139,7 @@
         Public key
       </label>
 
-      <div class="md:flex md:items-top mb-6">
+      <div class="md:flex md:items-top mb-6 gap-2">
         <div class="md:w-3/4">
           <Text
             bind:value={pubkey}
@@ -225,12 +224,18 @@
         somewhere on the net. Pictures are not stored in relays.
       </small>
     </div>
-    <Button type="button" click={checkPubkey}
-      >Check pubkey{#await promise}
-        <Spinner size={36} />
-      {/await}</Button
-    > |
-    <Button type="submit">Submit</Button>
+    <div class="flex flex-row justify-items-center w-full items-center gap-2 center">
+      <div class="col-1">
+        <Button type="button" click={checkPubkey}
+          >Check pubkey{#await promise}
+            <Spinner size={36} />
+          {/await}</Button
+        >
+      </div>
+      <div  class="col-2">
+        <Button type="submit">Submit</Button>
+      </div>
+    </div>
   </form>
 </div>
 
