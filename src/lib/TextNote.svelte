@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getTime } from "./util/time";
-  import type { User, Note } from "./state/types";
+  import type { User, TextNote as Note } from "./state/types";
   import { toHtml, findLink } from "./util/html";
   import { beforeUpdate, onMount } from "svelte";
   import { publishReaction } from "./state/pool";

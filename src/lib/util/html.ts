@@ -19,13 +19,13 @@ export function findLink(t: string): string | undefined {
  * @author: Stephan Schmitz <eyecatchup@gmail.com>
  * @url: https://stackoverflow.com/a/10315969/624466
  */
-function ytVidId(url) {
+function ytVidId(url: string) {
   let p = /^(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})(?:\S+)?$/;
   let match = url.match(p);
   return (match) ? match[0] : false;
 }
 
-function imgTag(url) {
+function imgTag(url: string) {
   let p = (/\.(gif|jpe?g|tiff?|png|webp|bmp)$/i);
   let match = url.match(p);
   return (match) ? match[0] : false;

@@ -6,8 +6,9 @@
   import Button from "./partials/Button.svelte";
   import Text from "./partials/Text.svelte";
   import { getKeys } from "./util/keys";
-  import { channels, publishAccount } from "./state/pool";
-  import type { Filter, Event, User } from "./state/types";
+  import { getData, publishAccount } from "./state/pool";
+  import type { User } from "./state/types";
+  import type { Filter, Event } from "nostr-tools";
   import { annotateUsers } from "./stores/users";
   import { now } from "./util/time";
   import Spinner from "./Spinner.svelte";
@@ -95,8 +96,7 @@
       authors: [pubkey],
     };
     log("Account view:: checkPubkey filter ", filter);
-    promise = channels.getter
-      .all(filter)
+    promise = getData(filter)
       .then((result: Array<Event> | null) => {
         if (result.length) {
           let data = result[0];

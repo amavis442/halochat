@@ -1,4 +1,4 @@
-import type { Event, Note, Reaction } from '../state/types'
+import type { TextNote as Note } from '../state/types'
 
 export function getLocalJson(k: string) {
     const data = localStorage.getItem(k);

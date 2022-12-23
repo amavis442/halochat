@@ -2,14 +2,14 @@
   import { closeModal } from "svelte-modals";
   import Button from "./partials/Button.svelte";
   import TextArea from "./partials/TextArea.svelte";
-  import type { Note } from "./state/types";
+  import type { TextNote } from "./state/types";
   import { publishReply } from "./state/pool";
 
   // provided by Modals
   export let isOpen:boolean;
 
   export let title: string;
-  export let note: Note;
+  export let note: TextNote;
 
   async function onSubmit(e:Event) {
     const target = e.target as HTMLFormElement;

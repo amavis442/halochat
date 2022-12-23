@@ -1,24 +1,82 @@
 import { writable, get } from 'svelte/store'
 import { getLocalJson, setLocalJson } from '../util/storage'
-import {
-  relayPool,
-  signEvent,
-  type Relay
-} from "nostr-tools";
 import { now } from "../util/time";
 import { head } from 'ramda';
 import { account } from '../stores/account';
-import type { Event, Filter } from './types'
 import { getRootTag, getReplyTag } from '../util/tags';
 import { log } from '../util/misc';
+import {
+  relayInit,
+  getEventHash,
+  signEvent,
+  verifySignature,
+  validateEvent,
+  type Relay,
+  type Event,
+  type Filter,
+  type Sub
+} from 'nostr-tools'
+import 'websocket-polyfill'
+import { Listener } from './app';
 
-export const pool = relayPool();
+export class relayPool {
+  relays: { [key: string]: Relay } = {}
+
+  addRelay = async (url: string) => {
+    this.relays[url] = relayInit(url)
+    await this.relays[url].connect()
+    this.relays[url].on('connect', () => {
+      console.log(`connected to ${this.relays[url].url}`)
+    })
+    this.relays[url].on('error', () => {
+      console.log(`failed to connect to ${this.relays[url].url}`)
+    })
+  }
+
+  removeRelay = (url: string) => {
+    if (this.hasRelay(url)) {
+      this.relays[url].close()
+    }
+  }
+
+  publish = (evt: Event) => {
+    console.log(Object.entries(relays))
+    for (const [url, relay] of Object.entries(this.relays)) {
+      let pub = relay.publish(evt)
+      pub.on('ok', () => {
+        console.log(`${this.relays[url].url} has accepted our event`)
+      })
+      pub.on('seen', () => {
+        console.log(`we saw the event on ${this.relays[url].url}`)
+      })
+      pub.on('failed', (reason: any) => {
+        console.log(`failed to publish to ${this.relays[url].url}: ${reason}`)
+      })
+    }
+    return
+  }
+
+  close = () => {
+    for (const [url, relay] of Object.entries(this.relays)) {
+      relay.close
+    }
+  }
+
+  getRelays = (): { [key: string]: Relay } => {
+    return this.relays
+  }
+
+  hasRelay = (url: string) => {
+    return this.relays && this.relays[url] ? true : false
+  }
+}
+export const pool = new relayPool()
 
 //@ts-ignore does exist just not in index.d.ts
-pool.onNotice((message: string, relay?: Relay) => {
+/* pool.onNotice((message: string, relay?: Relay) => {
   const url: string = relay.url
   log(`onNotice: Got a notice event from relay ${url}: ${message}`);
-})
+}) */
 
 /**
  * id and sig are added in the pool.publish() function.
@@ -44,113 +102,45 @@ export const createEvent = async (kind: number, content: string = '', tags: stri
 
   let note: Event = { kind: kind, content: content, tags: tags, pubkey: publicKey, created_at: createdAt }
   let sig: any = await signEvent(note, $account.privkey)
-  return { ...note, sig }
+  let id: any = getEventHash(note)
+  note = { ...note, sig, id }
+
+  console.log('VerifySignature', await verifySignature(note))
+  console.log('validateEvent', validateEvent(note))
+  return note
 }
 
-/**
- * Taken from @see https://github.com/staab/coracle
- * @see https://github.com/staab/coracle/blob/master/src/state/nostr.js
- */
-export class Channel {
-  name: string
-  p: Promise<any>
+export const getData = async (filter: Filter): Promise<Event[]> => {
+  return new Promise((resolve, reject) => {
+    let subs: { [key: string]: Sub } = {}
+    let result: Array<Event> = []
+    let relayReturns: string[] = []
+    const numRelays = get(relays).length
+    const subId = 'getter' + now()
 
-  constructor(name: string) {
-    this.name = name
-    this.p = Promise.resolve()
-  }
+    for (const [url, relay] of Object.entries(pool.getRelays())) {
+      subs[url] = relay.sub([filter], { id: subId })
 
-  async sub(filter: Filter, cb: Function, onEose: Function | null) {
-    // Make sure callers have to wait for the previous sub to be done
-    // before they can get a new one.
-    await this.p
-
-    // If we don't have any relays, we'll wait forever for an eose, but
-    // we already know we're done. Use a timeout since callers are
-    // expecting this to be async and we run into errors otherwise.
-    if (get(relays).length === 0) {
-      setTimeout(onEose)
-
-      return { unsub: () => { } }
-    }
-
-    let resolve: (value: any) => void
-    const eoseRelays = []
-    const sub = pool.sub(
-      { filter, cb },
-      this.name,
-      //@ts-ignore
-      (r: string) => {
-        eoseRelays.push(r)
-
-        if (eoseRelays.length === get(relays).length) {
-          onEose(r)
-        }
+      subs[url].on('event', (event: Event) => {
+        result.push(event)
       })
 
-    this.p = new Promise(r => {
-      resolve = r
-    })
-
-    return {
-      unsub: () => {
-        sub.unsub()
-
-        resolve(null)
-      }
+      subs[url].on('eose', (r: any) => {
+        relayReturns.push(url)
+        if (relayReturns.length == numRelays) {
+          resolve({ result: result, subs: subs })
+        }
+      })
     }
-  }
-  all(filter: Filter): Promise<Array<Event>> {
-    /**
-     * @see https://eslint.org/docs/latest/rules/no-async-promise-executor
-     */
-    /* eslint no-async-promise-executor: 0 */
-    return new Promise(async resolve => {
-      const result = []
-
-      const sub = await this.sub(
-        filter,
-        (e: Event) => result.push(e),
-        (r: string) => {
-          log('Eose from ', r)
-          sub.unsub()
-
-          resolve(result)
-        },
-      )
-    })
-  }
-}
-
-export const channels = {
-  listener: new Channel('listener'),
-  getter: new Channel('getter'),
-}
-
-
-export const getData = async (filter: Filter):Promise<Event|Array<Event>> => {
-  return new Promise((resolve, reject) => {
-    let result = []
-    const sub = pool.sub(
-      {
-        filter: filter,
-        cb: (e) => { 
-            result.push(e); 
-            sub.unsub(); 
-            resolve(e) 
-          } // Not gonna wait for the other relays. We got data, so use it.
-      },
-      'getdata' + now(),
-      //@ts-ignore
-      (r: string) => {
-        sub.unsub();
-        resolve(result);
+  })
+    .then((data: { result: Event[], subs: { [key: string]: Sub } }) => {
+      for (const [url, sub] of Object.entries(data.subs)) {
+        sub.off('event', () => console.log(`getData close listener EVENT for ${url} EOSE`))
+        sub.off('eose', () => console.log(`getData close listener EOSE for ${url} EOSE`))
       }
-    )
-  })
-  .then((data: Event) => {
-    return data
-  })
+
+      return data.result
+    })
 }
 /**
  * Update meta data of user account
@@ -164,18 +154,7 @@ export async function publishAccount() {
 
   let event = await createEvent(0, JSON.stringify(metadata))
   log('publishAccount: ', event)
-  await pool.publish(event, (status: number, url: string) => {
-    switch (status) {
-      case 0:
-        log("info", `publishAccount: Account request send to ${url}`)
-        break
-      case 1:
-        log("info", `publishAccount: Account published by ${url}`)
-        break
-      default:
-        log("info", `publishAccount: Unknown status ${status} while publishing account`)
-    }
-  })
+  pool.publish(event)
 }
 
 function copyTags(evt: Event) {
@@ -215,7 +194,7 @@ export async function publishReply(content: string, evt: Event) {
   const sendEvent = await createEvent(1, content, tags)
 
   log('publishReply: ', sendEvent)
-  pool.publish(sendEvent, (status: number) => { log('Message published. Status: ', status) })
+  pool.publish(sendEvent)
 }
 
 export async function publishReaction(content: string, evt: Event) {
@@ -223,7 +202,7 @@ export async function publishReaction(content: string, evt: Event) {
   const sendEvent = await createEvent(7, content, tags)
 
   log('publishReaction: ', sendEvent)
-  pool.publish(sendEvent, (status: number) => { log('Message published. Status: ', status) })
+  pool.publish(sendEvent)
 }
 
 /**
@@ -236,7 +215,7 @@ export async function publishReaction(content: string, evt: Event) {
 export async function publish(kind: number, content = '', tags = []): Promise<any> {
   const sendEvent = await createEvent(kind, content, tags)
   log('publish: ', sendEvent)
-  return pool.publish(sendEvent, (status: number) => { log('Message published. Status: ', status) })
+  return pool.publish(sendEvent)
 }
 
 export const relays = writable(getLocalJson("halonostr/relays") || [])
@@ -244,11 +223,11 @@ export const relays = writable(getLocalJson("halonostr/relays") || [])
 relays.subscribe($relays => {
   try {
     //@ts-ignore
-    Object.keys(pool.relays).forEach((url: string) => {
+    Object.keys(pool.getRelays()).forEach((url: string) => {
       if ($relays && !$relays.includes(url)) {
         //@ts-ignore
         pool.removeRelay(url)
-        log('Remove relay form pool:', url)
+        log('Remove relay from pool:', url)
       }
     })
   } catch (error) {
@@ -258,9 +237,9 @@ relays.subscribe($relays => {
   if ($relays && $relays.length) {
     $relays.forEach((url: string) => {
       //@ts-ignore
-      if (!pool.relays[url]) {
+      if (!pool.hasRelay(url)) {
         //@ts-ignore
-        pool.addRelay(String(url))
+        pool.addRelay(url)
         log('Add relay to pool: ', url)
       }
     })

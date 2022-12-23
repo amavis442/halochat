@@ -1,12 +1,12 @@
 import { get, writable, type Writable } from 'svelte/store'
 import { users, annotateUsers, formatUser } from '../stores/users'
 import { notes } from '../stores/notes'
-import type { Subscription } from 'nostr-tools'
 import { now } from "../util/time"
 import { find } from "../util/misc"
-import { uniq, pluck, difference, uniqBy, not } from 'ramda'
-import type { Event, User, Filter, Note, Reaction } from './types'
-import { pool, channels, getData } from './pool'
+import { uniq, pluck, difference, uniqBy } from 'ramda'
+import type { User, TextNote, Reaction } from './types'
+import type { Event, Filter, Sub } from 'nostr-tools'
+import { pool, getData } from './pool'
 import { prop, sort, descend } from "ramda";
 import { setLocalJson, getLocalJson } from '../util/storage'
 import { getRootTag, getReplyTag } from '../util/tags';
@@ -22,7 +22,7 @@ if (!$users) $users = []
 if (!$notes) $notes = []
 if (!$blocklist) $blocklist = []
 
-export const feed: Writable<Array<Note>> = writable([]) // Kind 1 feed 
+export const feed: Writable<Array<TextNote>> = writable([]) // Kind 1 feed 
 export const contacts: Writable<{ [key: string]: User }> = writable()
 
 export const blacklist: Writable<Array<string>> = writable([
@@ -57,7 +57,8 @@ export function getContactlist(pubkey): Promise<Array<Event>> {
         log('error', 'No account pubkey')
         return Promise.reject('No account pubkey')
     }
-    return channels.getter.all(filter)
+
+    return getData(filter)
 }
 
 export async function getFollowList(pubkey: string) {
@@ -100,8 +101,7 @@ export async function getFollowList(pubkey: string) {
  * @see https://github.com/nostr-protocol/nips/blob/master/01.md#basic-event-kinds
  * @returns 
  */
-export function getContacts(): Subscription | null {
-    const subscriptionId = Math.random().toString().slice(2);
+export function getContacts(): null {
     let filter: Filter = {
         kinds: [0],
     }
@@ -120,21 +120,9 @@ export function getContacts(): Subscription | null {
         filter.authors = pkeys
     }
 
-    const subscription: Subscription = pool.sub(
-        //@ts-ignore
-        {
-            //@ts-ignore
-            cb: onEvent,
-            filter: filter,
-        },
-        subscriptionId,
-        //@ts-ignore
-        () => {
-            log(`Not gonna close this subscription for getContacts() with subscription id ${subscriptionId}`)
-            loading.set(false)
-        }
-    )
-    return subscription
+    getData(filter).then((data) => {
+        loading.set(false)
+    })
 }
 
 function handleMetadata(evt: Event, relay: string) {
@@ -153,7 +141,7 @@ function handleMetadata(evt: Event, relay: string) {
  * @param relay string
  * @returns 
  */
-async function fetchMetaDataUser(note: Note, relay: string): Promise<void> {
+async function fetchMetaDataUser(note: TextNote, relay: string): Promise<void> {
     if (!note || !note.pubkey) {
         log('fetchMetaDataUser:: No pubkey ', note)
         return
@@ -177,7 +165,7 @@ export async function fetchUser(pubkey: string, relay: string): Promise<User> {
         kinds: [0],
         authors: [pubkey]
     }
-    return channels.getter.all(filter)
+    return getData(filter)
         .then((fetchResultUsers: Array<Event>) => {
             let user: User
             if (fetchResultUsers.length) {
@@ -213,7 +201,7 @@ export async function fetchUsers(pubkeys: Array<string>, relay: string): Promise
         authors: pubkeys
     }
     let result = []
-    return channels.getter.all(filter)
+    return getData(filter)
         .then((fetchResultUsers: Array<Event>) => {
             for (let i = 0; i < fetchResultUsers.length; i++) {
                 let user: User
@@ -269,7 +257,7 @@ function setMetadata(evt: Event, relay: string) {
     }
 }
 
-function initNote(note: Note) {
+function initNote(note: TextNote) {
     note.replies = []
     note.downvotes = 0
     note.upvotes = 0
@@ -284,7 +272,7 @@ function initNote(note: Note) {
  * @param relay 
  * @returns 
  */
-async function getNotes(ids: Array<string>, relay: string): Promise<{ [key: string]: Note } | null> {
+async function getNotes(ids: Array<string>, relay: string): Promise<{ [key: string]: TextNote } | null> {
     let filter: Filter = {
         kinds: [1],
         'ids': ids
@@ -292,12 +280,12 @@ async function getNotes(ids: Array<string>, relay: string): Promise<{ [key: stri
     log('getNotes: filter ', filter)
 
     if (!ids.length) return
-    let result = await channels.getter.all(filter)
+    let result = await getData(filter)
     if (!result) return null // No result to be found :(
 
-    let data: { [key: string]: Note } | null = null
+    let data: { [key: string]: TextNote } | null = null
     for (let i = 0; i < result.length; i++) {
-        let note: Note = result[i] // We get more of the same, depending on the number of relays.
+        let note: TextNote = result[i] // We get more of the same, depending on the number of relays.
         note = initNote(note)
         let user: User = $users.find((u: User) => u.pubkey == note.pubkey)
         note.user = user
@@ -320,9 +308,9 @@ async function getNotes(ids: Array<string>, relay: string): Promise<{ [key: stri
  * @param relay 
  * @returns 
  */
-async function processReplyFeed(evt: Event, replies: Array<Event>, relay: string = ''): Promise<Note | null> {
+async function processReplyFeed(evt: Event, replies: Array<Event>, relay: string = ''): Promise<TextNote | null> {
     let $feedStack = get(feedStack)
-    let rootNote: Note | null
+    let rootNote: TextNote | null
 
     log('processReplyFeed:: start. Based on these replies ', replies)
     if (replies.length > 0) {
@@ -332,7 +320,7 @@ async function processReplyFeed(evt: Event, replies: Array<Event>, relay: string
         let list = {}
         let rootTag = []
         for (let i = 0; i < replies.length; i++) {
-            let reply: Note = initNote(replies[i])
+            let reply: TextNote = initNote(replies[i])
 
             if (!rootTag.length) rootTag = getRootTag(reply.tags)
             let replyTag = getReplyTag(reply.tags)
@@ -350,13 +338,12 @@ async function processReplyFeed(evt: Event, replies: Array<Event>, relay: string
         log('processReplyFeed:: start of thread rootTag content ', rootTag, rootNote)
         if (rootTag) { // Try one more time to get the root note
             let k = Object.keys(list)
-            k.push(rootTag[1])
             let filter: Filter = {
                 kinds: [1],
                 '#e': k
             }
             log('processReplyFeed:: Attempt to find rootNote with this filter', filter)
-            rootNote = await channels.getter.all(filter)
+            rootNote = await getData(filter)
                 .then((data: Event | Array<Event> | null) => {
                     console.log('processReplyFeed:: Return data: ', data)
                     if (Array.isArray(data)) data = data[0] // Can happen if all of a sudden all relays respond at the same time
@@ -378,7 +365,7 @@ async function processReplyFeed(evt: Event, replies: Array<Event>, relay: string
                         parent = list[keys[i]] ? list[keys[i]] : null
                         if (!parent) {
                             console.log('processReplyFeed:: parent node Not in result set ', keys[i])
-                            getData({ids: [keys[i]], kinds: [1]}).then((data) => {
+                            getData({ ids: [keys[i]], kinds: [1] }).then((data) => {
                                 if (Array.isArray(data)) data = data[0]
                                 parent = data
                                 console.log('processReplyFeed:: parent node Not in result set result get data', data)
@@ -410,15 +397,15 @@ async function processReplyFeed(evt: Event, replies: Array<Event>, relay: string
  * 
  * @param rootNote 
  */
-function syncNoteTree(rootNote: Note) {
+function syncNoteTree(rootNote: TextNote) {
     if (typeof rootNote !== 'undefined' && rootNote) {
         log('syncNoteTree: Add/update a note: ', rootNote)
-        let byCreatedAt = descend<Note>(prop("created_at"));
-        feed.update((data: Array<Note>) => {
+        let byCreatedAt = descend<TextNote>(prop("created_at"));
+        feed.update((data: Array<TextNote>) => {
             if (!data || !data.length) {
                 data = []
             }
-            let note: Note = data.find(n => n.id == rootNote.id)
+            let note: TextNote = data.find(n => n.id == rootNote.id)
             if (note) {
                 note = rootNote //replace it with updated data
                 log('syncNoteTree: Updated note ', note)
@@ -439,7 +426,7 @@ function syncNoteTree(rootNote: Note) {
  * @param relay string
  * @returns 
  */
-async function annotateNote(note: Note, relay: string): Promise<Note> {
+async function annotateNote(note: TextNote, relay: string): Promise<TextNote> {
     log('annotateNote: User ', note.pubkey)
     if (!note.user) {
         let result = Array.isArray($users) ? $users.filter((u: User) => u.pubkey == note.pubkey) : null
@@ -487,9 +474,9 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
     let $feed = get(feed)
     if ($feed.find(f => f.content == evt.content)) return
 
-    let note: Note = initNote(evt)
+    let note: TextNote = initNote(evt)
     note.relays = [relay]
-    let rootNote: Note
+    let rootNote: TextNote
     let $feedStack = get(feedStack)
 
     log('handleTextNote: input ', evt)
@@ -514,7 +501,7 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
     // Reply to root only 1 e tag
     if ($feed && rootTag.length && replyTag.length && replyTag[1] == rootTag[1]) {
         log("handleTextNote: Replytag and RootTag are the same", rootTag, replyTag, evt)
-        let rootNote = $feed.find((n: Note) => n.id == rootTag[1])
+        let rootNote = $feed.find((n: TextNote) => n.id == rootTag[1])
         if (rootNote) { // Put getting extra data in a WebWorker for speed.
             handleMentions(note)
                 .then((note) => annotateNote(note, relay))
@@ -533,7 +520,7 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
     if ($feed && rootTag.length && replyTag.length && rootTag[1] != replyTag[1]) {
         let rootNote = $feed.find(n => n.id == rootTag[1])
         if (rootNote && rootNote.replies && rootNote.replies.length) {
-            let replyNote: Note | null = find(rootNote, replyTag[1])
+            let replyNote: TextNote | null = find(rootNote, replyTag[1])
             if (!replyNote) log('handleTextNote: Need to do expensive stuff and get the whole tree from a relay.', evt)
             if (replyNote) {
                 handleMentions(note)
@@ -554,15 +541,15 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
         '#e': [evt.id]
     }
     log('handleTextNote: Filter to get replies ', filter)
-    channels.getter.all(filter)
+    getData(filter)
         .then((replies: Array<Event>) => processReplyFeed(evt, replies, relay))
-        .then((rootNote: Note | null) => {
+        .then((rootNote: TextNote | null) => {
             log('handleTextNote: Current stack: ', $feedStack)
             if (rootNote) syncNoteTree(rootNote)
         })
 }
 
-async function handleMentions(note: Note): Promise<Note> {
+async function handleMentions(note: TextNote): Promise<TextNote> {
     if (note && !note.content) {
         log('handleMentions:: This should never ever happen, but it did', note)
         return note
@@ -601,7 +588,7 @@ function handleReaction(evt: Event, relay: string) {
     let rootTag = getRootTag(evt.tags)
     let replyTag = getReplyTag(evt.tags)
 
-    let note: Note | null = null
+    let note: TextNote | null = null
     if (!rootTag.length && !replyTag.length) {
         log('handleReaction:: Misformed tags.. ignore it', 'RootTag: ', rootTag, 'ReplyTag:', replyTag, 'Event:', evt)
     }
@@ -612,14 +599,14 @@ function handleReaction(evt: Event, relay: string) {
 
     // Is rootNote
     if (rootTag[1] == replyTag[1]) {
-        note = $notes.find((n: Note) => n.id == replyTag[1])
+        note = $notes.find((n: TextNote) => n.id == replyTag[1])
         log('handleReaction:: Reaction Root ', 'RootTag: ', rootTag, 'ReplyTag:', replyTag, 'Event:', note)
     }
 
     // Now we are talking
     if (rootTag[1] != replyTag[1]) {
         log('handleReaction:: Time for recursive search', 'RootTag: ', rootTag, 'ReplyTag:', replyTag, 'Event:', evt)
-        let rootNote = $notes.find((n: Note) => n.id == rootTag[1])
+        let rootNote = $notes.find((n: TextNote) => n.id == rootTag[1])
         if (rootNote) {
             let result = find(rootNote, replyTag[1])
             if (result) {
@@ -662,30 +649,39 @@ function handleReaction(evt: Event, relay: string) {
 
         notes.update(data => data) // make sure the view is updated without this, it will not
     }
-
 }
 
 export class Listener {
     filter: Filter
-    sub: { unsub: Function }
-
-    constructor(filter: Filter) {
+    subs:{[key:string]:Sub } = {}
+    id:string
+    constructor(filter: Filter, id?: string) {
         this.filter = filter
+        if (!this.id) {
+            'listener' + now()  
+        }
     }
 
     async start() {
-        this.sub = await channels.listener.sub(
-            this.filter,
-            onEvent,
-            (r: string) => { log('Eose from ', r) }
-        )
+        for (const [url, relay] of Object.entries(pool.getRelays())) {
+            this.subs[url] = relay.sub([this.filter], {id: this.id})
+        
+            this.subs[url].on('event', event => {
+                onEvent(event, url)
+            })
+            this.subs[url].on('eose', r => {
+                (r: string) => { log('Eose from ', r) }
+            })
+        }
     }
     stop() {
-        if (this.sub) {
-            this.sub.unsub()
+        for (const [url, sub] of Object.entries(this.subs)) {
+            sub.off('event', () => console.log(`Not gonna listen to events anymore on ${url}`))
+            sub.off('eose', () => console.log(`Not gonna listen for eose events anymore on ${url}`))
         }
     }
 }
+
 
 export function onEvent(evt: Event, relay: string) {
     switch (evt.kind) {

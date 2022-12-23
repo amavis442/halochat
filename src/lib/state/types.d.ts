@@ -1,18 +1,12 @@
-export type Event = {
-    id?: string;
-    pubkey: string;
-    created_at: number;
-    kind: number;
-    tags: string[][];
-    content: string;
-    sig?: string;
-}
+import type { Event, Filter } from 'nostr-tools'
 
 export type Reaction = Event & {
     user?: User
 }
 
-export type Note = Event & {
+export type Filter = Filter & {limit:number}
+
+export type TextNote = Event & {
     reply_id?: string;
     replies?: Array<Note>;
     reactions?: Array<Reaction>;
@@ -37,17 +31,6 @@ export type Follow = {
     petname: string;
     added?: number;
     user?: User | null;
-}
-
-export type Filter = {
-    ids?: string[];
-    authors?: string[];
-    kinds?: number[];
-    "#e"?: string[],
-    "#p"?: string[];
-    since?: number;
-    until?: number;
-    limit?: number;
 }
 
 export type Account = {

@@ -1,5 +1,7 @@
 import { writable } from 'svelte/store'
-import type { User, Event } from '../state/types'
+import type { User } from '../state/types'
+import type { Event } from 'nostr-tools'
+
 import { setLocalJson, getLocalJson } from '../util/storage'
 import { now } from '../util/time';
 import { log } from '../util/misc'

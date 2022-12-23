@@ -1,5 +1,6 @@
 import { prop, sort, descend } from "ramda";
-import type { Event, User, Filter, Note, Reaction } from './lib/state/types'
+import type {User, TextNote, Reaction } from './lib/state/types'
+import type {Event, Filter} from 'nostr-tools'
 import { now } from "./lib/util/time"
 import { log } from './lib/util/misc'
 
@@ -10,7 +11,6 @@ async function getUsers() {
         limit: 100
     }
 
-    //let result = await channels.getter.all(filter)
     let result = []
     if (result) {
         let users = []

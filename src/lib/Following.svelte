@@ -4,7 +4,8 @@
   import { get } from "svelte/store";
   import { Listener } from "./state/app";
  
-  import type { Note, Account, Event } from "./state/types";
+  import type { TextNote as Note, Account } from "./state/types";
+  import type { Event } from 'nostr-tools'
   import { account } from "./stores/account";
   import { feed } from "./state/app";
   import { now } from "./util/time";

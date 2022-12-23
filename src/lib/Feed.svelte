@@ -3,7 +3,7 @@
   import { onMount, beforeUpdate, onDestroy } from "svelte";
   import { get, writable } from "svelte/store";
   import { Listener } from "./state/app";
-  import type { Note as NoteEvent, Account } from "./state/types";
+  import type { TextNote as NoteEvent, Account } from "./state/types";
   import { account } from "./stores/account";
   import { feed } from "./state/app";
   import { now } from "./util/time";

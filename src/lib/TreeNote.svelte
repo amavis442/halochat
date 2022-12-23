@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Note as NoteEvent } from "./state/types";
+  import type { TextNote as NoteEvent } from "./state/types";
   import TextNote from "./TextNote.svelte";
   import { beforeUpdate, onMount } from "svelte";
   import classNames from "classnames";
