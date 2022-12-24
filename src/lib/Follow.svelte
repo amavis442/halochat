@@ -3,7 +3,7 @@
   import { addToast } from "./stores/toast";
   import Button from "./partials/Button.svelte";
   import Text from "./partials/Text.svelte";
-  import { prop, uniqBy, differenceWith, sort, ascend, uniq } from "ramda";
+  import { prop, differenceWith, sort, ascend } from "ramda";
   import type { Follow, User } from "./state/types";
   import { fetchUser, fetchUsers, getContactlist } from "./state/app";
   import Spinner from "./Spinner.svelte";
@@ -74,8 +74,10 @@
   let promiseGetContacts: Promise<void>;
   onMount(async () => {
     let contactList = [];
-    promiseGetContacts = getContactlist($account.pubkey).then(
+    promiseGetContacts = getContactlist($account.pubkey)
+    .then(
       (receivedContacts) => {
+        console.debug('Received contacts ',receivedContacts )
         receivedContacts.forEach((contact) => {
           let list = contact.tags.filter((c) => c[0] == "p");
           list.forEach((item) => {
@@ -84,9 +86,18 @@
             }
           });
         });
+        console.debug('Received contacts processed ',contactList )
+        
         contacts.set(contactList);
       }
     );
+
+    let followPubKeys = []
+    contactList.forEach(c => {
+      followPubKeys.push(c[0])
+    })
+
+    fetchUsers(followPubKeys,'all')
   });
 
   let promise: Promise<void>;
@@ -163,7 +174,7 @@
   </div>
 {/await}
 
-{#if $relays && $relays.length && $contacts && $contacts.length}
+{#if $relays && Object.keys($relays).length && $contacts && $contacts.length}
   <div
     class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6 text-left bg-blue-200"
   >

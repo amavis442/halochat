@@ -1,12 +1,11 @@
 <script lang="ts">
   import { account, updateAccount, deleteAccount } from "./stores/account";
-  import Toasts from "./Toasts.svelte";
   import { onMount } from "svelte";
   import { addToast } from "./stores/toast";
   import Button from "./partials/Button.svelte";
   import Text from "./partials/Text.svelte";
   import { getKeys } from "./util/keys";
-  import { getData, publishAccount } from "./state/pool";
+  import { getData, publishAccount, relays } from "./state/pool";
   import type { User } from "./state/types";
   import type { Filter, Event } from "nostr-tools";
   import { annotateUsers } from "./stores/users";
@@ -129,10 +128,13 @@
   });
 </script>
 
-<Toasts />
 <div
   class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6 bg-blue-200"
 >
+  {#if !$relays || !Object.keys($relays).length} 
+  <div class="bg-red-100 rounded-lg py-5 px-6 mb-4 text-base text-red-700 mb-3" role="alert"><i class="fa-solid fa-triangle-exclamation"></i> Add a relay first!!!</div>
+  {/if}
+
   <form on:submit|preventDefault={onSubmit}>
     <div class="form-group mb-6">
       <label for="pubKey" class="form-label inline-block mb-2 text-gray-700">
@@ -224,7 +226,7 @@
         somewhere on the net. Pictures are not stored in relays.
       </small>
     </div>
-    <div class="flex flex-row justify-items-center w-full items-center gap-2 center">
+    <div class="flex justify-end w-full gap-2">
       <div class="col-1">
         <Button type="button" click={checkPubkey}
           >Check pubkey{#await promise}

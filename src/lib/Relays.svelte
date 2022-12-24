@@ -68,7 +68,7 @@
   }
 </script>
 
-<div class="sm:w-full md:w-4/12 xl:w-4/12 sm:w-full">
+<div class="sm:w-full md:w-6/12 sm:w-full">
   <div
     class="block p-6 rounded-lg shadow-lg bg-white w-full ml-6 mt-6 bg-blue-200"
   >

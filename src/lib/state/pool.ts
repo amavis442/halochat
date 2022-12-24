@@ -1,6 +1,6 @@
 import { writable, get } from 'svelte/store'
 import { getLocalJson, setLocalJson } from '../util/storage'
-import { now } from "../util/time";
+import { now, delay } from "../util/time";
 import { head } from 'ramda';
 import { account } from '../stores/account';
 import { getRootTag, getReplyTag } from '../util/tags';
@@ -25,12 +25,22 @@ export class relayPool {
   addRelay = async (url: string) => {
     this.relays[url] = relayInit(url)
     await this.relays[url].connect()
-    this.relays[url].on('connect', () => {
-      console.log(`connected to ${this.relays[url].url}`)
-    })
+
     this.relays[url].on('error', () => {
-      console.log(`failed to connect to ${this.relays[url].url}`)
+      console.log(`failed to connect to ${url}`)
     })
+    delay(500)
+
+    //if (this.relays[url].status == 1) {
+    this.relays[url].on('connect', () => {
+      console.log(`connected to ${url}`)
+    })
+
+
+    this.relays[url].on('disconnect', () => {
+      console.log(`Closing connection to ${url}`)
+    })
+    //}
   }
 
   removeRelay = (url: string) => {
@@ -42,17 +52,22 @@ export class relayPool {
   publish = async (evt: Event) => {
     console.log(Object.entries(relays))
     for (const [url, relay] of Object.entries(this.relays)) {
-      if (get(relays)[url].write) {
+      if (get(relays)[url].write && relay.status == 1) {
         let pub = relay.publish(evt)
         pub.on('ok', () => {
-          console.log(`${this.relays[url].url} has accepted our event`)
+          console.log(`${url} has accepted our event`)
         })
         pub.on('seen', () => {
-          console.log(`we saw the event on ${this.relays[url].url}`)
+          console.log(`we saw the event on ${url}`)
         })
         pub.on('failed', (reason: any) => {
-          console.log(`failed to publish to ${this.relays[url].url}: ${reason}`)
+          console.log(`failed to publish to ${url}: ${reason}`)
         })
+      } else {
+        if (relay.status !== 1) {
+          console.error(`Not publishing: Relay ${url} has state ${relay.status} and should be 1 = OPEN (0 CONNECTING, 1 OPEN, 2 CLOSING, 3 CLOSE)`)
+        }
+        console.error(`${url} has no write permissions set`)
       }
     }
     return
@@ -117,19 +132,28 @@ export const getData = async (filter: Filter): Promise<Event[]> => {
     let subs: { [key: string]: Sub } = {}
     let result: Array<Event> = []
     let relayReturns: string[] = []
-    const numRelays = get(relays).length
+    const r = get(relays)
+    const numRelays = r.length
     const subId = 'getter' + now()
 
     for (const [url, relay] of Object.entries(pool.getRelays())) {
-      subs[url] = relay.sub([filter], { id: subId })
+      if (!r[url].write && relay.status !== 1) {
+        relayReturns.push(url)
+        continue
+      }
+      console.debug(`getData:: Getting data from ${url}`)
+      subs[url] = relay.sub([filter], {})
 
       subs[url].on('event', (event: Event) => {
+        console.debug(`getData:: Getting EVENT data from ${url}`, event)
         result.push(event)
+        resolve({ result: result, subs: subs })
       })
 
       subs[url].on('eose', (r: any) => {
+        console.debug(`getData:: Received EOSE from ${url}`)
         relayReturns.push(url)
-        if (relayReturns.length == numRelays) {
+        if (relayReturns.length >= numRelays) {
           resolve({ result: result, subs: subs })
         }
       })
@@ -137,10 +161,10 @@ export const getData = async (filter: Filter): Promise<Event[]> => {
   })
     .then((data: { result: Event[], subs: { [key: string]: Sub } }) => {
       for (const [url, sub] of Object.entries(data.subs)) {
-        sub.off('event', () => console.log(`getData close listener EVENT for ${url} EOSE`))
-        sub.off('eose', () => console.log(`getData close listener EOSE for ${url} EOSE`))
+        sub.unsub()
+        console.log(`getData unsub listeners for ${url} with an internal id`)
       }
-
+      console.debug(`getData:: Results `, data.result)
       return data.result
     })
 }
@@ -236,7 +260,7 @@ relays.subscribe($relays => {
 
   if ($relays) {
     for (const [url, value] of Object.entries($relays)) {
-      console.log(`${url}: ${value}`);
+      console.log(`${url}: permissions: ${JSON.stringify(value)}`);
 
       if (!pool.hasRelay(url)) {
         pool.addRelay(url)

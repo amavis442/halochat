@@ -36,6 +36,7 @@ module.exports = {
             emerald: colors.emerald,
             indigo: colors.indigo,
             yellow: colors.yellow,
+            red: colors.red,
         },
         gridTemplateColumns:
         {
