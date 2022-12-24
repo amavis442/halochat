@@ -6,7 +6,6 @@
   import { publishReaction } from "./state/pool";
   import TextArea from "./partials/TextArea.svelte";
   import Button from "./partials/Button.svelte";
-  import { fade } from "svelte/transition";
   import { publishReply } from "./state/pool";
   import { account } from "./stores/account";
   import { pluck, uniqBy, prop } from "ramda";
@@ -20,6 +19,7 @@
   import Preview from "./partials/Preview.svelte";
   import { getRootTag } from "./util/tags";
   import Modal from "./partials/Modal.svelte";
+  import Spinner from "./Spinner.svelte";
 
   export let note: Note | any; // Todo: Do not know how to type this correctly to make sure in Notes it does not say Note__SvelteComponent_ <> Note type, very annoying
   export let userHasAccount: boolean = false;
@@ -64,6 +64,7 @@
     await publishReaction("-", note);
   }
 
+  let promiseReply: Promise<void>
   async function onSubmit(e: Event) {
     const target = e.target as HTMLFormElement;
     const formData = new FormData(target);
@@ -76,10 +77,13 @@
     }
     let v = Object.values(data);
     console.debug(v);
+    
 
-    publishReply(v[0], note);
-    showElement = false;
+    promiseReply = publishReply(v[0], note).then(() => {
+      showElement = false;
+    })
   }
+
   let showElement: boolean = false;
 
   async function banUser() {
@@ -224,6 +228,9 @@
   </slot>
 </Modal>
 
+{#await promiseReply}
+<Spinner />
+{/await}
 {#if note && note.kind == 1}
   <div class="flex items-top gap-4 p-4 w-full overflow-auto bg-blue-200">
     <div
