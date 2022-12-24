@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { closeModal } from "svelte-modals";
-  import Button from "./Button.svelte";
   import { fly } from "svelte/transition";
 
   // provided by Modals
@@ -29,7 +27,7 @@
     on:introstart
     on:outroend
   >
-  <div class="modal-overlay fixed w-full h-full bg-gray-900 opacity-50"></div>
+    <div class="modal-overlay fixed w-full h-full bg-gray-900 opacity-50" />
 
     <div class="content-wrapper">
       <div class="content">
@@ -49,7 +47,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-
+    z-index: 100;
 
     /* allow click-through to backdrop */
     pointer-events: none;
