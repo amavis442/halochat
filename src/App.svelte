@@ -35,14 +35,9 @@
 
 <Router {url}>
   <div
-    class="grid grid-cols-20/80 w-screen h-screen max-w-screen max-h-screen
-    justify-center bg-gray-800"
+    class="flex h-screen w-screen m-auto"
   >
-    <header>
-      <div
-        class="mt-6 grid-cols-1 justify-start items-center pl-4 w-full
-        border-gray-600 border-b space-y-3 pb-5"
-      >
+    <header class="mt-6 items-center pl-4 border-gray-600 border-b space-y-3 pb-5 sm:w-full md:w-2/12 xl:w-6/10">
         <AccountInfo />
         <nav>
           <p class="nav-p">
@@ -62,10 +57,9 @@
             <Link to="account">Account</Link>
           </p>
         </nav>
-      </div>
     </header>
 
-    <main class="grid-cols-2 text-center justify-items-center max-h-max">
+    <main class="max-h-max w-full overflow-y-auto">
       <Route path="/">
         <Feed />
       </Route>
@@ -82,7 +76,5 @@
         <Account />
       </Route>
     </main>
-
-    <div class="grid-cols-3 max-h-max" />
   </div>
 </Router>
