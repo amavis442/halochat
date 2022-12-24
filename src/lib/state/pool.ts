@@ -50,9 +50,11 @@ export class relayPool {
   }
 
   publish = async (evt: Event) => {
-    console.log(Object.entries(relays))
+    const $relays = get(relays)
+
+    console.log(Object.entries($relays))
     for (const [url, relay] of Object.entries(this.relays)) {
-      if (get(relays)[url].write && relay.status == 1) {
+      if ($relays[url].write && relay.status == 1) {
         let pub = relay.publish(evt)
         pub.on('ok', () => {
           console.log(`${url} has accepted our event`)
@@ -122,8 +124,9 @@ export const createEvent = async (kind: number, content: string = '', tags: stri
   let id: any = getEventHash(note)
   note = { ...note, sig, id }
 
-  console.log('VerifySignature', await verifySignature(note))
-  console.log('validateEvent', validateEvent(note))
+  console.debug('VerifySignature', await verifySignature(note))
+  console.debug('validateEvent', validateEvent(note))
+  console.debug('createEvent:: ', note)
   return note
 }
 
@@ -201,9 +204,10 @@ function copyTags(evt: Event) {
       newtags.push(t);
     }
   });
+  const relayUrls = Object.keys(get(relays))
 
-  newtags.push(["p", evt.pubkey, head(get(relays))]);
-  newtags.push(["e", evt.id, head(get(relays)), "reply"]);
+  newtags.push(["p", evt.pubkey, head(relayUrls)]);
+  newtags.push(["e", evt.id, head(relayUrls), "reply"]);
 
   let rootTag = getRootTag(newtags)
   let replyTag = getReplyTag(newtags)

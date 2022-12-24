@@ -1,6 +1,5 @@
 import { get, writable, type Writable } from 'svelte/store'
 import { users, annotateUsers, formatUser } from '../stores/users'
-import { notes } from '../stores/notes'
 import { now } from "../util/time"
 import { find } from "../util/misc"
 import { uniq, pluck, difference, uniqBy } from 'ramda'
@@ -15,11 +14,9 @@ import { blocklist } from '../stores/block'
 import { account } from '../stores/account'
 
 let $users = get(users)
-let $notes = get(notes)
 let $blocklist = get(blocklist)
 let $account = get(account);
 if (!$users) $users = []
-if (!$notes) $notes = []
 if (!$blocklist) $blocklist = []
 
 export const feed: Writable<Array<TextNote>> = writable([]) // Kind 1 feed 
@@ -108,7 +105,7 @@ export function getContacts(): null {
     //@ts-ignore
     const userPubKeys = uniq(pluck('pubkey', Object.values($users)))
     //@ts-ignore
-    const notePubKeys = uniq(pluck('pubkey', Object.values($notes)))
+    const notePubKeys = uniq(pluck('pubkey', Object.values($feed)))
 
     let pkeys = difference(notePubKeys, userPubKeys)
     if (!pkeys || pkeys.length == 0) {
@@ -479,7 +476,7 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
     let rootNote: TextNote
     let $feedStack = get(feedStack)
 
-    log('handleTextNote: input ', evt)
+    console.debug('handleTextNote: input ', evt)
     if ($feedStack[evt.id]) {
         log('handleTextNote: Already added this input ', evt)
     }
@@ -583,11 +580,12 @@ async function handleMentions(note: TextNote): Promise<TextNote> {
 }
 
 function handleReaction(evt: Event, relay: string) {
-    let $notes = get(notes)
-    if (!$notes || !$notes.length) return
+    let $feed = get(feed)
+    if (!$feed || !$feed.length) return
     let rootTag = getRootTag(evt.tags)
     let replyTag = getReplyTag(evt.tags)
 
+    console.debug("handleReaction:: Event ", evt)
     let note: TextNote | null = null
     if (!rootTag.length && !replyTag.length) {
         log('handleReaction:: Misformed tags.. ignore it', 'RootTag: ', rootTag, 'ReplyTag:', replyTag, 'Event:', evt)
@@ -599,14 +597,14 @@ function handleReaction(evt: Event, relay: string) {
 
     // Is rootNote
     if (rootTag[1] == replyTag[1]) {
-        note = $notes.find((n: TextNote) => n.id == replyTag[1])
+        note = $feed.find((n: TextNote) => n.id == replyTag[1])
         log('handleReaction:: Reaction Root ', 'RootTag: ', rootTag, 'ReplyTag:', replyTag, 'Event:', note)
     }
 
     // Now we are talking
     if (rootTag[1] != replyTag[1]) {
         log('handleReaction:: Time for recursive search', 'RootTag: ', rootTag, 'ReplyTag:', replyTag, 'Event:', evt)
-        let rootNote = $notes.find((n: TextNote) => n.id == rootTag[1])
+        let rootNote = $feed.find((n: TextNote) => n.id == rootTag[1])
         if (rootNote) {
             let result = find(rootNote, replyTag[1])
             if (result) {
@@ -644,10 +642,10 @@ function handleReaction(evt: Event, relay: string) {
         if (!note.upvotes) note.upvotes = 0
         if (!note.downvotes) note.downvotes = 0
 
-        if (evt.content == '+') note.upvotes = note.upvotes + 1
+        if (evt.content == '+' || evt.content == "") note.upvotes = note.upvotes + 1
         if (evt.content == '-') note.downvotes = note.downvotes + 1
 
-        notes.update(data => data) // make sure the view is updated without this, it will not
+        feed.update(data => data) // make sure the view is updated without this, it will not
     }
 }
 
