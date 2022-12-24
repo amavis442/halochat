@@ -65,10 +65,11 @@ export class relayPool {
         pub.on('failed', (reason: any) => {
           console.log(`failed to publish to ${url}: ${reason}`)
         })
-      } else {
-        if (relay.status !== 1) {
-          console.error(`Not publishing: Relay ${url} has state ${relay.status} and should be 1 = OPEN (0 CONNECTING, 1 OPEN, 2 CLOSING, 3 CLOSE)`)
-        }
+      }
+      if (relay.status !== 1) {
+        console.error(`Not publishing: Relay ${url} has state ${relay.status} and should be 1 = OPEN (0 CONNECTING, 1 OPEN, 2 CLOSING, 3 CLOSE)`)
+      }
+      if (!$relays[url].write) {
         console.error(`${url} has no write permissions set`)
       }
     }
