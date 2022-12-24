@@ -19,6 +19,7 @@
   import { deleteNodeFromTree, log } from "./util/misc";
   import Preview from "./partials/Preview.svelte";
   import { getRootTag } from "./util/tags";
+  import Modal from "./partials/Modal.svelte";
 
   export let note: Note | any; // Todo: Do not know how to type this correctly to make sure in Notes it does not say Note__SvelteComponent_ <> Note type, very annoying
   export let userHasAccount: boolean = false;
@@ -63,10 +64,6 @@
     await publishReaction("-", note);
   }
 
-  function showInfo() {
-    log("info", "Debug note info from mouseover: ", note);
-  }
-
   async function onSubmit(e: Event) {
     const target = e.target as HTMLFormElement;
     const formData = new FormData(target);
@@ -78,6 +75,8 @@
       data[key] = value;
     }
     let v = Object.values(data);
+    console.debug(v);
+
     publishReply(v[0], note);
     showElement = false;
   }
@@ -103,6 +102,8 @@
       timeout: 3000,
     });
   }
+
+  let isFollowed: boolean = false;
 
   function followUser() {
     expanded = false;
@@ -165,18 +166,77 @@
   function toggleMenu() {
     expanded = !expanded;
   }
+
+  let showInfoModal: boolean = false;
 </script>
+
+<Modal isOpen={showInfoModal}>
+  <slot>
+    <div class="flex justify-left">
+      <img
+        class="w-16 h-16 rounded-full"
+        src={user && user.picture ? user.picture : "profile-placeholder.png"}
+        alt={note.pubkey.slice(0, 5)}
+      />
+      <div class="p-6">
+        <h5 class="text-gray-900 text-xl font-medium mb-2">
+          {user.name}
+        </h5>
+        <p class="text-gray-700 text-base mb-4">
+          {user.about}
+        </p>
+      </div>
+    </div>
+    <div class="flex space-x-1 p-2 justify-end">
+      {#if !isFollowed}
+        <Button click={followUser}>Follow</Button>
+      {:else}
+        <Button click={unfollowUser}>unFollow</Button>
+      {/if}
+      <Button type="button" click={() => (showInfoModal = !showInfoModal)}>
+        Close
+      </Button>
+    </div>
+  </slot>
+</Modal>
+
+<Modal isOpen={showElement}>
+  <slot>
+    <form on:submit|preventDefault={onSubmit}>
+      <h5 class="text-gray-900 text-xl font-medium mb-2">
+        Re: {note.content.slice(0, 30)}
+      </h5>
+      <TextArea id="reply{note.id}" placeholder="Add reply" cols="20" />
+
+      <div class="flex space-x-1 p-2 justify-end">
+        <Button type="submit" class="space-x-1"
+          ><i class="fa-solid fa-paper-plane" /> <span>Send</span></Button
+        >
+        <Button
+          type="button"
+          click={() => (showElement = !showElement)}
+          class="space-x-1"
+        >
+          <i class="fa-solid fa-circle-xmark" /> <span>Close</span>
+        </Button>
+      </div>
+    </form>
+  </slot>
+</Modal>
 
 {#if note && note.kind == 1}
   <div class="flex items-top gap-4 p-4 w-full overflow-auto bg-blue-200">
-    <img
-      class="w-12 h-12 rounded-full"
-      src={user && user.picture ? user.picture : "profile-placeholder.png"}
-      alt={note.pubkey.slice(0, 5)}
-      title={JSON.stringify(note)}
-      on:mouseover={showInfo}
-      on:focus={showInfo}
-    />
+    <div
+      on:click={() => (showInfoModal = !showInfoModal)}
+      on:keyup={() => (showInfoModal = !showInfoModal)}
+    >
+      <img
+        class="w-12 h-12 rounded-full"
+        src={user && user.picture ? user.picture : "profile-placeholder.png"}
+        alt={note.pubkey.slice(0, 5)}
+        title={JSON.stringify(note)}
+      />
+    </div>
     <div class="flex flex-col w-11/12">
       <div class="flex items-start">
         <div class="flex-start text-left w-6/12">
@@ -259,20 +319,4 @@
       {/if}
     </div>
   </div>
-  {#if showElement}
-    <div
-      transition:fade={{ delay: 250, duration: 300 }}
-      class="gap-4 p-4 ml-16 w-6/12"
-    >
-      <form on:submit|preventDefault={onSubmit}>
-        <TextArea id="reply{note.id}" placeholder="Add reply" cols="20" />
-        <div class="actions pt-2">
-          <Button type="button" click={() => (showElement = !showElement)}
-            >Cancel</Button
-          > |
-          <Button type="submit">Send</Button>
-        </div>
-      </form>
-    </div>
-  {/if}
 {/if}
