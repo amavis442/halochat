@@ -6,6 +6,7 @@
   import type { TextNote as NoteEvent, Account } from "./state/types";
   import { account } from "./stores/account";
   import { feed } from "./state/app";
+  import contacts from "./state/contacts";
   import { now } from "./util/time";
   import TextNote from "./TextNote.svelte";
   import TreeNote from "./TreeNote.svelte";
@@ -16,7 +17,6 @@
   import Text from "./partials/Text.svelte";
   import Anchor from "./partials/Anchor.svelte";
   import Toasts from "./Toasts.svelte";
-  import { pluck } from "ramda";
   import { log } from "./util/misc";
   
   let msg = "";
@@ -46,13 +46,14 @@
       let $account: Account = get(account);
       if ($account.pubkey) {
         userHasAccount = true;
+        contacts.getContacts($account.pubkey);
       }
     }
   });
 
   onDestroy(() => {
     if (listener) {
-      feed.set([])
+      feed.set([]);
       listener.stop();
     }
   });

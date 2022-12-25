@@ -21,6 +21,7 @@
   import { pluck,uniq } from "ramda";
   import { log } from "./util/misc";
   import { getFollowList } from "./state/app";
+  import contacts from './state/contacts';
 
   let msg = "";
   let replyTo: Event | null = null;
@@ -42,7 +43,7 @@
   let userHasAccount: boolean = false;
   let listener: Listener;
   onMount(async () => {
-    let contactList = await getFollowList($account.pubkey)
+    
     if ($relays && Object.keys($relays).length) {
       let lastSync: number = now() - 60 * 60 * 24 * 7;
       if ($feed && $feed.length) {
@@ -53,12 +54,19 @@
           lastSync = lastNote.created_at - 60;
         }
       }
-      listener = new Listener({ since: lastSync, limit: 500, authors: Object.keys(contactList) });
-      listener.start();
 
       let $account: Account = get(account);
       if ($account.pubkey) {
         userHasAccount = true;
+        if (!contacts.getList().length) {
+          await contacts.getContacts($account.pubkey)
+        }
+        let pubkeys = []
+        contacts.getList().forEach(c => {
+          pubkeys.push(c[1])
+        })
+        listener = new Listener({ since: lastSync, limit: 500, authors: pubkeys });
+        listener.start();
       }
     }
   });

@@ -17,7 +17,6 @@ import {
   type Sub
 } from 'nostr-tools'
 import 'websocket-polyfill'
-import { Listener } from './app';
 
 export class relayPool {
   relays: { [key: string]: Relay } = {}
@@ -36,6 +35,10 @@ export class relayPool {
       console.log(`connected to ${url}`)
     })
 
+    this.relays[url].on('notice', (evt) => {
+
+      console.log(`Got an notice from ${url}`, evt)
+    })
 
     this.relays[url].on('disconnect', () => {
       console.log(`Closing connection to ${url}`)
@@ -132,25 +135,29 @@ export const createEvent = async (kind: number, content: string = '', tags: stri
 }
 
 export const getData = async (filter: Filter): Promise<Event[]> => {
+  const $relays = get(relays)
+  const numRelays = Object.keys($relays).length
+
   return new Promise((resolve, reject) => {
     let subs: { [key: string]: Sub } = {}
     let result: Array<Event> = []
     let relayReturns: string[] = []
-    const r = get(relays)
-    const numRelays = r.length
     const subId = 'getter' + now()
 
     for (const [url, relay] of Object.entries(pool.getRelays())) {
-      if (!r[url].write && relay.status !== 1) {
+      if ($relays && !$relays[url].write && relay.status !== 1) {
         relayReturns.push(url)
         continue
       }
-      console.debug(`getData:: Getting data from ${url}`)
+      console.debug(`getData:: Request data from ${url}`)
       subs[url] = relay.sub([filter], {})
 
       subs[url].on('event', (event: Event) => {
         console.debug(`getData:: Getting EVENT data from ${url}`, event)
         result.push(event)
+        //if (timeoutId) {
+        //  clearTimeout(timeoutId)
+        //}
         resolve({ result: result, subs: subs })
       })
 
@@ -158,10 +165,14 @@ export const getData = async (filter: Filter): Promise<Event[]> => {
         console.debug(`getData:: Received EOSE from ${url}`)
         relayReturns.push(url)
         if (relayReturns.length >= numRelays) {
+          //if (timeoutId) {
+          //  clearTimeout(timeoutId)
+          //}
           resolve({ result: result, subs: subs })
         }
       })
     }
+    //let timeoutId = setTimeout(() => reject('Took to long for the relays to respond') , 15000);
   })
     .then((data: { result: Event[], subs: { [key: string]: Sub } }) => {
       for (const [url, sub] of Object.entries(data.subs)) {
@@ -205,7 +216,7 @@ function copyTags(evt: Event) {
       newtags.push(t);
     }
   });
-  const relayUrls = Object.keys(get(relays))
+  const relayUrls = Object.keys($relays)
 
   newtags.push(["p", evt.pubkey, head(relayUrls)]);
   newtags.push(["e", evt.id, head(relayUrls), "reply"]);
@@ -253,6 +264,7 @@ export async function publish(kind: number, content = '', tags = []): Promise<an
 }
 
 export const relays = writable(getLocalJson("halonostr/relays") || [])
+let $relays = get(relays)
 
 relays.subscribe($relays => {
   try {

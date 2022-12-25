@@ -10,7 +10,6 @@
   import { account } from "./stores/account";
   import { pluck, uniqBy, prop } from "ramda";
   import { blocklist } from "./stores/block";
-  import { followlist } from "./stores/follow";
   import { now } from "./util/time";
   import { addToast } from "./stores/toast";
   import { users } from "./stores/users";
@@ -21,12 +20,13 @@
   import Modal from "./partials/Modal.svelte";
   import Spinner from "./Spinner.svelte";
 
+  import contacts from "./state/contacts";
+
   export let note: Note | any; // Todo: Do not know how to type this correctly to make sure in Notes it does not say Note__SvelteComponent_ <> Note type, very annoying
   export let userHasAccount: boolean = false;
 
   let user: User;
   let votedFor: string = "";
-  let followed: boolean = false;
   let link: string | null = null;
 
   beforeUpdate(() => {
@@ -41,11 +41,18 @@
     }
   });
 
+  function isFollowed(): boolean {
+    if (contacts.getList().find((c) => c[1] == note.pubkey)) {
+      return true;
+    }
+    return false;
+  }
+
+  let followed = false;
+  $: followed = isFollowed()
+
   onMount(async () => {
     user = note?.user;
-    if (Object.values($followlist).find((u: User) => u.pubkey == note.pubkey)) {
-      followed = true;
-    }
     link = findLink(note.content);
   });
 
@@ -64,7 +71,7 @@
     await publishReaction("-", note);
   }
 
-  let promiseReply: Promise<void>
+  let promiseReply: Promise<void>;
   async function onSubmit(e: Event) {
     const target = e.target as HTMLFormElement;
     const formData = new FormData(target);
@@ -77,11 +84,10 @@
     }
     let v = Object.values(data);
     console.debug(v);
-    
 
     promiseReply = publishReply(v[0], note).then(() => {
       showElement = false;
-    })
+    });
   }
 
   let showElement: boolean = false;
@@ -107,39 +113,31 @@
     });
   }
 
-  let isFollowed: boolean = false;
-
-  function followUser() {
-    expanded = false;
-    if (!$followlist) $followlist = [];
-
-    $followlist.push({ pubkey: note.pubkey, petname: "", added: now() });
-    $followlist = uniqBy(prop("pubkey"), $followlist);
-    addToast({
-      message: "User " + note.pubkey.slice(0, 10) + " followed!",
-      type: "success",
-      dismissible: true,
-      timeout: 3000,
-    });
+  async function followUser() {
+    if (!user.name) {
+      addToast({
+        message:
+          "User " +
+          note.pubkey.slice(0, 10) +
+          " has no name to set as petname. Can't be followed yet!",
+        type: "warning",
+        dismissible: true,
+        timeout: 3000,
+      });
+      return;
+    }
+    contacts.follow(note.pubkey, user.name);
+    contacts.saveContactList();
+    followed = true
   }
 
   function unfollowUser() {
     expanded = false;
-    followed = true;
 
-    followlist.update((data) => {
-      if (!data) data = [];
-      data.filter(
-        (d: { pubkey: string; added: number }) => d.pubkey != note.pubkey
-      );
-    });
-
-    addToast({
-      message: "User " + note.pubkey.slice(0, 10) + " unfollowed!",
-      type: "success",
-      dismissible: true,
-      timeout: 3000,
-    });
+    let c = contacts.unFollow(note.pubkey);
+    console.log(c);
+    contacts.publishList(c);
+    followed = false
   }
 
   function removeNote() {
@@ -192,7 +190,7 @@
       </div>
     </div>
     <div class="flex space-x-1 p-2 justify-end">
-      {#if !isFollowed}
+      {#if !followed}
         <Button click={followUser}>Follow</Button>
       {:else}
         <Button click={unfollowUser}>unFollow</Button>
@@ -229,7 +227,7 @@
 </Modal>
 
 {#await promiseReply}
-<Spinner />
+  <Spinner />
 {/await}
 {#if note && note.kind == 1}
   <div class="flex items-top gap-4 p-4 w-full overflow-auto bg-blue-200">
