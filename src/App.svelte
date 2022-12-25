@@ -15,7 +15,6 @@
   import { notes } from "./lib/stores/notes";
   import { users } from "./lib/stores/users";
   import { relays } from "./lib/state/pool";
-  import { followlist } from './lib/stores/follow'
   import { blocklist } from './lib/stores/block'
 
   export let url = "";
@@ -26,7 +25,6 @@
     notes.set(null);
     relays.set(null);
     users.set(null);
-    followlist.set(null);
     blocklist.set(null);
   }
 </script>
@@ -37,7 +35,7 @@
   <div
     class="flex h-screen w-screen m-auto"
   >
-    <header class="mt-6 items-center pl-4 border-gray-600 border-b space-y-3 pb-5 sm:w-full md:w-2/12 xl:w-6/10">
+    <header class="mt-6 items-center pl-4 border-gray-600 border-b space-y-3 pb-5 sm:w-full md:w-3/12 xl:w-6/10">
         <AccountInfo />
         <nav>
           <p class="nav-p">
