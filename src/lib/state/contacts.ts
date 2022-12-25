@@ -30,8 +30,6 @@ export function unFollow(pubkey: string):Array<string[]> {
  * @param petname 
  */
 function follow(pubkey: string, petname: string):Array<string[]> {
-    let $contacts = get(contacts)
-
     let followUser: Follow = {
         pubkey: pubkey,
         petname: petname,
@@ -57,7 +55,7 @@ function follow(pubkey: string, petname: string):Array<string[]> {
         timeout: 3000,
     });
 
-    return $contacts
+    return get(contacts)
 }
 
 /**
