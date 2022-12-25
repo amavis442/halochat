@@ -1,103 +1,55 @@
 <script lang="ts">
-  import { publish, relays } from "./state/pool";
-  import { addToast } from "./stores/toast";
-  import Button from "./partials/Button.svelte";
-  import Text from "./partials/Text.svelte";
+  import { publish, relays } from "../state/pool";
+  import { addToast } from "../stores/toast";
+  import Button from "../partials/Button.svelte";
+  import Text from "../partials/Text.svelte";
   import { prop, differenceWith, sort, ascend } from "ramda";
-  import type { Follow, User } from "./state/types";
-  import { fetchUser, fetchUsers, getContactlist } from "./state/app";
-  import Spinner from "./Spinner.svelte";
-  import { users } from "./stores/users";
+  import type { Follow, User } from "../state/types";
+  import { fetchUser, fetchUsers, getContactlist } from "../state/app";
+  import Spinner from "../Spinner.svelte";
+  import { users } from "../stores/users";
   import { onMount } from "svelte";
-  import { account } from "./stores/account";
-  import { log } from "./util/misc";
-  import { writable } from "svelte/store";
+  import { account } from "../stores/account";
+  import { log } from "../util/misc";
+  import contacts from "../state/contacts";
 
   let pubkey = "";
   let petname = "";
-  let contacts = writable([]); // Follow list
 
-  function unFollow(pubkey: string) {
-    let c = $contacts.find((c) => c[1] == pubkey);
-    $contacts = $contacts.filter((c) => c[1] != pubkey);
-
-    addToast({
-      message: "Removed: " + c[3].slice(0, 10),
-      type: "success",
-      dismissible: true,
-      timeout: 3000,
-    });
+  export function unFollow(pubkey: string) {
+    followPubKeys = contacts.unFollow(pubkey);
   }
 
-  function follow() {
-    let followUser: Follow = {
-      pubkey: pubkey,
-      petname: petname,
-    };
-
-    let contact = [];
-    contact = ["p", pubkey, "", petname];
-
-    contacts.update((all) => [...all, contact]);
-    pubkey = "";
-    petname = "";
-
-    addToast({
-      message: "Following: " + followUser.petname,
-      type: "success",
-      dismissible: true,
-      timeout: 3000,
-    });
+  export function follow() {
+    followPubKeys = contacts.follow(pubkey, petname);
   }
 
-  async function saveContactList() {
-    publish(3, "", $contacts).then(() => {
-      addToast({
-        message: "Contact list has been saved",
-        type: "success",
-        dismissible: true,
-        timeout: 3000,
-      });
-    });
+  export async function saveContactList() {
+    contacts.publishList(followPubKeys);
   }
 
   let userDiff = [];
   $: userDiff = differenceWith(
     (a: User, b: Array<string>) => a.pubkey == b[1],
     $users,
-    $contacts
+    contacts.getList()
   ).filter((u) => u.pubkey != $account.pubkey);
 
   let byName = ascend<User>(prop("name"));
   userDiff = sort(byName, userDiff);
 
+  let followPubKeys = [];
   let promiseGetContacts: Promise<void>;
   onMount(async () => {
-    let contactList = [];
-    promiseGetContacts = getContactlist($account.pubkey)
-    .then(
-      (receivedContacts) => {
-        console.debug('Received contacts ',receivedContacts )
-        receivedContacts.forEach((contact) => {
-          let list = contact.tags.filter((c) => c[0] == "p");
-          list.forEach((item) => {
-            if (!contactList.find((cl) => cl[1] == item[1])) {
-              contactList = [...contactList, item];
-            }
-          });
-        });
-        console.debug('Received contacts processed ',contactList )
-        
-        contacts.set(contactList);
-      }
-    );
-
-    let followPubKeys = []
-    contactList.forEach(c => {
-      followPubKeys.push(c[0])
-    })
-
-    fetchUsers(followPubKeys,'all')
+    if ($account && $account.pubkey) {
+      promiseGetContacts = contacts.getContacts($account.pubkey).then((data) => {
+        console.log("Got the contact list");
+        followPubKeys = data
+        console.log(followPubKeys, contacts.getList())
+      });
+    }
+    console.log('Pubkeys is ', followPubKeys)
+    //fetchUsers(followPubKeys,'all')
   });
 
   let promise: Promise<void>;
@@ -174,7 +126,7 @@
   </div>
 {/await}
 
-{#if $relays && Object.keys($relays).length && $contacts && $contacts.length}
+{#if $relays && Object.keys($relays).length && followPubKeys && followPubKeys.length}
   <div
     class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6 text-left bg-blue-200"
   >
@@ -184,7 +136,7 @@
       </div>
     </form>
     <ul class="bg-white rounded-lg border border-gray-200 w-full text-gray-900">
-      {#each $contacts as contact}
+      {#each followPubKeys as contact}
         <li class="px-6 py-2 border-b border-gray-200 w-full rounded-t-lg">
           <button on:click={() => unFollow(contact[1])}>
             <span class="fa-solid fa-trash" />

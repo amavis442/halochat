@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { relays } from "./state/pool";
-  import { addToast } from "./stores/toast";
-  import Button from "./partials/Button.svelte";
-  import Text from "./partials/Text.svelte";
-  import Link from "./partials/Link.svelte";
+  import { relays } from "../state/pool";
+  import { addToast } from "../stores/toast";
+  import Button from "../partials/Button.svelte";
+  import Text from "../partials/Text.svelte";
+  import Link from "../partials/Link.svelte";
 
   let url: string = "";
   let read: boolean = true;

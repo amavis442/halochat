@@ -1,17 +1,17 @@
 <script lang="ts">
-  import { account, updateAccount, deleteAccount } from "./stores/account";
+  import { account, updateAccount, deleteAccount } from "../stores/account";
   import { onMount } from "svelte";
-  import { addToast } from "./stores/toast";
-  import Button from "./partials/Button.svelte";
-  import Text from "./partials/Text.svelte";
-  import { getKeys } from "./util/keys";
-  import { getData, publishAccount, relays } from "./state/pool";
-  import type { User } from "./state/types";
+  import { addToast } from "../stores/toast";
+  import Button from "../partials/Button.svelte";
+  import Text from "../partials/Text.svelte";
+  import { getKeys } from "../util/keys";
+  import { getData, publishAccount, relays } from "../state/pool";
+  import type { User } from "../state/types";
   import type { Filter, Event } from "nostr-tools";
-  import { annotateUsers } from "./stores/users";
-  import { now } from "./util/time";
-  import Spinner from "./Spinner.svelte";
-  import { log } from "./util/misc";
+  import { annotateUsers } from "../stores/users";
+  import { now } from "../util/time";
+  import Spinner from "../Spinner.svelte";
+  import { log } from "../util/misc";
 
   let pubkey: string;
   let privkey: string;
