@@ -229,7 +229,11 @@ export async function publishReply(content: string, evt: Event) {
 }
 
 export async function publishReaction(content: string, evt: Event) {
-  const tags: string[][] = copyTags(evt)
+  //const tags: string[][] = copyTags(evt)
+  let tags = evt.tags.filter(tag => tag.length >= 2 && (tag[0] == "e" || tag[0] == "p"))
+  tags.push(['e', evt.id])
+  tags.push(['p', evt.pubkey])
+  tags.push(['client', 'halochat'])
   const sendEvent = await createEvent(7, content, tags)
 
   log('publishReaction: ', sendEvent)
