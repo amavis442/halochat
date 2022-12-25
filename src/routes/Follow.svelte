@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Follow from '../lib/Follow.svelte'
+  import Follow from '../lib/settings/Follow.svelte'
  </script>
 
 <Follow />
