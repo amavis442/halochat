@@ -22,6 +22,8 @@
 
   export function follow() {
     followPubKeys = contacts.follow(pubkey, petname);
+    pubkey = ''
+    petname = ''
   }
 
   export async function saveContactList() {
