@@ -674,8 +674,8 @@ export class Listener {
     }
     stop() {
         for (const [url, sub] of Object.entries(this.subs)) {
-            sub.off('event', () => console.log(`Not gonna listen to events anymore on ${url}`))
-            sub.off('eose', () => console.log(`Not gonna listen for eose events anymore on ${url}`))
+            sub.unsub()
+            console.log(`Stop listening to relay ${url} by unsubscribe to events and eose`)
         }
     }
 }

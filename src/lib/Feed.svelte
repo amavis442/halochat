@@ -40,7 +40,7 @@
   onMount(async () => {
     if ($relays && Object.keys($relays).length) {
       let lastSync: number = now() - 60 * 60;
-      listener = new Listener({ since: lastSync, limit: 30 });
+      listener = new Listener({ since: lastSync });
       listener.start();
 
       let $account: Account = get(account);

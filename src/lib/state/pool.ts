@@ -233,7 +233,6 @@ export async function publishReaction(content: string, evt: Event) {
   let tags = evt.tags.filter(tag => tag.length >= 2 && (tag[0] == "e" || tag[0] == "p"))
   tags.push(['e', evt.id])
   tags.push(['p', evt.pubkey])
-  tags.push(['client', 'halochat'])
   const sendEvent = await createEvent(7, content, tags)
 
   log('publishReaction: ', sendEvent)
@@ -260,7 +259,7 @@ relays.subscribe($relays => {
     Object.keys(pool.getRelays()).forEach((url: string) => {
       if ($relays && !$relays[url]) {
         pool.removeRelay(url)
-        log('Remove relay from pool:', url)
+        console.log('Remove relay from pool:', url)
       }
     })
   } catch (error) {
@@ -273,7 +272,7 @@ relays.subscribe($relays => {
 
       if (!pool.hasRelay(url)) {
         pool.addRelay(url)
-        log('Add relay to pool: ', url)
+        console.log('Add relay to pool: ', url)
       }
     }
   }
