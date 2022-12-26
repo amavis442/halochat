@@ -80,7 +80,7 @@
 </script>
 
 <div
-  class="block p-6 rounded-lg shadow-lg bg-white xl:w-6/12 lg:w-8/12 md:w-10/12 sm:w-full ml-6 mt-6 bg-blue-200"
+  class="block p-6 rounded-lg shadow-lg bg-white xl:w-6/12 lg:w-10/12 md:w-10/12 sm:w-full ml-6 mt-6 bg-blue-200"
 >
   <div class="form-group mb-6">
     <label for="url" class="form-label inline-block mb-2 text-gray-700">

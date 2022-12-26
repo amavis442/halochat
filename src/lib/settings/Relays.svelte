@@ -4,9 +4,6 @@
   import Button from "../partials/Button.svelte";
   import Text from "../partials/Text.svelte";
   import Link from "../partials/Link.svelte";
-  import { getLocalJson, setLocalJson } from "../util/storage";
-  import { onMount } from "svelte";
-  
 
   let url: string = "";
   let read: boolean = true;
@@ -14,10 +11,15 @@
 
   function deleteRelay(url: string) {
     relays.update((data) => {
-      data = data.filter(d => d.url == url);
+      data = data.filter(d => {
+        console.log('Url:', url, 'Url reg:', d.url)
+        return d.url != url
+      });
+      console.log('Data:' , data)
       return data;
     });
-    
+    console.log($relays)
+
     addToast({
       message: "Relay removed!",
       type: "success",
@@ -73,12 +75,9 @@
     relays.set([]);
   }
 
-  onMount(() => {
-    console.log(getLocalJson("halochat/relays"))
-  })
 </script>
 
-<div class="xl:w-6/12 lg:w-8/12 md:w-10/12 sm:w-full">
+<div class="xl:w-8/12 lg:w-10/12 md:w-10/12 sm:w-full">
   <div
     class="block p-6 rounded-lg shadow-lg bg-white w-full ml-6 mt-6 bg-blue-200"
   >
@@ -154,7 +153,7 @@
       >
         {#each $relays as relay}
           <li class="px-6 py-2 border-b border-gray-200 w-full rounded-t-lg">
-            <button on:click={() => deleteRelay(url)}>
+            <button on:click={() => deleteRelay(relay.url)}>
               <span class="fa-solid fa-trash" />
             </button>
             {relay.url} [Read: {relay.read}, Write: {relay.write}]
