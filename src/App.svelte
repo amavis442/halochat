@@ -8,25 +8,11 @@
   import Follow from "./routes/Follow.svelte";
   import "@fortawesome/fontawesome-free/css/fontawesome.css";
   import "@fortawesome/fontawesome-free/css/solid.css";
-  import { account } from "./lib/stores/account";
   import AccountInfo from "./lib/partials/AccountInfo.svelte";
-
   import Toasts from "./lib/Toasts.svelte";
-  import { notes } from "./lib/stores/notes";
-  import { users } from "./lib/stores/users";
-  import { relays } from "./lib/state/pool";
-  import { blocklist } from './lib/stores/block'
 
   export let url = "";
 
-  /* big reset for testing and debugging */
-  if (import.meta.env.VITE_APP_MODE == "debug") {
-    account.set(null);
-    notes.set(null);
-    relays.set(null);
-    users.set(null);
-    blocklist.set(null);
-  }
 </script>
 
 <Toasts />

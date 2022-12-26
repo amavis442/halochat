@@ -71,10 +71,11 @@
   <div class="h-85p">
     <div
       id="Notes"
-      class="container overflow-y-auto relative max-w-full mx-auto bg-gray-800
-      dark:highlight-white/5 shadow-lg ring-1 ring-black/5
-            rounded-xl divide-y ml-4 mr-4 h-full max-h-full md:w-8/12 ms:w-full mt-6 pb-5
-            space-y-0 place-content-start"
+      class="container overflow-y-auto relative mx-auto bg-gray-800
+            dark:highlight-white/5 shadow-lg ring-1 ring-black/5
+            rounded-xl divide-y ml-4 mr-4  mt-6 pb-5
+            space-y-0 place-content-start
+            h-full max-h-full xl:w-6/12 lg:w-10/12 md:w-11/12 sm:w-full"
       on:scroll={scrollHandler}
     >
       {#if $relays && Object.keys($relays).length}
@@ -111,11 +112,12 @@
       {/if}
     </div>
   </div>
-  <div class="h-15p md:w-8/12 ms:w-full mt-4">
+  <div class="h-15p mt-4 xl:w-6/12 lg:w-10/12 md:w-11/12 sm:w-full">
     <div
-      class="block max-w-full flex justify-center bg-white
+      class="block flex justify-center bg-white
       dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1 ring-black/5
-      rounded-xl divide-y dark:divide-slate-200/5 p-2 w-full ml-4 mr-4 bg-blue-200"
+      rounded-xl divide-y dark:divide-slate-200/5 p-2 ml-4 mr-4 bg-blue-200 
+      w-full max-w-full "
     >
       {#if $relays && $account && Object.keys($relays).length && $account.privkey}
         <div class="w-4/5 mr-2">

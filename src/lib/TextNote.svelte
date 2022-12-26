@@ -301,7 +301,7 @@
       </div>
       <div class="max-w-lg">
         <div class="text-left w-full max-w-max break-words items-top">
-          <span class="text-slate-800 text-sm font-medium dark:text-slate-400">
+          <span class="text-blakc text-md font-medium">
             {@html toHtml(note.content)}
             {#if link}
               <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -350,4 +350,32 @@
   </div>
 {/if}
 
-
+<style>
+  .border-indigo-100 {
+    border-color: rgb(224 231 255);
+  }
+  .border-indigo-200 {
+    border-color: rgb(199 210 254);
+  }
+  .border-indigo-300 {
+    border-color: rgb(165 180 252);
+  }
+  .border-indigo-400 {
+    border-color: rgb(129 140 248);
+  }
+  .border-indigo-500 {
+    border-color: rgb(99 102 241);
+  }
+  .border-indigo-600 {
+    border-color: rgb(79 70 229);
+  }
+  .border-indigo-700 {
+    border-color: rgb(67 56 202);
+  }
+  .border-indigo-800 {
+    border-color: rgb(55 48 163);
+  }
+  .border-indigo-900 {
+    border-color: rgb(49 46 129);
+  }
+</style>

@@ -1,9 +1,12 @@
 <script lang="ts">
-  import { relays } from "../state/pool";
+  import { pool, relays } from "../state/pool";
   import { addToast } from "../stores/toast";
   import Button from "../partials/Button.svelte";
   import Text from "../partials/Text.svelte";
   import Link from "../partials/Link.svelte";
+  import { getLocalJson, setLocalJson } from "../util/storage";
+  import { onMount } from "svelte";
+  
 
   let url: string = "";
   let read: boolean = true;
@@ -14,6 +17,10 @@
       delete data[url];
       return data;
     });
+    
+    setLocalJson('halochat/relays', $relays);
+    pool.removeRelay(url)
+
     addToast({
       message: "Relay removed!",
       type: "success",
@@ -28,6 +35,7 @@
       !url.match(/^wss?:\/\/[\w.:\/-]+$/) &&
       !url.match(/^http?:\/\/[\w.:\/-]+$/)
     ) {
+     
       addToast({
         message: "Please start websocket url with wss://",
         type: "error",
@@ -46,6 +54,10 @@
       }
       return data;
     });
+
+    setLocalJson('halochat/relays', $relays);
+    pool.addRelay(url)
+
     addToast({
       message: "Relay [" + url + "] added!",
       type: "success",
@@ -66,9 +78,13 @@
   function resetRelays() {
     relays.set({});
   }
+
+  onMount(() => {
+    console.log(getLocalJson("halochat/relays"))
+  })
 </script>
 
-<div class="sm:w-full md:w-6/12 sm:w-full">
+<div class="xl:w-6/12 lg:w-8/12 md:w-10/12 sm:w-full">
   <div
     class="block p-6 rounded-lg shadow-lg bg-white w-full ml-6 mt-6 bg-blue-200"
   >

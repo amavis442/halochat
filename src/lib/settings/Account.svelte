@@ -129,7 +129,7 @@
 </script>
 
 <div
-  class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6 bg-blue-200"
+  class="block p-6 rounded-lg shadow-lg bg-white xl:w-6/12 lg:w-8/12 md:w-10/12 sm:w-full ml-6 mt-6 bg-blue-200"
 >
   {#if !$relays || !Object.keys($relays).length} 
   <div class="bg-red-100 rounded-lg py-5 px-6 mb-4 text-base text-red-700 mb-3" role="alert"><i class="fa-solid fa-triangle-exclamation"></i> Add a relay first!!!</div>
