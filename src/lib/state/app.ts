@@ -467,8 +467,11 @@ async function annotateNote(note: TextNote, relay: string): Promise<TextNote> {
 async function handleTextNote(evt: Event, relay: string): Promise<void> {
 
     let $lastSeen = get(lastSeen)
-    if ($lastSeen < evt.created_at) {
-        $lastSeen = evt.created_at
+    let tags = evt.tags.filter(t => t[0] == 'e')
+    if (tags.length == 0) {     
+        if ($lastSeen < evt.created_at) {
+            $lastSeen = evt.created_at
+        }
     }
 
     if ($blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == evt.pubkey)) {
