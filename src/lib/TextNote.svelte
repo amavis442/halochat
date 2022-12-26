@@ -49,7 +49,7 @@
   }
 
   let followed = false;
-  $: followed = isFollowed()
+  $: followed = isFollowed();
 
   onMount(async () => {
     user = note?.user;
@@ -128,7 +128,7 @@
     }
     contacts.follow(note.pubkey, user.name);
     contacts.saveContactList();
-    followed = true
+    followed = true;
   }
 
   function unfollowUser() {
@@ -137,7 +137,7 @@
     let c = contacts.unFollow(note.pubkey);
     console.log(c);
     contacts.publishList(c);
-    followed = false
+    followed = false;
   }
 
   function removeNote() {
@@ -163,6 +163,8 @@
       timeout: 3000,
     });
   }
+
+  let borderColor = "border-indigo-" + (note.tree * 100 + 400);
 
   export let expanded: boolean = false;
   function toggleMenu() {
@@ -230,98 +232,122 @@
   <Spinner />
 {/await}
 {#if note && note.kind == 1}
-  <div class="flex items-top gap-4 p-4 w-full overflow-auto bg-blue-200">
+  <div
+    class="flex flex-row w-full items-top gap-2 mb-2 overflow-y-auto bg-white rounded-lg p-1 border-l-8 {borderColor}"
+  >
     <div
       on:click={() => (showInfoModal = !showInfoModal)}
       on:keyup={() => (showInfoModal = !showInfoModal)}
+      class="w-16 mr-2"
     >
       <img
-        class="w-12 h-12 rounded-full"
+        class="w-full h-14 rounded-full min-w-min"
         src={user && user.picture ? user.picture : "profile-placeholder.png"}
         alt={note.pubkey.slice(0, 5)}
         title={JSON.stringify(note)}
       />
     </div>
-    <div class="flex flex-col w-11/12">
-      <div class="flex items-start">
-        <div class="flex-start text-left w-6/12">
-          <strong
-            class="text-slate-900 text-sm font-medium dark:text-slate-200"
-          >
-            {normalizeName(user)}
-            <small class="text-gray">{getTime(note.created_at)}</small>
-          </strong>
-        </div>
-        <div class="flex-end text-right  w-6/12">
-          <span class="text-right">
-            {#if userHasAccount}
-              <div class="relative">
-                <button class="dropdown-toggle" on:click={toggleMenu}>
-                  <i class="fa-solid fa-ellipsis" />
-                </button>
-                {#if expanded}
-                  <div role="menu" tabindex="-1" class="dropdown-menu">
-                    <ul class="py-1 w-44 text-left">
-                      <li>
-                        <button class="downdown-menu-button" on:click={banUser}>
-                          <i class="fa-solid fa-ban" /> Block user
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          class="downdown-menu-button"
-                          on:click={removeNote}
-                        >
-                          <i class="fa-solid fa-comment-slash" /> Mute post
-                        </button>
-                      </li>
-                    </ul>
+
+    <div class="flex-col w-full">
+      <div class="px-2">
+        <div class="h-12">
+          <div class="flex gap-2 h-12 w-full ">
+            <div class="text-left order-first w-6/12">
+              <strong
+                class="text-slate-900 text-sm font-medium dark:text-slate-200"
+              >
+                {#if followed}
+                  <i class="fa-solid fa-bookmark" />
+                {/if}{normalizeName(user)}
+                <small class="text-gray">{getTime(note.created_at)}</small>
+              </strong>
+            </div>
+
+            <div class="text-right order-last w-6/12">
+              <span class="text-right">
+                {#if userHasAccount}
+                  <div class="relative">
+                    <button class="dropdown-toggle" on:click={toggleMenu}>
+                      <i class="fa-solid fa-ellipsis" />
+                    </button>
+                    {#if expanded}
+                      <div role="menu" tabindex="-1" class="dropdown-menu">
+                        <ul class="py-1 w-44 text-left">
+                          <li>
+                            <button
+                              class="downdown-menu-button"
+                              on:click={banUser}
+                            >
+                              <i class="fa-solid fa-ban" /> Block user
+                            </button>
+                          </li>
+                          <li>
+                            <button
+                              class="downdown-menu-button"
+                              on:click={removeNote}
+                            >
+                              <i class="fa-solid fa-comment-slash" /> Mute post
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+                    {/if}
                   </div>
                 {/if}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="max-w-lg">
+        <div class="text-left w-full max-w-max break-words items-top">
+          <span class="text-slate-800 text-sm font-medium dark:text-slate-400">
+            {@html toHtml(note.content)}
+            {#if link}
+              <!-- svelte-ignore a11y-click-events-have-key-events -->
+              <div class="mt-2" on:click={(e) => e.stopPropagation()}>
+                <Preview
+                  endpoint={`${import.meta.env.VITE_PREVIEW_LINK}/preview/link`}
+                  url={link}
+                />
               </div>
             {/if}
           </span>
         </div>
       </div>
-      <div class="text-left">
-        <span class="text-slate-500 text-sm font-medium dark:text-slate-400">
-          {@html toHtml(note.content)}
-          {#if link}
-            <!-- svelte-ignore a11y-click-events-have-key-events -->
-            <div class="mt-2" on:click={(e) => e.stopPropagation()}>
-              <Preview
-                endpoint={`${import.meta.env.VITE_PREVIEW_LINK}/preview/link`}
-                url={link}
-              />
-            </div>
-          {/if}
-        </span>
-      </div>
-      {#if userHasAccount}
-        <p class="mt-4 flex space-x-4 w-max p-1">
-          <span class={votedFor == "-" ? "text-blue-700" : ""}>
-            <button type="button" on:click={downvoteHandler}>
-              <i class="fa-solid fa-thumbs-down" />
-            </button>
-            {note?.downvotes ? note.downvotes : 0}
-          </span>
-          <span class={votedFor == "+" ? "text-blue-700" : ""}>
-            <button type="button" on:click={upvoteHandler}>
-              <i class="fa-solid fa-thumbs-up " />
-            </button>
-            {note?.upvotes ? note.upvotes : 0}
-          </span>
 
-          <span>
-            <button type="button" on:click={() => (showElement = !showElement)}>
-              <i class="fa-regular fa-comment-dots" />
-            </button>
-            {#if note.replies}
-              {note.replies.length}
-            {/if}
-          </span>
-        </p>
-      {/if}
+      <div class="w-full">
+        {#if userHasAccount}
+          <p class="mt-4 flex space-x-4 w-max p-1 items-end">
+            <span class={votedFor == "-" ? "text-blue-700" : ""}>
+              <button type="button" on:click={downvoteHandler}>
+                <i class="fa-solid fa-thumbs-down" />
+              </button>
+              {note?.downvotes ? note.downvotes : 0}
+            </span>
+            <span class={votedFor == "+" ? "text-blue-700" : ""}>
+              <button type="button" on:click={upvoteHandler}>
+                <i class="fa-solid fa-thumbs-up " />
+              </button>
+              {note?.upvotes ? note.upvotes : 0}
+            </span>
+
+            <span>
+              <button
+                type="button"
+                on:click={() => (showElement = !showElement)}
+              >
+                <i class="fa-regular fa-comment-dots" />
+              </button>
+              {#if note.replies}
+                {note.replies.length}
+              {/if}
+            </span>
+          </p>
+        {/if}
+      </div>
     </div>
   </div>
 {/if}
+
+

@@ -14,6 +14,7 @@ export type TextNote = Event & {
     downvotes?: number;
     relays?: Array<string>;
     user?: User;
+    tree?: number;
 }
 
 export type User = {

@@ -22,13 +22,12 @@
   beforeUpdate(() => {
     color = color + level * 100;
     ulClasses = classNames(
-      "border-l-indigo-600",
-      "w-full border-l-8 mt-0 top-0 margin-top-0 "
+      "w-full m-0 top-0"
     );
   });
 </script>
 
-<div class="flex flex-col">
+<div>
   <div class="flex items-top gap-4 p-4 ml-16">
     <Button click={toggle}>
       {#if expanded}
