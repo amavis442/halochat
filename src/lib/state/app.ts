@@ -660,6 +660,12 @@ function handleReaction(evt: Event, relay: string) {
     }
 }
 
+/**
+ * TODO: this will be time consuming, need to find a faster way to parse the tree for the ids i want
+ * 
+ * @param evt 
+ * @param relay 
+ */
 function handleDelete(evt, relay) {
     let pubkey = evt.pubkey
     let eventsToDelete: Array<any> = evt.tags.filter((e: Event) => e[0] == 'e')
@@ -670,10 +676,8 @@ function handleDelete(evt, relay) {
         for (let n = 0; n < eventsToDelete.length; n++) {
             let searchEventId = eventsToDelete[n][1]
             let foundNote = find(rootNotes[i], searchEventId)
-            if (foundNote) {
-                if (foundNote.pubkey == pubkey) {
-                    foundNote.content = '<i class="fa-solid fa-triangle-exclamation"></i> Note deleted. Reason: ' + foundNote.content
-                }
+            if (foundNote && foundNote.pubkey == pubkey) {
+                foundNote.content = '<i class="fa-solid fa-triangle-exclamation"></i> Note deleted. Reason: ' + evt.content
                 continue
             }
         }
