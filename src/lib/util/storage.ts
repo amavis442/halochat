@@ -6,7 +6,8 @@ export const allowedKeys = [
     'halochat/notestack',
     'halochat/blocklist',
     'halochat/blocktext',
-    'halochat/followlist'
+    'halochat/followlist',
+    'halochat/lastseen'
 ]
 
 export function getLocalJson(k: string) {

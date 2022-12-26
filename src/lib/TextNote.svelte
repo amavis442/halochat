@@ -232,7 +232,7 @@
   <Spinner />
 {/await}
 {#if note && note.kind == 1}
-  <div
+  <div id={note.id}
     class="flex flex-row w-full min-h-full items-top gap-2 mb-2 overflow-y-auto bg-white rounded-lg p-1 border-l-8 {borderColor}"
   >
     <div

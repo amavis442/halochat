@@ -466,6 +466,11 @@ async function annotateNote(note: TextNote, relay: string): Promise<TextNote> {
  */
 async function handleTextNote(evt: Event, relay: string): Promise<void> {
 
+    let $lastSeen = get(lastSeen)
+    if ($lastSeen < evt.created_at) {
+        $lastSeen = evt.created_at
+    }
+
     if ($blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == evt.pubkey)) {
         log('handleTextNote:: user on blocklist ', evt)
         return
@@ -618,7 +623,7 @@ function handleReaction(evt: Event, relay: string) {
             }
         }
     }
-    
+
     if (note) {
         log('handleReaction:: Reaction found node: ', note)
 
@@ -654,6 +659,27 @@ function handleReaction(evt: Event, relay: string) {
         feed.update(data => data) // make sure the view is updated without this, it will not
     }
 }
+
+function handleDelete(evt, relay) {
+    let pubkey = evt.pubkey
+    let eventsToDelete: Array<any> = evt.tags.filter((e: Event) => e[0] == 'e')
+    let $feed = get(feed)
+
+    let rootNotes: Array<TextNote> = $feed.filter(e => e.tree == 0)
+    for (let i = 0; i < rootNotes.length; i++) {
+        for (let n = 0; n < eventsToDelete.length; n++) {
+            let searchEventId = eventsToDelete[n][1]
+            let foundNote = find(rootNotes[i], searchEventId)
+            if (foundNote) {
+                if (foundNote.pubkey == pubkey) {
+                    foundNote.content = '<i class="fa-solid fa-triangle-exclamation"></i> Note deleted. Reason: ' + foundNote.content
+                }
+                continue
+            }
+        }
+    }
+}
+
 
 export class Listener {
     filter: Filter
@@ -692,7 +718,7 @@ export class Listener {
     }
 }
 
-
+export let lastSeen = writable(getLocalJson('halochat/lastseen') || now() - 60 * 60)
 export function onEvent(evt: Event, relay: string) {
     switch (evt.kind) {
         case 0:
@@ -700,6 +726,12 @@ export function onEvent(evt: Event, relay: string) {
             break
         case 1:
             handleTextNote(evt, relay)
+            break
+        case 3:
+            // Update contact list, and seeing other contact lists
+            break
+        case 5:
+            handleDelete(evt, relay)
             break
         case 7:
             handleReaction(evt, relay)

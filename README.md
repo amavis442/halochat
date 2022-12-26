@@ -18,7 +18,31 @@ Features
 - [x] Generate keys (Private/Public)
 - [x] Replies
 - [x] Upvotes/Downvotes
-- [ ] Preview links
+- [x] Preview links
 - [ ] Infinite scroller
-- [ ] Follow
+- [x] Follow
 - [ ] Channels
+
+
+Status as in [Nips](https://github.com/nostr-protocol/nips)
+
+- [x] NIP-01: Basic protocol flow description
+- [x] NIP-02: Contact List and Petnames
+- [ ] NIP-04: Encrypted Direct Message
+- [ ] NIP-05: Mapping Nostr keys to DNS-based internet identifiers
+- [ ] NIP-06: Basic key derivation from mnemonic seed phrase
+- [ ] NIP-08: Handling Mentions
+- [x] NIP-09: Event Deletion
+- [x] NIP-10: Conventions for clients' use of e and p tags in text events.
+- [ ] NIP-11: Relay Information Document
+- [ ] NIP-12: Generic Tag Queries
+- [ ] NIP-14: Subject tag in text events.
+- [x] NIP-15: End of Stored Events Notice
+- [ ] NIP-16: Event Treatment
+- [ ] NIP-19: bech32-encoded entities
+- [x] NIP-25: Reactions
+- [ ] NIP-26: Delegated Event Signing
+- [ ] NIP-28: Public Chat
+- [ ] NIP-35: User Discovery
+- [ ] NIP-36: Sensitive Content
+- [ ] NIP-40: Expiration Timestamp

@@ -1,8 +1,8 @@
 <script lang="ts">
   import { publish, publishReply, relays } from "./state/pool";
-  import { onMount, beforeUpdate, onDestroy } from "svelte";
-  import { get, writable } from "svelte/store";
-  import { Listener } from "./state/app";
+  import { onMount, onDestroy } from "svelte";
+  import { get } from "svelte/store";
+  import { Listener, lastSeen } from "./state/app";
   import type { TextNote as NoteEvent, Account } from "./state/types";
   import { account } from "./stores/account";
   import { feed } from "./state/app";
@@ -39,8 +39,7 @@
 
   onMount(async () => {
     if ($relays && $relays.length) {
-      let lastSync: number = now() - 60 * 60;
-      listener = new Listener({ since: lastSync });
+      listener = new Listener({ since: $lastSeen });
       listener.start();
 
       let $account: Account = get(account);
