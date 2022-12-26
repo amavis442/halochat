@@ -19,9 +19,9 @@
 
 <Router {url}>
   <div
-    class="flex h-screen w-screen m-auto"
+    class="flex h-screen w-screen m-auto justify-center"
   >
-    <header class="mt-6 items-center pl-4 border-gray-600 border-b space-y-3 pb-5 sm:w-full md:w-3/12 xl:w-6/10">
+    <header class="mt-6 items-center pl-4 border-gray-600 border-b space-y-3 pb-5 xl:w-2/12 md:w-3/12 sm:w-full">
         <AccountInfo />
         <nav>
           <p class="nav-p">
@@ -43,7 +43,7 @@
         </nav>
     </header>
 
-    <main class="max-h-max w-full overflow-y-auto">
+    <main class="xl:w-6/12 md:w-9/12 sm:w-full overflow-y-auto">
       <Route path="/">
         <Feed />
       </Route>

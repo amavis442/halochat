@@ -91,10 +91,11 @@
   <div class="h-85p">
     <div
       id="Notes"
-      class="container overflow-y-auto relative max-w-full mx-auto bg-gray-800
+      class="flex flex-col overflow-y-auto relative mx-auto bg-gray-800
       dark:highlight-white/5 shadow-lg ring-1 ring-black/5
-            rounded-xl divide-y ml-4 mr-4 h-full max-h-full md:w-8/12 ms:w-full mt-6 pb-5
-            space-y-0 place-content-start"
+      rounded-xl divide-y ml-4 mr-4 mt-6
+      space-y-0 place-content-start
+      h-full max-h-full w-11/12"
       on:scroll={scrollHandler}
     >
       {#if $relays && $relays.length}
@@ -122,7 +123,6 @@
         {#await moreLoading}
           <Spinner size={36} />
         {/await}
-        <footer id="footer" class="h-5" />
       {:else}
         <p class="bg-white">
           Please add a relay first. You can do this here
@@ -133,9 +133,10 @@
   </div>
   <div class="h-15p md:w-8/12 ms:w-full mt-4">
     <div
-      class="block max-w-full flex justify-center bg-white
+      class="block flex justify-center bg-white
       dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1 ring-black/5
-      rounded-xl divide-y dark:divide-slate-200/5 p-2 w-full ml-4 mr-4 bg-blue-200"
+      rounded-xl divide-y dark:divide-slate-200/5 p-2 ml-4 mr-4 bg-blue-200 
+      w-11/12"
     >
       {#if $relays && $account && $relays.length && $account.privkey}
         <div class="w-4/5 mr-2">

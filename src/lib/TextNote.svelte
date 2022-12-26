@@ -233,7 +233,7 @@
 {/await}
 {#if note && note.kind == 1}
   <div
-    class="flex flex-row w-full items-top gap-2 mb-2 overflow-y-auto bg-white rounded-lg p-1 border-l-8 {borderColor}"
+    class="flex flex-row w-full min-h-full items-top gap-2 mb-2 overflow-y-auto bg-white rounded-lg p-1 border-l-8 {borderColor}"
   >
     <div
       on:click={() => (showInfoModal = !showInfoModal)}
@@ -254,7 +254,7 @@
           <div class="flex gap-2 h-12 w-full ">
             <div class="text-left order-first w-6/12">
               <strong
-                class="text-slate-900 text-sm font-medium dark:text-slate-200"
+                class="text-black text-sm font-medium"
               >
                 {#if followed}
                   <i class="fa-solid fa-bookmark" />
@@ -263,7 +263,7 @@
               </strong>
             </div>
 
-            <div class="text-right order-last w-6/12">
+            <div class="text-right order-last md:w-6/12">
               <span class="text-right">
                 {#if userHasAccount}
                   <div class="relative">
@@ -272,7 +272,7 @@
                     </button>
                     {#if expanded}
                       <div role="menu" tabindex="-1" class="dropdown-menu">
-                        <ul class="py-1 w-44 text-left">
+                        <ul class="py-2 w-44 text-left">
                           <li>
                             <button
                               class="downdown-menu-button"
@@ -299,7 +299,7 @@
           </div>
         </div>
       </div>
-      <div class="max-w-lg">
+      <div class="xl:max-w-lg md:max-w-lg sm:max-w-sm">
         <div class="text-left w-full max-w-max break-words items-top">
           <span class="text-black text-md font-medium">
             {@html toHtml(note.content)}
@@ -318,7 +318,7 @@
 
       <div class="w-full">
         {#if userHasAccount}
-          <p class="mt-4 flex space-x-4 w-max p-1 items-end">
+          <p class="mt-4 flex space-x-8 w-full p-1">
             <span class={votedFor == "-" ? "text-blue-700" : ""}>
               <button type="button" on:click={downvoteHandler}>
                 <i class="fa-solid fa-thumbs-down" />

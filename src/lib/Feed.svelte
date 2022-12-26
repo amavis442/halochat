@@ -71,19 +71,19 @@
   <div class="h-85p">
     <div
       id="Notes"
-      class="container overflow-y-auto relative mx-auto bg-gray-800
+      class="flex flex-col overflow-y-auto relative mx-auto bg-gray-800
             dark:highlight-white/5 shadow-lg ring-1 ring-black/5
-            rounded-xl divide-y ml-4 mr-4  mt-6 pb-5
+            rounded-xl divide-y ml-4 mr-4 mt-6
             space-y-0 place-content-start
-            h-full max-h-full xl:w-6/12 lg:w-10/12 md:w-11/12 sm:w-full"
+            h-full max-h-full w-11/12"
       on:scroll={scrollHandler}
     >
       {#if $relays && $relays.length}
         {#each $feed ? $feed : [] as note (note.id)}
-          <ul class="items-center w-full mb-2 border-hidden">
+          <ul class="items-center w-full border-hidden">
             <li>
               <div
-                class="flex flex-col items-top gap-4 p-4 w-full overflow-hidden rounded-lg bg-blue-200 mb-2"
+                class="flex flex-col items-top gap-4 p-2 w-full overflow-hidden rounded-lg bg-blue-200 mb-2"
               >
                 <TextNote {note} {userHasAccount} />
                 {#if note?.replies && note.replies.length > 0}
@@ -103,7 +103,6 @@
         {#await moreLoading}
           <Spinner size={36} />
         {/await}
-        <footer id="footer" class="h-5" />
       {:else}
         <p class="bg-white">
           Please add a relay first. You can do this here
@@ -112,12 +111,12 @@
       {/if}
     </div>
   </div>
-  <div class="h-15p mt-4 xl:w-6/12 lg:w-10/12 md:w-11/12 sm:w-full">
+  <div class="h-15p mt-4">
     <div
       class="block flex justify-center bg-white
       dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1 ring-black/5
       rounded-xl divide-y dark:divide-slate-200/5 p-2 ml-4 mr-4 bg-blue-200 
-      w-full max-w-full "
+      w-11/12"
     >
       {#if $relays && $account && $relays.length && $account.privkey}
         <div class="w-4/5 mr-2">
