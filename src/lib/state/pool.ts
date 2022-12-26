@@ -1,4 +1,4 @@
-import { writable, get } from 'svelte/store'
+import { writable, get, type Writable } from 'svelte/store'
 import { getLocalJson, setLocalJson } from '../util/storage'
 import { now, delay } from "../util/time";
 import { head } from 'ramda';
@@ -15,35 +15,33 @@ import {
   type Event,
   type Filter,
   type Sub
-} from 'nostr-tools'
-import 'websocket-polyfill'
+} from 'nostr-tools';
+import 'websocket-polyfill';
 
 export class relayPool {
   relays: { [key: string]: Relay } = {}
 
-  addRelay = async (url: string) => {
-    this.relays[url] = relayInit(url)
-    await this.relays[url].connect()
+  addRelay = (url: string) => {
+    let relay = relayInit(url)
+    relay.connect()
 
-    this.relays[url].on('error', () => {
+    relay.on('error', () => {
       console.log(`failed to connect to ${url}`)
     })
-    await delay(500)
 
-    //if (this.relays[url].status == 1) {
-    this.relays[url].on('connect', () => {
+    relay.on('connect', () => {
       console.log(`connected to ${url}`)
     })
 
-    this.relays[url].on('notice', (evt) => {
-
+    relay.on('notice', (evt) => {
       console.log(`Got an notice from ${url}`, evt)
     })
 
-    this.relays[url].on('disconnect', () => {
+    relay.on('disconnect', () => {
       console.log(`Closing connection to ${url}`)
     })
-    //}
+
+    this.relays[url] = relay
   }
 
   removeRelay = (url: string) => {
@@ -55,9 +53,10 @@ export class relayPool {
   publish = async (evt: Event) => {
     const $relays = get(relays)
 
-    console.log(Object.entries($relays))
+    console.log($relays)
     for (const [url, relay] of Object.entries(this.relays)) {
-      if ($relays[url].write && relay.status == 1) {
+      let $relay = $relays.find(r => r.url == url)
+      if ($relay.write && relay.status == 1) {
         let pub = relay.publish(evt)
         pub.on('ok', () => {
           console.log(`${url} has accepted our event`)
@@ -72,7 +71,7 @@ export class relayPool {
       if (relay.status !== 1) {
         console.error(`Not publishing: Relay ${url} has state ${relay.status} and should be 1 = OPEN (0 CONNECTING, 1 OPEN, 2 CLOSING, 3 CLOSE)`)
       }
-      if (!$relays[url].write) {
+      if (!$relay.write) {
         console.error(`${url} has no write permissions set`)
       }
     }
@@ -95,31 +94,24 @@ export class relayPool {
 }
 export const pool = new relayPool()
 
-export const waitForOpenConnection = (relay:Relay) => {
+export const waitForOpenConnection = (relay: Relay) => {
   return new Promise((resolve, reject) => {
-      const maxNumberOfAttempts = 10
-      const intervalTime = 200 //ms
+    const maxNumberOfAttempts = 10
+    const intervalTime = 200 //ms
 
-      let currentAttempt = 0
-      const interval = setInterval(() => {
-          if (currentAttempt > maxNumberOfAttempts - 1) {
-              clearInterval(interval)
-              reject(new Error('Maximum number of attempts exceeded'))
-          } else if (relay.status === 1) {
-              clearInterval(interval)
-              resolve(true)
-          }
-          currentAttempt++
-      }, intervalTime)
+    let currentAttempt = 0
+    const interval = setInterval(() => {
+      if (currentAttempt > maxNumberOfAttempts - 1) {
+        clearInterval(interval)
+        reject(new Error('Maximum number of attempts exceeded'))
+      } else if (relay.status === 1) {
+        clearInterval(interval)
+        resolve(true)
+      }
+      currentAttempt++
+    }, intervalTime)
   })
 }
-
-
-//@ts-ignore does exist just not in index.d.ts
-/* pool.onNotice((message: string, relay?: Relay) => {
-  const url: string = relay.url
-  log(`onNotice: Got a notice event from relay ${url}: ${message}`);
-}) */
 
 /**
  * id and sig are added in the pool.publish() function.
@@ -143,12 +135,12 @@ export const createEvent = async (kind: number, content: string = '', tags: stri
     tags = [...tags, clientTag]
   }
 
-  let note: Event = { kind: kind, content: content, tags: tags, pubkey: publicKey, created_at: createdAt }
-  let sig: any = await signEvent(note, $account.privkey)
+  let note: Event & { id: string, sig: string } = { kind: kind, content: content, tags: tags, pubkey: publicKey, created_at: createdAt, id: '', sig: '' }
+  let sig: any = signEvent(note, $account.privkey)
   let id: any = getEventHash(note)
   note = { ...note, sig, id }
 
-  console.debug('VerifySignature', await verifySignature(note))
+  console.debug('VerifySignature', verifySignature(note))
   console.debug('validateEvent', validateEvent(note))
   console.debug('createEvent:: ', note)
   return note
@@ -156,7 +148,9 @@ export const createEvent = async (kind: number, content: string = '', tags: stri
 
 export const getData = async (filter: Filter): Promise<Event[]> => {
   const $relays = get(relays)
-  const numRelays = Object.keys($relays).length
+  const numRelays = $relays.length
+  const poolRelays = pool.getRelays()
+  console.log(pool)
 
   return new Promise((resolve, reject) => {
     let subs: { [key: string]: Sub } = {}
@@ -164,9 +158,15 @@ export const getData = async (filter: Filter): Promise<Event[]> => {
     let relayReturns: string[] = []
     const subId = 'getter' + now()
 
-    for (const [url, relay] of Object.entries(pool.getRelays())) {
-      if ($relays && !$relays[url].write || relay.status !== 1) {
+    if (!Object.entries(pool.getRelays()).length) {
+      reject('Pool of relays is empty.')
+    }
 
+    for (const [url, relay] of Object.entries(pool.getRelays())) {
+      let $relay = $relays.find(r => r.url == url)
+
+      if ($relays && !$relay.write || relay.status !== 1) {
+        console.log(`Relay ${url} has status ${relay.status}`)
         relayReturns.push(url)
         if (relayReturns.length >= numRelays) {
           reject(new Error('No relays with open connection'))
@@ -174,14 +174,12 @@ export const getData = async (filter: Filter): Promise<Event[]> => {
         continue
       }
       console.debug(`getData:: Request data from ${url}`)
+      try{ 
       subs[url] = relay.sub([filter], {})
 
       subs[url].on('event', (event: Event) => {
         console.debug(`getData:: Getting EVENT data from ${url}`, event)
         result.push(event)
-        //if (timeoutId) {
-        //  clearTimeout(timeoutId)
-        //}
         resolve({ result: result, subs: subs })
       })
 
@@ -189,12 +187,12 @@ export const getData = async (filter: Filter): Promise<Event[]> => {
         console.debug(`getData:: Received EOSE from ${url}`)
         relayReturns.push(url)
         if (relayReturns.length >= numRelays) {
-          //if (timeoutId) {
-          //  clearTimeout(timeoutId)
-          //}
           resolve({ result: result, subs: subs })
         }
       })
+     } catch(error) {
+      reject(error)
+     }
     }
     //let timeoutId = setTimeout(() => reject('Took to long for the relays to respond') , 15000);
   })
@@ -293,7 +291,7 @@ let $relays = get(relays)
 relays.subscribe($relays => {
   try {
     Object.keys(pool.getRelays()).forEach((url: string) => {
-      if ($relays && !$relays[url]) {
+      if ($relays && !$relays.find(r => r.url == url)) {
         pool.removeRelay(url)
         console.log('Remove relay from pool:', url)
       }
@@ -303,12 +301,12 @@ relays.subscribe($relays => {
   }
 
   if ($relays) {
-    for (const [url, value] of Object.entries($relays)) {
-      console.log(`${url}: permissions: ${JSON.stringify(value)}`);
+    for (const relay of $relays) {
+      console.log(`${relay.url}: permissions: ${JSON.stringify(relay)}`);
 
-      if (!pool.hasRelay(url)) {
-        pool.addRelay(url)
-        console.log('Add relay to pool: ', url)
+      if (!pool.hasRelay(relay.url)) {
+        pool.addRelay(relay.url)
+        console.log('Add relay to pool: ', relay.url)
       }
     }
   }

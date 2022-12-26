@@ -128,7 +128,7 @@
   </div>
 {/await}
 
-{#if $relays && Object.keys($relays).length && followPubKeys && followPubKeys.length}
+{#if $relays && $relays.length && followPubKeys && followPubKeys.length}
   <div
     class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6 text-left bg-blue-200"
   >

@@ -38,7 +38,7 @@
   }
 
   onMount(async () => {
-    if ($relays && Object.keys($relays).length) {
+    if ($relays && $relays.length) {
       let lastSync: number = now() - 60 * 60;
       listener = new Listener({ since: lastSync });
       listener.start();
@@ -78,7 +78,7 @@
             h-full max-h-full xl:w-6/12 lg:w-10/12 md:w-11/12 sm:w-full"
       on:scroll={scrollHandler}
     >
-      {#if $relays && Object.keys($relays).length}
+      {#if $relays && $relays.length}
         {#each $feed ? $feed : [] as note (note.id)}
           <ul class="items-center w-full mb-2 border-hidden">
             <li>
@@ -119,7 +119,7 @@
       rounded-xl divide-y dark:divide-slate-200/5 p-2 ml-4 mr-4 bg-blue-200 
       w-full max-w-full "
     >
-      {#if $relays && $account && Object.keys($relays).length && $account.privkey}
+      {#if $relays && $account && $relays.length && $account.privkey}
         <div class="w-4/5 mr-2">
           <Text bind:value={msg} id="msg" placeholder="Message to send" />
         </div>

@@ -19,7 +19,7 @@ export function getLocalJson(k: string) {
         try {
             return JSON.parse(data)
         } catch (e) {
-            return null
+            console.error("Local Storage is full, Please empty data" , e);
         }
     }
     return null
@@ -33,6 +33,6 @@ export function setLocalJson(k: string, v: any) {
     try {
         localStorage.setItem(k, JSON.stringify(v))
     } catch (e) {
-        console.error("Local Storage is full, Please empty data");
+        console.error("Local Storage is full, Please empty data", e);
     }
 }

@@ -14,13 +14,10 @@
 
   function deleteRelay(url: string) {
     relays.update((data) => {
-      delete data[url];
+      data = data.filter(d => d.url == url);
       return data;
     });
     
-    setLocalJson('halochat/relays', $relays);
-    pool.removeRelay(url)
-
     addToast({
       message: "Relay removed!",
       type: "success",
@@ -46,17 +43,14 @@
     }
 
     relays.update((data) => {
-      if (!data) data = {};
-      const result = data[url];
+      if (!data) data = [];
+      const result = data.find(d=>d.url ==url);
       if (!result) {
-        data[url] = { read: read, write: write };
+        data.push({url:url, read: read, write: write});
         return data;
       }
       return data;
     });
-
-    setLocalJson('halochat/relays', $relays);
-    pool.addRelay(url)
 
     addToast({
       message: "Relay [" + url + "] added!",
@@ -76,7 +70,7 @@
   }
 
   function resetRelays() {
-    relays.set({});
+    relays.set([]);
   }
 
   onMount(() => {
@@ -158,12 +152,12 @@
       <ul
         class="bg-white rounded-lg border border-gray-200 w-full text-gray-900 text-left"
       >
-        {#each Object.entries($relays) as [url, relay]}
+        {#each $relays as relay}
           <li class="px-6 py-2 border-b border-gray-200 w-full rounded-t-lg">
             <button on:click={() => deleteRelay(url)}>
               <span class="fa-solid fa-trash" />
             </button>
-            {url} [Read: {relay.read}, Write: {relay.write}]
+            {relay.url} [Read: {relay.read}, Write: {relay.write}]
           </li>
         {/each}
       </ul>

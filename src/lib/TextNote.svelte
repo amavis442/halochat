@@ -241,7 +241,7 @@
       class="w-16 mr-2"
     >
       <img
-        class="w-full h-14 rounded-full min-w-min"
+        class="w-14 h-14 rounded-full"
         src={user && user.picture ? user.picture : "profile-placeholder.png"}
         alt={note.pubkey.slice(0, 5)}
         title={JSON.stringify(note)}
@@ -301,7 +301,7 @@
       </div>
       <div class="max-w-lg">
         <div class="text-left w-full max-w-max break-words items-top">
-          <span class="text-blakc text-md font-medium">
+          <span class="text-black text-md font-medium">
             {@html toHtml(note.content)}
             {#if link}
               <!-- svelte-ignore a11y-click-events-have-key-events -->

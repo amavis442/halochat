@@ -94,8 +94,11 @@
       kinds: [0],
       authors: [pubkey],
     };
+    
     log("Account view:: checkPubkey filter ", filter);
-    promise = getData(filter).then((result: Array<Event> | null) => {
+
+    promise = getData(filter)
+    .then((result: Array<Event> | null) => {
       if (result.length) {
         let data = result[0];
         const content = JSON.parse(data.content);
@@ -131,7 +134,7 @@
 <div
   class="block p-6 rounded-lg shadow-lg bg-white xl:w-6/12 lg:w-8/12 md:w-10/12 sm:w-full ml-6 mt-6 bg-blue-200"
 >
-  {#if !$relays || !Object.keys($relays).length} 
+  {#if !$relays || !$relays.length} 
   <div class="bg-red-100 rounded-lg py-5 px-6 mb-4 text-base text-red-700 mb-3" role="alert"><i class="fa-solid fa-triangle-exclamation"></i> Add a relay first!!!</div>
   {/if}
 
@@ -250,7 +253,11 @@
         <button on:click={() => deleteOldAccount()}>
           <span class="fa-solid fa-trash" />
         </button>
+        {#if $account.name}
+          {$account.name}
+        {:else}
         {$account.pubkey.slice(0, 5)}....{$account.pubkey.slice(-5)}
+        {/if}
       </li>
     </ul>
   </div>
