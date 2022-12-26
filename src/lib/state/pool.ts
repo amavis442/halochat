@@ -39,6 +39,7 @@ export class relayPool {
 
     relay.on('disconnect', () => {
       console.log(`Closing connection to ${url}`)
+      if (relay.status == 3) relay.connect() //reconnect
     })
 
     this.relays[url] = relay
