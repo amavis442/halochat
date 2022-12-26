@@ -29,7 +29,7 @@
         log("error", err);
       });
 
-    if (json && json.title) {
+    if (json) {
       preview = json;
     }
   });
@@ -45,11 +45,20 @@
           <img src={preview.images[0]} alt={preview.description} />
           <div class="h-px bg-medium" />
         {/if}
+        {#if preview.mediaType == "image"}
+          <img src={preview.url} alt={preview.url} />
+          <div class="h-px bg-medium" />
+        {/if}
+
         <div class="px-4 py-2 text-black flex flex-col bg-white">
-          <strong class="whitespace-nowrap text-ellipsis overflow-hidden"
-            >{preview.title}</strong
-          >
-          <small>{preview.description}</small>
+          {#if preview.title}
+            <strong class="whitespace-nowrap text-ellipsis overflow-hidden"
+              >{preview.title}</strong
+            >
+          {/if}
+          {#if preview.description}
+            <small>{preview.description}</small>
+          {/if}
         </div>
       </Link>
     </div>

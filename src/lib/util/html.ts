@@ -1,14 +1,14 @@
 export function findLink(t: string): string | undefined {
-  const match = t.match(/https?:\/\/([\w.-]+)[^ ]*/);
-  if (match && match[0]) {
-    return match[0];
-  }
-
   let m = ytVidId(t);
   if (m) return m;
 
   let p = imgTag(t);
   if (p) return p;
+
+  const match = t.match(/https?:\/\/([\w.-]+)[^ ]*/);
+  if (match && match[0]) {
+    return match[0];
+  }
 
   return undefined;
 }
@@ -20,15 +20,13 @@ export function findLink(t: string): string | undefined {
  * @url: https://stackoverflow.com/a/10315969/624466
  */
 function ytVidId(url: string) {
-  let p = /^(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})(?:\S+)?$/;
-  let match = url.match(p);
-  return (match) ? match[0] : false;
+  let match = url.match(/^(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})(?:\S+)?$/);
+  return (match && match[0]) ? match[0] : false;
 }
 
 function imgTag(url: string) {
-  let p = (/\.(gif|jpe?g|tiff?|png|webp|bmp)$/i);
-  let match = url.match(p);
-  return (match) ? match[0] : false;
+  let match = url.match( /^https?:\/\/(?:[a-z\-]+\.)+[a-z]{2,6}(?:\/[^\/#?]+)+\.(?:jpe?g|gif|png|webp)$/i);
+  return (match && match[0]) ? match[0] : false;
 }
 
 
