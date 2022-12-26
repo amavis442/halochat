@@ -28,7 +28,7 @@ export class relayPool {
     this.relays[url].on('error', () => {
       console.log(`failed to connect to ${url}`)
     })
-    delay(500)
+    await delay(500)
 
     //if (this.relays[url].status == 1) {
     this.relays[url].on('connect', () => {
@@ -95,6 +95,26 @@ export class relayPool {
 }
 export const pool = new relayPool()
 
+export const waitForOpenConnection = (relay:Relay) => {
+  return new Promise((resolve, reject) => {
+      const maxNumberOfAttempts = 10
+      const intervalTime = 200 //ms
+
+      let currentAttempt = 0
+      const interval = setInterval(() => {
+          if (currentAttempt > maxNumberOfAttempts - 1) {
+              clearInterval(interval)
+              reject(new Error('Maximum number of attempts exceeded'))
+          } else if (relay.status === 1) {
+              clearInterval(interval)
+              resolve(true)
+          }
+          currentAttempt++
+      }, intervalTime)
+  })
+}
+
+
 //@ts-ignore does exist just not in index.d.ts
 /* pool.onNotice((message: string, relay?: Relay) => {
   const url: string = relay.url
@@ -145,8 +165,12 @@ export const getData = async (filter: Filter): Promise<Event[]> => {
     const subId = 'getter' + now()
 
     for (const [url, relay] of Object.entries(pool.getRelays())) {
-      if ($relays && !$relays[url].write && relay.status !== 1) {
+      if ($relays && !$relays[url].write || relay.status !== 1) {
+
         relayReturns.push(url)
+        if (relayReturns.length >= numRelays) {
+          reject(new Error('No relays with open connection'))
+        }
         continue
       }
       console.debug(`getData:: Request data from ${url}`)

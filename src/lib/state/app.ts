@@ -1,11 +1,11 @@
 import { get, writable, type Writable } from 'svelte/store'
 import { users, annotateUsers, formatUser } from '../stores/users'
-import { now } from "../util/time"
+import { delay, now } from "../util/time"
 import { find } from "../util/misc"
 import { uniq, pluck, difference, uniqBy } from 'ramda'
 import type { User, TextNote, Reaction } from './types'
 import type { Event, Filter, Sub } from 'nostr-tools'
-import { pool, getData } from './pool'
+import { pool, getData, waitForOpenConnection } from './pool'
 import { prop, sort, descend } from "ramda";
 import { setLocalJson, getLocalJson } from '../util/storage'
 import { getRootTag, getReplyTag } from '../util/tags';
@@ -259,6 +259,7 @@ function initNote(note: TextNote) {
     note.downvotes = 0
     note.upvotes = 0
     note.reactions = []
+    note.tree = 0 // rootnote
     return note
 }
 
@@ -362,15 +363,19 @@ async function processReplyFeed(evt: Event, replies: Array<Event>, relay: string
                         parent = list[keys[i]] ? list[keys[i]] : null
                         if (!parent) {
                             console.log('processReplyFeed:: parent node Not in result set ', keys[i])
-                            getData({ ids: [keys[i]], kinds: [1] }).then((data) => {
+                            getData({ ids: [keys[i]], kinds: [1] })
+                            .then((data) => {
                                 if (Array.isArray(data)) data = data[0]
                                 parent = data
                                 console.log('processReplyFeed:: parent node Not in result set result get data', data)
                             })
                         }
+
                         Object.values(map[keys[i]]).forEach((replyId: string) => {
                             if (parent) {
                                 if (!parent.replies) parent.replies = []
+                                let item = list[replyId]
+                                item.tree = parent.tree + 1
                                 parent.replies.push(list[replyId])
                             }
                         })
@@ -503,6 +508,7 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
             handleMentions(note)
                 .then((note) => annotateNote(note, relay))
                 .then((note) => {
+                    note.tree = 1
                     if (!rootNote.replies) rootNote.replies = []
                     rootNote.replies.push(note)
                     rootNote.replies = uniqBy(prop('id'), rootNote.replies)
@@ -523,6 +529,7 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
                 handleMentions(note)
                     .then((note) => annotateNote(note, relay))
                     .then((note) => {
+                        note.tree = 2
                         replyNote.replies.push(note)
                         replyNote.replies = uniqBy(prop('id'), replyNote.replies)
                         syncNoteTree(rootNote)
@@ -662,6 +669,12 @@ export class Listener {
 
     async start() {
         for (const [url, relay] of Object.entries(pool.getRelays())) {
+            if (relay.status !== 1) {
+                try {
+                    await waitForOpenConnection(relay)
+                } catch (err) { console.error(err) }
+            }
+
             this.subs[url] = relay.sub([this.filter], {id: this.id})
         
             this.subs[url].on('event', event => {
