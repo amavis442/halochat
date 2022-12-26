@@ -50,16 +50,16 @@
           <div class="h-px bg-medium" />
         {/if}
 
-        <div class="px-4 py-2 text-black flex flex-col bg-white">
-          {#if preview.title}
+        {#if preview.title}
+          <div class="px-4 py-2 text-black flex flex-col bg-white">
             <strong class="whitespace-nowrap text-ellipsis overflow-hidden"
               >{preview.title}</strong
             >
-          {/if}
-          {#if preview.description}
-            <small>{preview.description}</small>
-          {/if}
-        </div>
+            {#if preview.description}
+              <small>{preview.description}</small>
+            {/if}
+          </div>
+        {/if}
       </Link>
     </div>
   </div>
