@@ -20,24 +20,6 @@ module.exports = {
                 '100p': '100%'
               }
         },
-        colors: {
-            transparent: "transparent",
-            current: 'currentColor',
-            accent: "#EB5E28",
-            light: "#CCC5B9",
-            medium: "#403D39",
-            dark: "#252422",
-            danger: "#ff0000",
-            blue: colors.blue,
-            purple: colors.purple,
-            black: colors.black,
-            white: colors.white,
-            gray: colors.gray,
-            emerald: colors.emerald,
-            indigo: colors.indigo,
-            yellow: colors.yellow,
-            red: colors.red,
-        },
         gridTemplateColumns:
         {
             '20/80': '20% 80%',
