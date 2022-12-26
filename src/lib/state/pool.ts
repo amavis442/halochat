@@ -56,7 +56,7 @@ export class relayPool {
     console.log($relays)
     for (const [url, relay] of Object.entries(this.relays)) {
       let $relay = $relays.find(r => r.url == url)
-      if ($relay.write && relay.status == 1) {
+      if ($relay && $relay.write && relay.status == 1) {
         let pub = relay.publish(evt)
         pub.on('ok', () => {
           console.log(`${url} has accepted our event`)

@@ -2,7 +2,7 @@ import { get, writable, type Writable } from 'svelte/store'
 import { users, annotateUsers, formatUser } from '../stores/users'
 import { delay, now } from "../util/time"
 import { find } from "../util/misc"
-import { uniq, pluck, difference, uniqBy } from 'ramda'
+import { uniq, pluck, difference, uniqBy, last } from 'ramda'
 import type { User, TextNote, Reaction } from './types'
 import type { Event, Filter, Sub } from 'nostr-tools'
 import { pool, getData, waitForOpenConnection } from './pool'
@@ -364,11 +364,11 @@ async function processReplyFeed(evt: Event, replies: Array<Event>, relay: string
                         if (!parent) {
                             console.log('processReplyFeed:: parent node Not in result set ', keys[i])
                             getData({ ids: [keys[i]], kinds: [1] })
-                            .then((data) => {
-                                if (Array.isArray(data)) data = data[0]
-                                parent = data
-                                console.log('processReplyFeed:: parent node Not in result set result get data', data)
-                            })
+                                .then((data) => {
+                                    if (Array.isArray(data)) data = data[0]
+                                    parent = data
+                                    console.log('processReplyFeed:: parent node Not in result set result get data', data)
+                                })
                         }
 
                         Object.values(map[keys[i]]).forEach((replyId: string) => {
@@ -589,37 +589,36 @@ async function handleMentions(note: TextNote): Promise<TextNote> {
 function handleReaction(evt: Event, relay: string) {
     let $feed = get(feed)
     if (!$feed || !$feed.length) return
+
+
+    let tags = evt.tags.filter(tag => tag.length >= 2 && (tag[0] == "e"))
+    let lastTag = last(tags)
+    if (!lastTag) {
+        log('handleReaction:: Misformed tags.. ignore it', 'Tags:', tags, 'Event:', evt)
+    }
+
     let rootTag = getRootTag(evt.tags)
     let replyTag = getReplyTag(evt.tags)
 
     console.debug("handleReaction:: Event ", evt)
     let note: TextNote | null = null
-    if (!rootTag.length && !replyTag.length) {
+    if (rootTag.length && replyTag.length && rootTag == lastTag) {
         log('handleReaction:: Misformed tags.. ignore it', 'RootTag: ', rootTag, 'ReplyTag:', replyTag, 'Event:', evt)
+        note = $feed.find((n: TextNote) => n.id == rootTag[1])
     }
 
-    if (rootTag.length && replyTag.length && (rootTag[0] != 'e' || replyTag[0] != 'e')) {
-        log('handleReaction:: Misformed tags.. ignore it', 'RootTag: ', rootTag, 'ReplyTag:', replyTag, 'Event:', evt)
-    }
-
-    // Is rootNote
-    if (rootTag[1] == replyTag[1]) {
-        note = $feed.find((n: TextNote) => n.id == replyTag[1])
-        log('handleReaction:: Reaction Root ', 'RootTag: ', rootTag, 'ReplyTag:', replyTag, 'Event:', note)
-    }
-
-    // Now we are talking
-    if (rootTag[1] != replyTag[1]) {
+    if (rootTag.length && replyTag.length && rootTag != lastTag) {
+        // Now we are talking
         log('handleReaction:: Time for recursive search', 'RootTag: ', rootTag, 'ReplyTag:', replyTag, 'Event:', evt)
         let rootNote = $feed.find((n: TextNote) => n.id == rootTag[1])
         if (rootNote) {
-            let result = find(rootNote, replyTag[1])
+            let result = find(rootNote, lastTag[1])
             if (result) {
                 note = result
             }
         }
     }
-
+    
     if (note) {
         log('handleReaction:: Reaction found node: ', note)
 
@@ -658,12 +657,12 @@ function handleReaction(evt: Event, relay: string) {
 
 export class Listener {
     filter: Filter
-    subs:{[key:string]:Sub } = {}
-    id:string
+    subs: { [key: string]: Sub } = {}
+    id: string
     constructor(filter: Filter, id?: string) {
         this.filter = filter
         if (!this.id) {
-            'listener' + now()  
+            'listener' + now()
         }
     }
 
@@ -675,8 +674,8 @@ export class Listener {
                 } catch (err) { console.error(err) }
             }
 
-            this.subs[url] = relay.sub([this.filter], {id: this.id})
-        
+            this.subs[url] = relay.sub([this.filter], { id: this.id })
+
             this.subs[url].on('event', event => {
                 onEvent(event, url)
             })
