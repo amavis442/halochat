@@ -6,7 +6,7 @@ import { setLocalJson, getLocalJson } from '../util/storage'
 import { now } from '../util/time';
 import { log } from '../util/misc'
 
-export const users = writable(getLocalJson('halonostr/users') || []);
+export const users = writable(getLocalJson('halochat/users') || []);
 
 export function annotateUsers(user: User) {
   users.update(data => {
@@ -50,5 +50,5 @@ export function formatUser(evt: Event, relay: string) {
 }
 
 users.subscribe((value) => {
-  setLocalJson('halonostr/users', value)
+  setLocalJson('halochat/users', value)
 })

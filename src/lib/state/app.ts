@@ -32,9 +32,9 @@ export const queue: Writable<Array<string>> = writable([])
 
 export const loading: Writable<boolean> = writable(false)
 
-export const blocktext = writable(getLocalJson("halonostr/blocktext") || [])
+export const blocktext = writable(getLocalJson("halochat/blocktext") || [])
 blocklist.subscribe((value) => {
-    setLocalJson('halonostr/blocktext', value)
+    setLocalJson('halochat/blocktext', value)
 })
 
 export const feedStack = writable([])

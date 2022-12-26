@@ -5,10 +5,10 @@ import { now } from '../util/time'
 import { prop, uniqBy } from "ramda";
 
 
-export const followlist = writable(getLocalJson("halonostr/followlist") || [])
+export const followlist = writable(getLocalJson("halochat/followlist") || [])
 
 followlist.subscribe((value) => {
-    setLocalJson('halonostr/followlist', value)
+    setLocalJson('halochat/followlist', value)
 })
 
 export const addFollow = (followUser: Follow) => {

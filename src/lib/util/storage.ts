@@ -1,12 +1,12 @@
 export const allowedKeys = [
-    'halonostr/relays',
-    'halonostr/users',
-    'halonostr/notes',
-    'halonostr/account',
-    'halonostr/notestack',
-    'halonostr/blocklist',
-    'halonostr/blocktext',
-    'halonostr/followlist'
+    'halochat/relays',
+    'halochat/users',
+    'halochat/notes',
+    'halochat/account',
+    'halochat/notestack',
+    'halochat/blocklist',
+    'halochat/blocktext',
+    'halochat/followlist'
 ]
 
 export function getLocalJson(k: string) {

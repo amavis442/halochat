@@ -287,7 +287,7 @@ export async function publish(kind: number, content = '', tags = []): Promise<an
   return pool.publish(sendEvent)
 }
 
-export const relays = writable(getLocalJson("halonostr/relays") || [])
+export const relays = writable(getLocalJson("halochat/relays") || [])
 let $relays = get(relays)
 
 relays.subscribe($relays => {
@@ -312,5 +312,5 @@ relays.subscribe($relays => {
       }
     }
   }
-  setLocalJson("halonostr/relays", $relays)
+  setLocalJson("halochat/relays", $relays)
 })

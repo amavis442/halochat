@@ -1,7 +1,7 @@
 import { writable, derived } from 'svelte/store'
 import { getLocalJson, setLocalJson } from '../util/misc'
 
-export const relays = writable(getLocalJson("halonostr/relays") || []);
+export const relays = writable(getLocalJson("halochat/relays") || []);
 export const filterRelay = writable('');
 
 export function addRelay(url: string) {
@@ -30,5 +30,5 @@ export const f = derived(
 )
 
 relays.subscribe($relays => {
-    setLocalJson("halonostr/relays", $relays)
+    setLocalJson("halochat/relays", $relays)
 })

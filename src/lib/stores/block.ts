@@ -1,10 +1,10 @@
 import { writable } from 'svelte/store'
 import { setLocalJson, getLocalJson } from '../util/storage'
 
-export const blocklist = writable(getLocalJson("halonostr/blocklist") || [])
+export const blocklist = writable(getLocalJson("halochat/blocklist") || [])
 
 blocklist.subscribe((value) => {
-    setLocalJson('halonostr/blocklist', value)
+    setLocalJson('halochat/blocklist', value)
 })
 
 export const addBlock = (pubkey:string) => {
