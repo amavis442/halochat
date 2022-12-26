@@ -661,7 +661,7 @@ function handleReaction(evt: Event, relay: string) {
 }
 
 /**
- * TODO: this will be time consuming, need to find a faster way to parse the tree for the ids i want
+ * @todo: this will be time consuming, need to find a faster way to parse the tree for the ids i want
  * 
  * @param evt 
  * @param relay 
