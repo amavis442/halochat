@@ -73,12 +73,12 @@ export class relayPool {
         })
         pub.on('failed', (reason: any) => {
           console.log(`failed to publish to ${url}: ${reason}`)
-          addToast({
+          /* addToast({
             message: `failed to publish to ${url}: ${reason}`,
             type: "error",
             dismissible: true,
             timeout: 3000,
-          })
+          }) */
         })
       }
       if (relay.status !== 1) {
