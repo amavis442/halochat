@@ -16,7 +16,7 @@
     display: flex;
     align-items: center;
     margin: 0 auto 0.5rem auto;
-    width: 20rem;
+    width: 30rem;
   }
   .error {
     background: IndianRed;
