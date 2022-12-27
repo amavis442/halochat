@@ -3,7 +3,7 @@ import { users, annotateUsers, formatUser } from '../stores/users'
 import { delay, now } from "../util/time"
 import { find } from "../util/misc"
 import { uniq, pluck, difference, uniqBy, last } from 'ramda'
-import type { User, TextNote, Reaction } from './types'
+import type { User, TextNote, Reaction, Account } from './types'
 import type { Event, Filter, Relay, Sub } from 'nostr-tools'
 import { pool, getData, waitForOpenConnection } from './pool'
 import { prop, sort, descend } from "ramda";
@@ -13,9 +13,9 @@ import { log } from '../util/misc';
 import { blocklist } from '../stores/block'
 import { account } from '../stores/account'
 
-let $users = get(users)
-let $blocklist = get(blocklist)
-let $account = get(account);
+let $users:Array<User> = get(users)
+let $blocklist:Array<{pubkey:string, added:number}> = get(blocklist)
+let $account:Account = get(account);
 if (!$users) $users = []
 if (!$blocklist) $blocklist = []
 
@@ -435,13 +435,13 @@ async function handleTextNote(): Promise<void> {
             $lastSeen = evt.created_at
         }
     }
-/*
-    if ($blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == evt.pubkey)) {
+
+    if ($account.pubkey != evt.pubkey && $blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == evt.pubkey)) {
         log('handleTextNote:: user on blocklist ', evt)
         checkQueue()
         return
     }
-*/    if (blockText(evt)) {
+    if (blockText(evt)) {
         checkQueue()
         return
     }
@@ -731,7 +731,12 @@ export function onEvent(evt: Event, relay: string) {
             handleMetadata(evt, relay)
             break
         case 1:
-            feedQueue.push({ textnote: evt, url: relay })
+            if (evt.pubkey == $account.pubkey) {
+                // Add this to own posts to later see the thread.
+                feedQueue.unshift({ textnote: evt, url: relay })
+            } else {
+                feedQueue.push({ textnote: evt, url: relay })
+            }
             if (feedQueueTimer === null) {
                 feedQueueTimer = setInterval(handleTextNote, 500)
             }

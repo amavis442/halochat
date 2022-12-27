@@ -12,6 +12,7 @@
   import Toasts from "./lib/partials/Toast/Toasts.svelte";
   import { Modals, closeModal } from "svelte-modals";
   import { users } from './lib/stores/users'
+  import Posts from "./lib/Posts.svelte";
 
   export let url = "";
 
@@ -37,6 +38,9 @@
             <Link to="contacts" title="Admin list of contacts to follow">Contacts</Link>
           </p>
           <p class="nav-p">
+            <Link to="posts" title="Posts you made">Posts</Link>
+          </p>
+          <p class="nav-p">
             <Link to="relays" title="Relays to use">Relays</Link>
           </p>
           <p class="nav-p">
@@ -51,6 +55,9 @@
       </Route>
       <Route path="/followfeed">
         <FollowFeed />
+      </Route>
+      <Route path="/posts">
+        <Posts />
       </Route>
       <Route path="relays">
         <Relays />

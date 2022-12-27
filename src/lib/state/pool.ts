@@ -18,6 +18,7 @@ import {
 } from 'nostr-tools';
 import 'websocket-polyfill';
 import { isAlive } from './app';
+import { uniq } from 'ramda';
 
 export class relayPool {
   relays: { [key: string]: Relay } = {}
@@ -55,6 +56,7 @@ export class relayPool {
   removeRelay = (url: string) => {
     if (this.hasRelay(url)) {
       this.relays[url].close()
+      delete(this.relays[url])
     }
   }
 
@@ -178,13 +180,13 @@ export const getData = async (filter: Filter): Promise<Event[]> => {
     }
 
     for (const [url, relay] of Object.entries(pool.getRelays())) {
-      let $relay = $relays.find(r => r.url == url)
+      //let $relay = $relays.find(r => r.url == url)
       let timeoutId = setTimeout(() => {
         subs.forEach(item => item.unsub())
         reject(`getData:: Request took to long (15s) unsub all subscription to free slots`)
-      } , 15000);
+      } , 30000);
 
-      if ($relays && !$relay.write || relay.status !== 1) {
+      if (relay.status !== 1) {
         console.log(`Relay ${url} has status ${relay.status}`)
         
         relayReturns.push(url)
@@ -202,17 +204,20 @@ export const getData = async (filter: Filter): Promise<Event[]> => {
         sub.on('event', (event: Event) => {
           console.debug(`getData:: Getting EVENT data from ${url}`, event)
           result.push(event)
-          clearInterval(timeoutId)
-          subs.forEach(item => item.unsub())
-          resolve(result)
+          //clearInterval(timeoutId)
+          //subs.forEach(item => item.unsub())
+          //resolve(result)
         })
 
         sub.on('eose', (r: any) => {
           console.debug(`getData:: Received EOSE from ${url}`)
           relayReturns.push(url)
-          if (relayReturns.length >= numRelays) {
+          relayReturns = uniq(relayReturns)
+          console.debug('ESOE', relayReturns.length,Object.entries(pool.getRelays()).length)
+          if (relayReturns.length >= Object.entries(pool.getRelays()).length) {
             clearInterval(timeoutId)
             subs.forEach(item => item.unsub())
+            uniq(result)
             resolve(result)
           }
         })
