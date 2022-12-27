@@ -162,7 +162,6 @@
 
   function userInfo() {
     openModal(UserModal, {
-      user: note.user,
       note: note,
       followed: followed,
       onFollowUser: () => {

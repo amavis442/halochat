@@ -1,15 +1,15 @@
 <script>
+  import { onMount } from "svelte";
   import { closeModal } from "svelte-modals";
   import Button from "../Button.svelte";
 
   // provided by <Modals />
   export let isOpen;
-
-  export let user;
   export let note;
   export let followed;
   export let onUnfollowUser;
   export let onFollowUser;
+  let user = {};
 
   function follow() {
     onFollowUser();
@@ -19,6 +19,14 @@
     onUnfollowUser();
     closeModal();
   }
+  onMount(() => {
+    user["name"] = note.pubkey;
+    user["picture"] = "profile-placeholder.png";
+    user["about"] = "";
+    if (note.user && note.user.name) {
+      user = note.user;
+    }
+  });
 </script>
 
 {#if isOpen}
@@ -36,7 +44,9 @@
         </div>
         <div class="w-full pl-6 pb-6">
           <h5 class="text-gray-900 text-xl font-medium mb-2">
-            {user.name}
+            {user && user.name
+              ? user.name.slice(0, 20)
+              : note.pubkey.slice(0, 10)}
           </h5>
           <p class="text-gray-700 text-base mb-4">
             {user.about}

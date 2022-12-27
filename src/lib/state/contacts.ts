@@ -2,7 +2,7 @@ import { addToast } from "../partials/Toast/toast";
 import { getContactlist } from "./app";
 import type { Follow } from "./types";
 import { get, writable } from 'svelte/store'
-import { publish, waitForOpenConnection } from "./pool";
+import { publish } from "./pool";
 
 let contacts = writable([]); // Follow list
 /**

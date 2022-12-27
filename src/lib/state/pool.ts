@@ -70,20 +70,20 @@ export class relayPool {
         }
         let pub = relay.publish(evt)
         pub.on('ok', () => {
-          console.log(`${url} has accepted our event`)
+          console.log(`Publish: ${url} has accepted our event`, evt)
         })
         pub.on('seen', () => {
-          console.log(`we saw the event on ${url}`, evt)
+          console.log(`Publish: we saw the event on ${url}`, evt)
         })
         pub.on('failed', (reason: any) => {
-          console.log(`failed to publish to ${url}: ${reason}`, evt)
+          console.log(`Publish: failed to publish to ${url}: ${reason}`, evt)
         })
       }
       if (relay.status !== 1) {
         console.error(`Not publishing: Relay ${url} has state ${relay.status} and should be 1 = OPEN (0 CONNECTING, 1 OPEN, 2 CLOSING, 3 CLOSE)`)
       }
       if (!$relay.write) {
-        console.error(`${url} has no write permissions set`)
+        console.error(`Publish: ${url} has no write permissions set`)
       }
     }
     return
