@@ -1,6 +1,6 @@
 <script lang="ts">
   import { pool, relays } from "../state/pool";
-  import { addToast } from "../stores/toast";
+  import { addToast } from "../partials/Toast/toast";
   import Button from "../partials/Button.svelte";
   import Text from "../partials/Text.svelte";
   import Link from "../partials/Link.svelte";

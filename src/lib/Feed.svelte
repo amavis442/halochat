@@ -11,12 +11,10 @@
   import TextNote from "./TextNote.svelte";
   import TreeNote from "./TreeNote.svelte";
 
-  import { Modals, closeModal } from "svelte-modals";
-  import Spinner from "./Spinner.svelte";
+  import Spinner from "./partials/Spinner/Spinner.svelte";
   import Button from "./partials/Button.svelte";
   import Text from "./partials/Text.svelte";
   import Anchor from "./partials/Anchor.svelte";
-  import Toasts from "./Toasts.svelte";
   import { log } from "./util/misc";
   
   let msg = "";
@@ -39,6 +37,7 @@
 
   onMount(async () => {
     if ($relays && $relays.length) {
+      //listener = new Listener({ since: now()});
       listener = new Listener({ since: $lastSeen });
       listener.start();
 
@@ -65,7 +64,6 @@
   }
 </script>
 
-<Toasts />
 <div class="flex flex-col gap-4 h-screen">
   <div class="h-85p">
     <div
@@ -133,23 +131,3 @@
     </div>
   </div>
 </div>
-
-<Modals>
-  <div
-    slot="backdrop"
-    class="backdrop"
-    on:click={closeModal}
-    on:keyup={closeModal}
-  />
-</Modals>
-
-<style>
-  .backdrop {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    right: 0;
-    left: 0;
-    background: rgba(0, 0, 0, 0.5);
-  }
-</style>

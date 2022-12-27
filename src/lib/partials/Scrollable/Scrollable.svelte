@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { delay } from "./util/time";
+  import { delay } from "../../util/time";
   import { debounce } from "throttle-debounce";
-  import Spinner from "./Spinner.svelte";
+  import Spinner from "../Spinner/Spinner.svelte";
   import { onMount } from "svelte";
-  import { log } from "./util/misc";
+  import { log } from "../../util/misc";
 
   export let loading: boolean = false;
   export let cbGetData: Function;

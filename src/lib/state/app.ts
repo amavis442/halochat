@@ -435,13 +435,13 @@ async function handleTextNote(): Promise<void> {
             $lastSeen = evt.created_at
         }
     }
-
+/*
     if ($blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == evt.pubkey)) {
         log('handleTextNote:: user on blocklist ', evt)
         checkQueue()
         return
     }
-    if (blockText(evt)) {
+*/    if (blockText(evt)) {
         checkQueue()
         return
     }

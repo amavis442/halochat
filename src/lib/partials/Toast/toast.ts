@@ -2,7 +2,7 @@
  * @see https://dev.to/danawoodman/svelte-quick-tip-creating-a-toast-notification-system-ge3
  */
 import { writable } from 'svelte/store'
-import type { Toast } from './types'
+import type { Toast } from '../../stores/types'
 
 export const toasts = writable([])
 

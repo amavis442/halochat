@@ -9,8 +9,9 @@
   import "@fortawesome/fontawesome-free/css/fontawesome.css";
   import "@fortawesome/fontawesome-free/css/solid.css";
   import AccountInfo from "./lib/partials/AccountInfo.svelte";
-  import Toasts from "./lib/Toasts.svelte";
-
+  import Toasts from "./lib/partials/Toast/Toasts.svelte";
+  import { Modals, closeModal } from "svelte-modals";
+  
   export let url = "";
 
 </script>
@@ -62,3 +63,23 @@
     </main>
   </div>
 </Router>
+
+<Modals>
+  <div
+    slot="backdrop"
+    class="backdrop"
+    on:click={closeModal}
+    on:keyup={closeModal}
+  />
+</Modals>
+
+<style>
+  .backdrop {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    background: rgba(0, 0, 0, 0.5);
+  }
+</style>

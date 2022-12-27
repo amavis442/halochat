@@ -4,22 +4,23 @@
   import { toHtml, findLink } from "./util/html";
   import { beforeUpdate, onMount } from "svelte";
   import { publishReaction } from "./state/pool";
-  import TextArea from "./partials/TextArea.svelte";
-  import Button from "./partials/Button.svelte";
   import { publishReply } from "./state/pool";
   import { account } from "./stores/account";
   import { pluck, uniqBy, prop } from "ramda";
   import { blocklist } from "./stores/block";
   import { now } from "./util/time";
-  import { addToast } from "./stores/toast";
+  import { addToast } from "./partials/Toast/toast";
   import { users } from "./stores/users";
   import { feed } from "./state/app";
-  import { deleteNodeFromTree, log } from "./util/misc";
-  import Preview from "./partials/Preview.svelte";
+  import { deleteNodeFromTree } from "./util/misc";
+  import Preview from "./partials/Preview/Preview.svelte";
   import { getRootTag } from "./util/tags";
-  import Modal from "./partials/Modal.svelte";
-  import Spinner from "./Spinner.svelte";
 
+  import { openModal } from "svelte-modals";
+  import UserModal from "./partials/Modal/UserModal.svelte";
+  import CreateNoteModal from "./partials/Modal/CreateNoteModal.svelte";
+
+  import Spinner from "./partials/Spinner/Spinner.svelte";
   import contacts from "./state/contacts";
 
   export let note: Note | any; // Todo: Do not know how to type this correctly to make sure in Notes it does not say Note__SvelteComponent_ <> Note type, very annoying
@@ -41,16 +42,6 @@
     }
   });
 
-  function isFollowed(): boolean {
-    if (contacts.getList().find((c) => c[1] == note.pubkey)) {
-      return true;
-    }
-    return false;
-  }
-
-  let followed = false;
-  $: followed = isFollowed();
-
   onMount(async () => {
     user = note?.user;
     link = findLink(note.content);
@@ -71,26 +62,14 @@
     await publishReaction("-", note);
   }
 
+  /**
+   * Send a textnote as reply
+   */
   let promiseReply: Promise<void>;
-  async function onSubmit(e: Event) {
-    const target = e.target as HTMLFormElement;
-    const formData = new FormData(target);
-
-    const data: { replyText?: string } = {};
-    //@ts-ignore
-    for (let field of formData) {
-      const [key, value] = field;
-      data[key] = value;
-    }
-    let v = Object.values(data);
-    console.debug(v);
-
-    promiseReply = publishReply(v[0], note).then(() => {
-      showElement = false;
-    });
+  async function sendTextNote(noteText) {
+    console.log(noteText);
+    promiseReply = publishReply(noteText, note);
   }
-
-  let showElement: boolean = false;
 
   async function banUser() {
     expanded = false;
@@ -112,6 +91,16 @@
       timeout: 3000,
     });
   }
+
+  function isFollowed(): boolean {
+    if (contacts.getList().find((c) => c[1] == note.pubkey)) {
+      return true;
+    }
+    return false;
+  }
+
+  let followed = false;
+  $: followed = isFollowed();
 
   async function followUser() {
     if (!user.name) {
@@ -171,73 +160,42 @@
     expanded = !expanded;
   }
 
-  let showInfoModal: boolean = false;
+  function userInfo() {
+    openModal(UserModal, {
+      user: note.user,
+      note: note,
+      followed: followed,
+      onFollowUser: () => {
+        followUser();
+      },
+      onUnfollowUser: () => {
+        unfollowUser();
+      },
+    });
+  }
+
+  function createTextNote() {
+    openModal(CreateNoteModal, {
+      note: note,
+      onSendTextNote: (noteText: string) => {
+        sendTextNote(noteText);
+      },
+    });
+  }
 </script>
-
-<Modal isOpen={showInfoModal}>
-  <slot>
-    <div class="flex justify-left">
-      <img
-        class="w-16 h-16 rounded-full"
-        src={user && user.picture ? user.picture : "profile-placeholder.png"}
-        alt={note.pubkey.slice(0, 5)}
-      />
-      <div class="p-6">
-        <h5 class="text-gray-900 text-xl font-medium mb-2">
-          {user.name}
-        </h5>
-        <p class="text-gray-700 text-base mb-4">
-          {user.about}
-        </p>
-      </div>
-    </div>
-    <div class="flex space-x-1 p-2 justify-end">
-      {#if !followed}
-        <Button click={followUser}>Follow</Button>
-      {:else}
-        <Button click={unfollowUser}>unFollow</Button>
-      {/if}
-      <Button type="button" click={() => (showInfoModal = !showInfoModal)}>
-        Close
-      </Button>
-    </div>
-  </slot>
-</Modal>
-
-<Modal isOpen={showElement}>
-  <slot>
-    <form on:submit|preventDefault={onSubmit}>
-      <h5 class="text-gray-900 text-xl font-medium mb-2">
-        Re: {note.content.slice(0, 30)}
-      </h5>
-      <TextArea id="reply{note.id}" placeholder="Add reply" cols="20" />
-
-      <div class="flex space-x-1 p-2 justify-end">
-        <Button type="submit" class="space-x-1"
-          ><i class="fa-solid fa-paper-plane" /> <span>Send</span></Button
-        >
-        <Button
-          type="button"
-          click={() => (showElement = !showElement)}
-          class="space-x-1"
-        >
-          <i class="fa-solid fa-circle-xmark" /> <span>Close</span>
-        </Button>
-      </div>
-    </form>
-  </slot>
-</Modal>
 
 {#await promiseReply}
   <Spinner />
 {/await}
+
 {#if note && note.kind == 1}
-  <div id={note.id}
+  <div
+    id={note.id}
     class="flex flex-row w-full min-h-full items-top gap-2 mb-2 overflow-y-auto bg-white rounded-lg p-1 border-l-8 {borderColor}"
   >
     <div
-      on:click={() => (showInfoModal = !showInfoModal)}
-      on:keyup={() => (showInfoModal = !showInfoModal)}
+      on:click={userInfo}
+      on:keyup={() => console.log("keyup")}
       class="w-16 mr-2"
     >
       <img
@@ -253,9 +211,7 @@
         <div class="h-12">
           <div class="flex gap-2 h-12 w-full ">
             <div class="text-left order-first w-6/12">
-              <strong
-                class="text-black text-sm font-medium"
-              >
+              <strong class="text-black text-sm font-medium">
                 {#if followed}
                   <i class="fa-solid fa-bookmark" />
                 {/if}{normalizeName(user)}
@@ -333,10 +289,7 @@
             </span>
 
             <span>
-              <button
-                type="button"
-                on:click={() => (showElement = !showElement)}
-              >
+              <button type="button" on:click={createTextNote}>
                 <i class="fa-regular fa-comment-dots" />
               </button>
               {#if note.replies}

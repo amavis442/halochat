@@ -1,7 +1,7 @@
 <script lang="ts">
   import { account, updateAccount, deleteAccount } from "../stores/account";
   import { onMount } from "svelte";
-  import { addToast } from "../stores/toast";
+  import { addToast } from "../partials/Toast/toast";
   import Button from "../partials/Button.svelte";
   import Text from "../partials/Text.svelte";
   import { getKeys } from "../util/keys";
@@ -10,7 +10,7 @@
   import type { Filter, Event } from "nostr-tools";
   import { annotateUsers } from "../stores/users";
   import { now } from "../util/time";
-  import Spinner from "../Spinner.svelte";
+  import Spinner from "../partials/Spinner/Spinner.svelte";
   import { log } from "../util/misc";
 
   let pubkey: string;

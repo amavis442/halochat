@@ -4,7 +4,7 @@ import { now } from "../util/time";
 import { account } from '../stores/account';
 import { getRootTag, getReplyTag } from '../util/tags';
 import { log } from '../util/misc';
-import { addToast } from '../stores/toast';
+import { addToast } from '../partials/Toast/toast';
 import {
   relayInit,
   getEventHash,

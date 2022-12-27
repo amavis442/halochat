@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import Link from "./Link.svelte";
-  import { log } from "../util/misc";
+  import Link from "../Link.svelte";
+  import { log } from "../../util/misc";
 
   export let url: string = "";
   export let endpoint: string;

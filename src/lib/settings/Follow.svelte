@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { publish, relays } from "../state/pool";
-  import { addToast } from "../stores/toast";
+  import { relays } from "../state/pool";
+  import { addToast } from "../partials/Toast/toast";
   import Button from "../partials/Button.svelte";
   import Text from "../partials/Text.svelte";
   import { prop, differenceWith, sort, ascend } from "ramda";
-  import type { Follow, User } from "../state/types";
-  import { fetchUser, fetchUsers, getContactlist } from "../state/app";
-  import Spinner from "../Spinner.svelte";
+  import type { User } from "../state/types";
+  import { fetchUser } from "../state/app";
+  import Spinner from "../partials/Spinner/Spinner.svelte";
   import { users } from "../stores/users";
   import { onMount } from "svelte";
   import { account } from "../stores/account";
@@ -51,7 +51,6 @@
       });
     }
     console.log('Pubkeys is ', followPubKeys)
-    //fetchUsers(followPubKeys,'all')
   });
 
   let promise: Promise<void>;

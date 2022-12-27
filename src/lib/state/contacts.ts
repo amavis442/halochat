@@ -1,4 +1,4 @@
-import { addToast } from "../stores/toast";
+import { addToast } from "../partials/Toast/toast";
 import { getContactlist } from "./app";
 import type { Follow } from "./types";
 import { get, writable } from 'svelte/store'

@@ -13,14 +13,11 @@
   import TreeNote from "./TreeNote.svelte";
 
   import { Modals, closeModal } from "svelte-modals";
-  import Spinner from "./Spinner.svelte";
+  import Spinner from "./partials/Spinner/Spinner.svelte";
   import Button from "./partials/Button.svelte";
   import Text from "./partials/Text.svelte";
   import Anchor from "./partials/Anchor.svelte";
-  import Toasts from "./Toasts.svelte";
-  import { pluck,uniq } from "ramda";
   import { log } from "./util/misc";
-  import { getFollowList } from "./state/app";
   import contacts from './state/contacts';
 
   let msg = "";
@@ -86,7 +83,6 @@
   }
 </script>
 
-<Toasts />
 <div class="flex flex-col gap-4 h-screen">
   <div class="h-85p">
     <div
