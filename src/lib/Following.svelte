@@ -131,7 +131,7 @@
       {/if}
     </div>
   </div>
-  <div class="h-15p md:w-8/12 ms:w-full mt-4">
+  <div class="h-15p mt-4">
     <div
       class="block flex justify-center bg-white
       dark:bg-slate-800 dark:highlight-white/5 shadow-lg ring-1 ring-black/5
