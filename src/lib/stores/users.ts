@@ -8,6 +8,11 @@ import { log } from '../util/misc'
 
 export const users = writable(getLocalJson('halochat/users') || []);
 
+/**
+ * No requests made
+ * 
+ * @param user 
+ */
 export function annotateUsers(user: User) {
   users.update(data => {
     if (!Array.isArray(data)) data = []

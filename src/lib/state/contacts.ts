@@ -1,8 +1,8 @@
 import { addToast } from "../stores/toast";
-import { fetchUser, fetchUsers, getContactlist } from "./app";
-import type { Follow, User } from "./types";
-import { get, writable, type Writable } from 'svelte/store'
-import { publish, relays } from "./pool";
+import { getContactlist } from "./app";
+import type { Follow } from "./types";
+import { get, writable } from 'svelte/store'
+import { publish } from "./pool";
 
 let contacts = writable([]); // Follow list
 /**

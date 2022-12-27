@@ -1,10 +1,10 @@
-import { writable, get, type Writable } from 'svelte/store'
+import { writable, get } from 'svelte/store'
 import { getLocalJson, setLocalJson } from '../util/storage'
-import { now, delay } from "../util/time";
-import { head } from 'ramda';
+import { now } from "../util/time";
 import { account } from '../stores/account';
 import { getRootTag, getReplyTag } from '../util/tags';
 import { log } from '../util/misc';
+import { addToast } from '../stores/toast';
 import {
   relayInit,
   getEventHash,
@@ -27,6 +27,12 @@ export class relayPool {
 
     relay.on('error', () => {
       console.log(`failed to connect to ${url}`)
+      addToast({
+        message: `failed to connect to ${url}`,
+        type: "error",
+        dismissible: true,
+        timeout: 3000,
+      })
     })
 
     relay.on('connect', () => {
@@ -67,6 +73,12 @@ export class relayPool {
         })
         pub.on('failed', (reason: any) => {
           console.log(`failed to publish to ${url}: ${reason}`)
+          addToast({
+            message: `failed to publish to ${url}: ${reason}`,
+            type: "error",
+            dismissible: true,
+            timeout: 3000,
+          })
         })
       }
       if (relay.status !== 1) {
@@ -147,14 +159,13 @@ export const createEvent = async (kind: number, content: string = '', tags: stri
   return note
 }
 
+let subscriptions = {}
 export const getData = async (filter: Filter): Promise<Event[]> => {
   const $relays = get(relays)
   const numRelays = $relays.length
-  const poolRelays = pool.getRelays()
-  console.log(pool)
 
   return new Promise((resolve, reject) => {
-    let subs: { [key: string]: Sub } = {}
+    let subs: Array<Sub> = []
     let result: Array<Event> = []
     let relayReturns: string[] = []
     const subId = 'getter' + now()
@@ -165,47 +176,53 @@ export const getData = async (filter: Filter): Promise<Event[]> => {
 
     for (const [url, relay] of Object.entries(pool.getRelays())) {
       let $relay = $relays.find(r => r.url == url)
+      let timeoutId = setTimeout(() => {
+        subs.forEach(item => item.unsub())
+        reject(`getData:: Request took to long (15s) unsub all subscription to free slots`)
+      } , 15000);
 
       if ($relays && !$relay.write || relay.status !== 1) {
         console.log(`Relay ${url} has status ${relay.status}`)
         relayReturns.push(url)
         if (relayReturns.length >= numRelays) {
+          
           reject(new Error('No relays with open connection'))
         }
         continue
       }
       console.debug(`getData:: Request data from ${url}`)
-      try{ 
-      subs[url] = relay.sub([filter], {})
+      try {
+        let sub = relay.sub([filter], { id: subId })
+        subs.push(sub)
 
-      subs[url].on('event', (event: Event) => {
-        console.debug(`getData:: Getting EVENT data from ${url}`, event)
-        result.push(event)
-        resolve({ result: result, subs: subs })
-      })
+        sub.on('event', (event: Event) => {
+          console.debug(`getData:: Getting EVENT data from ${url}`, event)
+          result.push(event)
+          clearInterval(timeoutId)
+          subs.forEach(item => item.unsub())
+          resolve(result)
+        })
 
-      subs[url].on('eose', (r: any) => {
-        console.debug(`getData:: Received EOSE from ${url}`)
-        relayReturns.push(url)
-        if (relayReturns.length >= numRelays) {
-          resolve({ result: result, subs: subs })
-        }
-      })
-     } catch(error) {
-      reject(error)
-     }
-    }
-    //let timeoutId = setTimeout(() => reject('Took to long for the relays to respond') , 15000);
-  })
-    .then((data: { result: Event[], subs: { [key: string]: Sub } }) => {
-      for (const [url, sub] of Object.entries(data.subs)) {
-        sub.unsub()
-        console.log(`getData unsub listeners for ${url} with an internal id`)
+        sub.on('eose', (r: any) => {
+          console.debug(`getData:: Received EOSE from ${url}`)
+          relayReturns.push(url)
+          if (relayReturns.length >= numRelays) {
+            clearInterval(timeoutId)
+            subs.forEach(item => item.unsub())
+            resolve(result)
+          }
+        })
+      } catch (error) {
+        reject(error)
       }
-      console.debug(`getData:: Results `, data.result)
-      return data.result
+    }
+  })
+    .then((data: Event[]) => {
+      console.debug(`getData:: Results `, data)
+      return data
     })
 }
+
 /**
  * Update meta data of user account
  * 
@@ -239,10 +256,12 @@ function copyTags(evt: Event) {
       newtags.push(t);
     }
   });
-  const relayUrls = Object.keys($relays)
-
-  newtags.push(["p", evt.pubkey, head(relayUrls)]);
-  newtags.push(["e", evt.id, head(relayUrls), "reply"]);
+  
+  let relays = pool.getRelays()
+  let relayUrl = Object.keys(relays)[0]
+ 
+  newtags.push(["p", evt.pubkey, relayUrl]);
+  newtags.push(["e", evt.id, relayUrl, "reply"]);
 
   let rootTag = getRootTag(newtags)
   let replyTag = getReplyTag(newtags)

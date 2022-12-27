@@ -8,7 +8,7 @@ import type { Event, Filter, Sub } from 'nostr-tools'
 import { pool, getData, waitForOpenConnection } from './pool'
 import { prop, sort, descend } from "ramda";
 import { setLocalJson, getLocalJson } from '../util/storage'
-import { getRootTag, getReplyTag } from '../util/tags';
+import { getRootTag, getReplyTag, getLastETag } from '../util/tags';
 import { log } from '../util/misc';
 import { blocklist } from '../stores/block'
 import { account } from '../stores/account'
@@ -93,35 +93,11 @@ export async function getFollowList(pubkey: string) {
 }
 
 /**
- * Kind 0
- * 
- * @see https://github.com/nostr-protocol/nips/blob/master/01.md#basic-event-kinds
- * @returns 
+ * Got an kind 0 event from the feed
+ *  
+ * @param evt 
+ * @param relay 
  */
-export function getContacts(): null {
-    let filter: Filter = {
-        kinds: [0],
-    }
-    //@ts-ignore
-    const userPubKeys = uniq(pluck('pubkey', Object.values($users)))
-    //@ts-ignore
-    const notePubKeys = uniq(pluck('pubkey', Object.values($feed)))
-
-    let pkeys = difference(notePubKeys, userPubKeys)
-    if (!pkeys || pkeys.length == 0) {
-        loading.set(false)
-        return null
-    }
-
-    if (pkeys && pkeys.length) {
-        filter.authors = pkeys
-    }
-
-    getData(filter).then((data) => {
-        loading.set(false)
-    })
-}
-
 function handleMetadata(evt: Event, relay: string) {
     try {
         setMetadata(evt, relay);
@@ -132,25 +108,7 @@ function handleMetadata(evt: Event, relay: string) {
 }
 
 /**
- * Get user metadata from a relay
- * 
- * @param pubkey string
- * @param relay string
- * @returns 
- */
-async function fetchMetaDataUser(note: TextNote, relay: string): Promise<void> {
-    if (!note || !note.pubkey) {
-        log('fetchMetaDataUser:: No pubkey ', note)
-        return
-    }
-
-    fetchUser(note.pubkey, relay)
-        .then((user: User) => {
-            note.user = user
-        })
-}
-
-/**
+ * Request a single user
  * Kind 0
  * 
  * @param pubkey 
@@ -186,6 +144,8 @@ export async function fetchUser(pubkey: string, relay: string): Promise<User> {
 }
 
 /**
+ * Request a bunch of user metadata
+ *  
  * Kind 0
  * 
  * @param pubkeys 
@@ -200,19 +160,30 @@ export async function fetchUsers(pubkeys: Array<string>, relay: string): Promise
     let result = []
     return getData(filter)
         .then((fetchResultUsers: Array<Event>) => {
-            for (let i = 0; i < fetchResultUsers.length; i++) {
-                let user: User
-                if (fetchResultUsers.length) {
-                    user = formatUser(fetchResultUsers[i], relay)
-                    annotateUsers(user)
-                    result.push(user)
+            for (let i = 0; i < pubkeys.length; i++) {
+                let user: User = {
+                    pubkey: pubkeys[i],
+                    name: 'unknown',
+                    about: '',
+                    picture: 'profile-placeholder.png',
+                    content: '',
+                    refreshed: now(),
+                    relays: [relay]
                 }
+
+                if (fetchResultUsers.length) {
+                    let evt: Event = fetchResultUsers.find(e => e.pubkey = pubkeys[i])
+                    user = formatUser(evt, relay)
+                }
+                annotateUsers(user)
+                result.push(user)
             }
             return result;
         });
 }
 
 /**
+ * No request made
  * 
  * @param evt Event
  * @param relay string
@@ -262,41 +233,6 @@ function initNote(note: TextNote) {
     note.tree = 0 // rootnote
     return note
 }
-
-/**
- * Get the note from a relay and add user meta data to it (expensive)
- * 
- * @param ids 
- * @param relay 
- * @returns 
- */
-async function getNotes(ids: Array<string>, relay: string): Promise<{ [key: string]: TextNote } | null> {
-    let filter: Filter = {
-        kinds: [1],
-        'ids': ids
-    }
-    log('getNotes: filter ', filter)
-
-    if (!ids.length) return
-    let result = await getData(filter)
-    if (!result) return null // No result to be found :(
-
-    let data: { [key: string]: TextNote } | null = null
-    for (let i = 0; i < result.length; i++) {
-        let note: TextNote = result[i] // We get more of the same, depending on the number of relays.
-        note = initNote(note)
-        let user: User = $users.find((u: User) => u.pubkey == note.pubkey)
-        note.user = user
-        if (!user) {
-            fetchMetaDataUser(note, relay)
-        }
-        data[note.id] = note
-        feedStack[note.id] = note
-    }
-    return data
-}
-
-
 
 /**
  * Expensive operation and last resort to get a root to make a tree
@@ -365,8 +301,7 @@ async function processReplyFeed(evt: Event, replies: Array<Event>, relay: string
                             console.log('processReplyFeed:: parent node Not in result set ', keys[i])
                             getData({ ids: [keys[i]], kinds: [1] })
                                 .then((data) => {
-                                    if (Array.isArray(data)) data = data[0]
-                                    parent = data
+                                    if (Array.isArray(data)) parent = data[0]
                                     console.log('processReplyFeed:: parent node Not in result set result get data', data)
                                 })
                         }
@@ -421,6 +356,16 @@ function syncNoteTree(rootNote: TextNote) {
     }
 }
 
+let batchUser = writable([])
+batchUser.subscribe(data => {
+    if (data.length > 10) {
+        fetchUsers(data, '')
+    }
+    return []
+})
+
+
+
 /**
  * Adds user data like name, about , picture when it is available
  * 
@@ -437,15 +382,24 @@ async function annotateNote(note: TextNote, relay: string): Promise<TextNote> {
 
     if (!note.user || note.user.refreshed > now() - (60 * 10)) {
         log('annotateNote:: fetch user data for ', note.pubkey)
-        fetchMetaDataUser(note, relay).then(() => {
-            log('annotateNote: Promise result by ref ', note.user)
-        })
     }
 
     return note
 }
 
 
+function checkQueue() {
+    if (feedQueue.length === 0) {
+        clearInterval(feedQueueTimer)
+        feedQueueTimer = null
+    }
+}
+
+function blockText(evt: Event): boolean {
+    if (evt.content.match(/followid/)) return true
+    if (evt.content.match(/Verifying\ My\ Public\ Key/)) return true
+    return false
+}
 /**
  * Kind 1
  * 
@@ -464,11 +418,19 @@ async function annotateNote(note: TextNote, relay: string): Promise<TextNote> {
  * @param relay 
  * @returns 
  */
-async function handleTextNote(evt: Event, relay: string): Promise<void> {
+async function handleTextNote(): Promise<void> {
+    if (!feedQueue.length) return
+    const eventItem = feedQueue.shift()
+    let evt = eventItem.textnote
+    const relay = eventItem.url
+
+    if (pool.hasRelay('ws://localhost:8008')) {
+        pool.getRelays()['ws://localhost:8008'].publish(evt)
+    }
 
     let $lastSeen = get(lastSeen)
     let tags = evt.tags.filter(t => t[0] == 'e')
-    if (tags.length == 0) {     
+    if (tags.length == 0) {
         if ($lastSeen < evt.created_at) {
             $lastSeen = evt.created_at
         }
@@ -476,13 +438,19 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
 
     if ($blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == evt.pubkey)) {
         log('handleTextNote:: user on blocklist ', evt)
+        checkQueue()
         return
     }
-    if (evt.content.match(/followid/)) return
-    if (evt.content.match(/Verifying\ My\ Public\ Key/)) return
+    if (blockText(evt)) {
+        checkQueue()
+        return
+    }
 
     let $feed = get(feed)
-    if ($feed.find(f => f.content == evt.content)) return
+    if ($feed.find(f => f.content == evt.content)) {
+        checkQueue()
+        return
+    }
 
     let note: TextNote = initNote(evt)
     note.relays = [relay]
@@ -505,6 +473,7 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
                 rootNote = note
                 syncNoteTree(rootNote)
             })
+        checkQueue()
         return
     }
 
@@ -522,6 +491,7 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
                     rootNote.replies = uniqBy(prop('id'), rootNote.replies)
                     syncNoteTree(rootNote)
                 });
+            checkQueue()
             return
         }
     }
@@ -559,6 +529,7 @@ async function handleTextNote(evt: Event, relay: string): Promise<void> {
             log('handleTextNote: Current stack: ', $feedStack)
             if (rootNote) syncNoteTree(rootNote)
         })
+    checkQueue()
 }
 
 async function handleMentions(note: TextNote): Promise<TextNote> {
@@ -598,11 +569,9 @@ function handleReaction(evt: Event, relay: string) {
     let $feed = get(feed)
     if (!$feed || !$feed.length) return
 
-
-    let tags = evt.tags.filter(tag => tag.length >= 2 && (tag[0] == "e"))
-    let lastTag = last(tags)
+    let lastTag = getLastETag(evt.tags)
     if (!lastTag) {
-        log('handleReaction:: Misformed tags.. ignore it', 'Tags:', tags, 'Event:', evt)
+        log('handleReaction:: Misformed tags.. ignore it', 'Tags:', evt.tags, 'Event:', evt)
     }
 
     let rootTag = getRootTag(evt.tags)
@@ -610,9 +579,8 @@ function handleReaction(evt: Event, relay: string) {
 
     console.debug("handleReaction:: Event ", evt)
     let note: TextNote | null = null
-    if (rootTag.length && replyTag.length && rootTag == lastTag) {
-        log('handleReaction:: Misformed tags.. ignore it', 'RootTag: ', rootTag, 'ReplyTag:', replyTag, 'Event:', evt)
-        note = $feed.find((n: TextNote) => n.id == rootTag[1])
+    if (rootTag.length && rootTag == lastTag) {
+        note = $feed.find((n: TextNote) => n.id == lastTag[1])
     }
 
     if (rootTag.length && replyTag.length && rootTag != lastTag) {
@@ -725,6 +693,9 @@ export class Listener {
     }
 }
 
+let feedQueue: Array<{ textnote: Event, url: string }> = []
+let feedQueueTimer = null
+
 export let lastSeen = writable(getLocalJson('halochat/lastseen') || now() - 60 * 60)
 export function onEvent(evt: Event, relay: string) {
     switch (evt.kind) {
@@ -732,7 +703,11 @@ export function onEvent(evt: Event, relay: string) {
             handleMetadata(evt, relay)
             break
         case 1:
-            handleTextNote(evt, relay)
+            feedQueue.push({ textnote: evt, url: relay })
+            if (feedQueueTimer === null) {
+                feedQueueTimer = setInterval(handleTextNote, 1000)
+            }
+            //handleTextNote(evt, relay)
             break
         case 3:
             // Update contact list, and seeing other contact lists

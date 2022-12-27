@@ -24,3 +24,12 @@ export function getReplyTag(tags: string[][]): string[] {
 
     return []
 }
+
+export function getLastETag(tags: string[][]): string[] {
+    for (let i = tags.length - 1; i >= 0; i--) {
+        if (tags[i][0] == 'e') {
+            return tags[i]
+        }
+    }
+    return []
+}
