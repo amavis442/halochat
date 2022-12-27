@@ -69,16 +69,10 @@ export class relayPool {
           console.log(`${url} has accepted our event`)
         })
         pub.on('seen', () => {
-          console.log(`we saw the event on ${url}`)
+          console.log(`we saw the event on ${url}`, evt)
         })
         pub.on('failed', (reason: any) => {
-          console.log(`failed to publish to ${url}: ${reason}`)
-          /* addToast({
-            message: `failed to publish to ${url}: ${reason}`,
-            type: "error",
-            dismissible: true,
-            timeout: 3000,
-          }) */
+          console.log(`failed to publish to ${url}: ${reason}`, evt)
         })
       }
       if (relay.status !== 1) {
@@ -159,7 +153,6 @@ export const createEvent = async (kind: number, content: string = '', tags: stri
   return note
 }
 
-let subscriptions = {}
 export const getData = async (filter: Filter): Promise<Event[]> => {
   const $relays = get(relays)
   const numRelays = $relays.length
@@ -234,7 +227,7 @@ export async function publishAccount() {
   const metadata = { name: $account.name, about: $account.about, picture: $account.picture }
 
   let event = await createEvent(0, JSON.stringify(metadata))
-  log('publishAccount: ', event)
+  console.debug('publishAccount: ', event)
   pool.publish(event)
 }
 
@@ -277,7 +270,7 @@ export async function publishReply(content: string, evt: Event) {
   const tags: string[][] = copyTags(evt)
   const sendEvent = await createEvent(1, content, tags)
 
-  log('publishReply: ', sendEvent)
+  console.debug('publishReply: ', sendEvent)
   pool.publish(sendEvent)
 }
 
@@ -288,7 +281,7 @@ export async function publishReaction(content: string, evt: Event) {
   tags.push(['p', evt.pubkey])
   const sendEvent = await createEvent(7, content, tags)
 
-  log('publishReaction: ', sendEvent)
+  console.debug('publishReaction: ', sendEvent)
   pool.publish(sendEvent)
 }
 
@@ -301,13 +294,11 @@ export async function publishReaction(content: string, evt: Event) {
  */
 export async function publish(kind: number, content = '', tags = []): Promise<any> {
   const sendEvent = await createEvent(kind, content, tags)
-  log('publish: ', sendEvent)
+  console.debug('publish: ', sendEvent)
   return pool.publish(sendEvent)
 }
 
 export const relays = writable(getLocalJson("halochat/relays") || [])
-let $relays = get(relays)
-
 relays.subscribe($relays => {
   try {
     Object.keys(pool.getRelays()).forEach((url: string) => {

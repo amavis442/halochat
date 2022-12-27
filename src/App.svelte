@@ -1,19 +1,21 @@
 <script lang="ts">
   import { Router, Link, Route } from "svelte-routing";
   import Feed from "./routes/Feed.svelte";
-  import Following from "./routes/Following.svelte";
+  import FollowFeed from "./routes/FollowFeed.svelte";
 
   import Relays from "./routes/Relays.svelte";
   import Account from "./routes/Account.svelte";
-  import Follow from "./routes/Follow.svelte";
+  import Contacts from "./routes/Contacts.svelte";
   import "@fortawesome/fontawesome-free/css/fontawesome.css";
   import "@fortawesome/fontawesome-free/css/solid.css";
   import AccountInfo from "./lib/partials/AccountInfo.svelte";
   import Toasts from "./lib/partials/Toast/Toasts.svelte";
   import { Modals, closeModal } from "svelte-modals";
-  
+  import { users } from './lib/stores/users'
+
   export let url = "";
 
+  users.set([]) // new Session, means new users, else the browser will complain of storage full
 </script>
 
 <Toasts />
@@ -26,20 +28,19 @@
         <AccountInfo />
         <nav>
           <p class="nav-p">
-            <Link to="/">Feed</Link>
+            <Link to="/" title="Global feed">Global</Link>
           </p>
           <p class="nav-p">
-            <Link to="/following">Following</Link>
-          </p>
-
-          <p class="nav-p">
-            <Link to="relays">Relays</Link>
+            <Link to="/followfeed" title="Contacts that you follow">Following</Link>
           </p>
           <p class="nav-p">
-            <Link to="follow">Follow list</Link>
+            <Link to="contacts" title="Admin list of contacts to follow">Contacts</Link>
           </p>
           <p class="nav-p">
-            <Link to="account">Account</Link>
+            <Link to="relays" title="Relays to use">Relays</Link>
+          </p>
+          <p class="nav-p">
+            <Link to="account" title="Your account data">Account</Link>
           </p>
         </nav>
     </header>
@@ -48,14 +49,14 @@
       <Route path="/">
         <Feed />
       </Route>
-      <Route path="/following">
-        <Following />
+      <Route path="/followfeed">
+        <FollowFeed />
       </Route>
       <Route path="relays">
         <Relays />
       </Route>
-      <Route path="follow">
-        <Follow />
+      <Route path="contacts">
+        <Contacts />
       </Route>
       <Route path="account">
         <Account />

@@ -158,37 +158,4 @@
       </ul>
     </div>
   {/if}
-
-  {#if $relays && $relays.length && $users && $users.length}
-    <div
-      class="block p-6 rounded-lg shadow-lg bg-white w-full ml-6 mt-6 text-left bg-blue-200 overflow-auto h-auto"
-    >
-      <ul
-        class="bg-white rounded-lg border border-gray-200 w-full text-gray-900"
-      >
-        {#each userDiff as user}
-          {#if user.name}
-            <li class="px-6 py-2 border-b border-gray-200 w-full rounded-t-lg">
-              <div class="flex justify-items-start text-center">
-                <Button
-                  type="button"
-                  click={() => {
-                    pubkey = user.pubkey;
-                    petname = user.name;
-                    follow();
-                  }}
-                >
-                  <span class="fa-solid fa-add" />
-                </Button>
-                {#if user.name}
-                  <span class="font-bold pl-1">{user.name.slice(0, 10)}</span> -
-                  {#if user.about} <small>{user.about}</small>{/if}
-                {/if}
-              </div>
-            </li>
-          {/if}
-        {/each}
-      </ul>
-    </div>
-  {/if}
 </div>
