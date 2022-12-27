@@ -733,7 +733,7 @@ export function onEvent(evt: Event, relay: string) {
         case 1:
             feedQueue.push({ textnote: evt, url: relay })
             if (feedQueueTimer === null) {
-                feedQueueTimer = setInterval(handleTextNote, 1000)
+                feedQueueTimer = setInterval(handleTextNote, 500)
             }
             //handleTextNote(evt, relay)
             break
