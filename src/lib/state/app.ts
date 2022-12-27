@@ -4,7 +4,7 @@ import { delay, now } from "../util/time"
 import { find } from "../util/misc"
 import { uniq, pluck, difference, uniqBy, last } from 'ramda'
 import type { User, TextNote, Reaction } from './types'
-import type { Event, Filter, Sub } from 'nostr-tools'
+import type { Event, Filter, Relay, Sub } from 'nostr-tools'
 import { pool, getData, waitForOpenConnection } from './pool'
 import { prop, sort, descend } from "ramda";
 import { setLocalJson, getLocalJson } from '../util/storage'
@@ -655,18 +655,43 @@ function handleDelete(evt, relay) {
     }
 }
 
+export async function isAlive() {
+    let promises = []
+
+    Object.values(pool.getRelays()).forEach((relay: Relay) => {
+        if (relay.status === 0 || relay.status === 2 || relay.status === 3) {
+            let promise = waitForOpenConnection(relay)
+            promises.push(promise)
+        }
+    })
+
+    return Promise.all(promises).then(() => {
+        return true
+    })
+}
 
 export class Listener {
     filter: Filter
     subs: { [key: string]: Sub } = {}
     id: string
+    timer: string | number | NodeJS.Timeout
+
     constructor(filter: Filter, id?: string) {
         this.filter = filter
-        if (!this.id) {
-            'listener' + now()
+        if (!id) {
+            this.id = 'listener' + now()
+        } else {
+            this.id = id
         }
+        this.timer = null
     }
-
+    isAlive() {
+        Object.values(pool.getRelays()).forEach((relay: Relay) => {
+            if (relay.status === 2 || relay.status === 3) {
+                relay.connect() // reconnect
+            }
+        })
+    }
     async start() {
         for (const [url, relay] of Object.entries(pool.getRelays())) {
             if (relay.status !== 1) {
@@ -684,12 +709,15 @@ export class Listener {
                 (r: string) => { log('Eose from ', r) }
             })
         }
+
+        this.timer = setInterval(isAlive, 1000 * 60 * 5) // check every 5 minutes
     }
     stop() {
         for (const [url, sub] of Object.entries(this.subs)) {
             sub.unsub()
             console.log(`Stop listening to relay ${url} by unsubscribe to events and eose`)
         }
+        clearInterval(this.timer)
     }
 }
 

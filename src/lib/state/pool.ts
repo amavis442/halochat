@@ -17,6 +17,7 @@ import {
   type Sub
 } from 'nostr-tools';
 import 'websocket-polyfill';
+import { isAlive } from './app';
 
 export class relayPool {
   relays: { [key: string]: Relay } = {}
@@ -64,6 +65,9 @@ export class relayPool {
     for (const [url, relay] of Object.entries(this.relays)) {
       let $relay = $relays.find(r => r.url == url)
       if ($relay && $relay.write && relay.status == 1) {
+        if (relay.status !== 1) {
+          await waitForOpenConnection(relay)
+        }
         let pub = relay.publish(evt)
         pub.on('ok', () => {
           console.log(`${url} has accepted our event`)
@@ -110,10 +114,13 @@ export const waitForOpenConnection = (relay: Relay) => {
     const interval = setInterval(() => {
       if (currentAttempt > maxNumberOfAttempts - 1) {
         clearInterval(interval)
-        reject(new Error('Maximum number of attempts exceeded'))
+        reject(new Error(`Maximum number of attempts exceeded for relay ${relay.url}`))
       } else if (relay.status === 1) {
         clearInterval(interval)
         resolve(true)
+      }
+      if (relay.status == 2 || relay.status == 3) {
+        relay.connect()
       }
       currentAttempt++
     }, intervalTime)
@@ -157,6 +164,9 @@ export const getData = async (filter: Filter): Promise<Event[]> => {
   const $relays = get(relays)
   const numRelays = $relays.length
 
+  let connectionStatus = await isAlive()
+  console.log(connectionStatus)
+
   return new Promise((resolve, reject) => {
     let subs: Array<Sub> = []
     let result: Array<Event> = []
@@ -176,6 +186,7 @@ export const getData = async (filter: Filter): Promise<Event[]> => {
 
       if ($relays && !$relay.write || relay.status !== 1) {
         console.log(`Relay ${url} has status ${relay.status}`)
+        
         relayReturns.push(url)
         if (relayReturns.length >= numRelays) {
           

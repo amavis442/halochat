@@ -62,7 +62,7 @@
         contacts.getList().forEach(c => {
           pubkeys.push(c[1])
         })
-        listener = new Listener({ since: lastSync, limit: 500, authors: pubkeys });
+        listener = new Listener({ since: lastSync, limit: 500, authors: pubkeys }, 'followcontacts');
         listener.start();
       }
     }

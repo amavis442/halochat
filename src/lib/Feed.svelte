@@ -38,7 +38,7 @@
   onMount(async () => {
     if ($relays && $relays.length) {
       //listener = new Listener({ since: now()});
-      listener = new Listener({ since: $lastSeen });
+      listener = new Listener({ since: $lastSeen }, 'globalfeed');
       listener.start();
 
       let $account: Account = get(account);

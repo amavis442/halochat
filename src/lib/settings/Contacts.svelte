@@ -5,7 +5,7 @@
   import Text from "../partials/Text.svelte";
   import { prop, differenceWith, sort, ascend } from "ramda";
   import type { User } from "../state/types";
-  import { fetchUser } from "../state/app";
+  import { fetchUser, isAlive } from "../state/app";
   import Spinner from "../partials/Spinner/Spinner.svelte";
   import { users } from "../stores/users";
   import { onMount } from "svelte";
@@ -44,6 +44,9 @@
   let promiseGetContacts: Promise<void>;
   onMount(async () => {
     if ($account && $account.pubkey) {
+      
+      await isAlive()
+
       promiseGetContacts = contacts
         .getContacts($account.pubkey)
         .then((data) => {
