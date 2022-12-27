@@ -130,9 +130,9 @@
     }
   });
 </script>
-
+<div class="xl:w-8/12 lg:w-10/12 md:w-10/12 sm:w-full">
 <div
-  class="block p-6 rounded-lg shadow-lg bg-white xl:w-6/12 lg:w-8/12 md:w-10/12 sm:w-full ml-6 mt-6 bg-blue-200"
+  class="block p-6 rounded-lg shadow-lg bg-white w-full ml-6 mt-6 bg-blue-200"
 >
   {#if !$relays || !$relays.length} 
   <div class="bg-red-100 rounded-lg py-5 px-6 mb-4 text-base text-red-700 mb-3" role="alert"><i class="fa-solid fa-triangle-exclamation"></i> Add a relay first!!!</div>
@@ -145,7 +145,7 @@
       </label>
 
       <div class="md:flex md:items-top mb-6 gap-2">
-        <div class="md:w-3/4">
+        <div class="md:w-10/12 flex justify-start">
           <Text
             bind:value={pubkey}
             id="pubkey"
@@ -153,7 +153,7 @@
             placeholder="Public key"
           />
         </div>
-        <div class="md:w-1/4">
+        <div class="md:w-2/12 flex justify-end">
           <Button click={generateKeys}>Keys</Button>
         </div>
       </div>
@@ -246,7 +246,7 @@
 
 {#if $account && $account.pubkey}
   <div
-    class="block p-6 rounded-lg shadow-lg bg-white md:w-6/12 ms:w-full ml-6 mt-6 text-left bg-blue-200"
+    class="block p-6 rounded-lg shadow-lg bg-white w-full ml-6 mt-6 text-left bg-blue-200"
   >
     <ul class="bg-white rounded-lg border border-gray-200 w-full text-gray-900">
       <li class="px-6 py-2 border-b border-gray-200 w-full rounded-t-lg">
@@ -262,3 +262,4 @@
     </ul>
   </div>
 {/if}
+</div>

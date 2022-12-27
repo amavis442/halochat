@@ -124,9 +124,7 @@
           </div>
         </div>
 
-        <div class="flex items-center justify-end">
-          <Button type="submit" {...{ class: "flex" }}>Add</Button>
-        </div>
+ 
       </div>
 
       <div class="md:flex md:items-center mb-6">
@@ -136,6 +134,10 @@
           usually has the form of wss://[name of relay]. For more relays see
           <Link href="https://nostr-registry.netlify.app/">nostr-registry</Link>
         </small>
+      </div>
+
+      <div class="flex items-center justify-end">
+        <Button type="submit" {...{ class: "flex" }}>Add</Button>
       </div>
     </form>
   </div>
