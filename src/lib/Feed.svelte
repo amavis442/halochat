@@ -7,7 +7,6 @@
   import { account } from "./stores/account";
   import { feed } from "./state/app";
   import contacts from "./state/contacts";
-  import { now } from "./util/time";
   import TextNote from "./TextNote.svelte";
   import TreeNote from "./TreeNote.svelte";
 
@@ -37,7 +36,6 @@
 
   onMount(async () => {
     if ($relays && $relays.length) {
-      //listener = new Listener({ since: now()});
       listener = new Listener({ since: $lastSeen }, 'globalfeed');
       listener.start();
 

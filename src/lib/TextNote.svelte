@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getTime } from "./util/time";
-  import type { User, TextNote as Note } from "./state/types";
+  import type { User, TextNote as Note, Reaction } from "./state/types";
   import { toHtml, findLink } from "./util/html";
   import { beforeUpdate, onMount } from "svelte";
   import { publishReaction } from "./state/pool";
@@ -36,7 +36,9 @@
       let pubkeys = pluck("pubkey", note.reactions);
       let fp = pubkeys.find((pk) => pk == $account.pubkey);
       if (fp) {
-        let voted = note.reactions.find((r) => r.pubkey == $account.pubkey);
+        let voted = note.reactions.find(
+          (r: Reaction) => r.pubkey == $account.pubkey
+        );
         votedFor = voted.content;
       }
     }
@@ -66,7 +68,7 @@
    * Send a textnote as reply
    */
   let promiseReply: Promise<void>;
-  async function sendTextNote(noteText) {
+  async function sendTextNote(noteText: string) {
     console.log(noteText);
     promiseReply = publishReply(noteText, note);
   }

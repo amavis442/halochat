@@ -1,12 +1,10 @@
 import { writable } from 'svelte/store'
 import type { User } from '../state/types'
 import type { Event } from 'nostr-tools'
-
-import { setLocalJson, getLocalJson } from '../util/storage'
 import { now } from '../util/time';
 import { log } from '../util/misc'
 
-export const users = writable(getLocalJson('halochat/users') || []);
+export const users = writable([]);
 
 /**
  * No requests made
@@ -54,6 +52,14 @@ export function formatUser(evt: Event, relay: string) {
   return user
 }
 
-users.subscribe((value) => {
-  setLocalJson('halochat/users', value)
-})
+export const initUser = (pubkey: string, relay: string): User => {
+  return {
+    pubkey: pubkey,
+    name: 'unknown',
+    about: '',
+    picture: 'profile-placeholder.png',
+    content: '',
+    refreshed: now(),
+    relays: [relay]
+  }
+}

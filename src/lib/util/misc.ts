@@ -1,25 +1,5 @@
 import type { TextNote as Note } from '../state/types'
 
-export function getLocalJson(k: string) {
-    const data = localStorage.getItem(k);
-    if (data) {
-        try {
-            return JSON.parse(data)
-        } catch (e) {
-            return null
-        }
-    }
-    return null
-}
-
-export function setLocalJson(k: string, v: any) {
-    try {
-        localStorage.setItem(k, JSON.stringify(v))
-    } catch (e) {
-        // pass
-    }
-}
-
 export function filter(notes: Array<Note>, pubkey: string) {
     const getNodes = (result: any, object: any) => {
         if (object.pubkey !== pubkey) {

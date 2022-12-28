@@ -1,11 +1,11 @@
 import { writable } from 'svelte/store'
-import { getLocalJson, setLocalJson } from '../util/misc'
+import { getLocalJson, setLocalJson, setting } from '../util/storage'
 import type { Account } from '../state/types'
 
-export const account = writable(getLocalJson("halochat/account") || []);
+export const account = writable(getLocalJson(setting.Account) || []);
 
 account.subscribe(($account: Account) => {
-  setLocalJson("halochat/account", $account)
+  setLocalJson(setting.Account, $account)
 })
 
 export function deleteAccount() {

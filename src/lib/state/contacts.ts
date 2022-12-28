@@ -1,21 +1,30 @@
 import { addToast } from "../partials/Toast/toast";
 import { getContactlist } from "./app";
 import type { Follow } from "./types";
-import { get, writable } from 'svelte/store'
+import { get, writable, type Writable } from 'svelte/store'
 import { publish } from "./pool";
+import { setLocalJson, getLocalJson, setting } from '../util/storage';
 
-let contacts = writable([]); // Follow list
+/**
+ * @see https://github.com/nostr-protocol/nips/blob/master/02.md
+ * ['p',pubkey,relay, petname]
+ */
+let contacts: Writable<Array<{ pubkey: string, relay: string, petname: string }>> = writable(getLocalJson(setting.Contacts) || []); // Follow list
+contacts.subscribe((value) => {
+    setLocalJson(setting.Contacts, value)
+})
+
 /**
  * 
  * @param pubkey 
  */
-export function unFollow(pubkey: string):Array<string[]> {
+export function unFollow(pubkey: string): Array<{ pubkey: string, relay: string, petname: string }> {
     let $contacts = get(contacts)
-    let c = $contacts.find((c) => c[1] == pubkey);
-    $contacts = $contacts.filter((c) => c[1] != pubkey);
+    let c = $contacts.find((c) => c.pubkey == pubkey);
+    $contacts = $contacts.filter((c) => c.pubkey != pubkey);
 
     addToast({
-        message: "Removed: " + c[3].slice(0, 10),
+        message: "Removed: " + c.petname.slice(0, 10),
         type: "success",
         dismissible: true,
         timeout: 3000,
@@ -29,22 +38,22 @@ export function unFollow(pubkey: string):Array<string[]> {
  * @param pubkey 
  * @param petname 
  */
-function follow(pubkey: string, petname: string):Array<string[]> {
+function follow(pubkey: string, petname: string): Array<{ pubkey: string, relay: string, petname: string }> {
     let followUser: Follow = {
         pubkey: pubkey,
         petname: petname,
     };
 
-    let contact = [];
-    contact = ["p", pubkey, "", petname];
-
+    let contact = {pubkey: pubkey, relay: '', petname:petname};
+ 
     console.log('Contact to follow', contact)
-    
+
     contacts.update((all) => {
+        all.push(contact)
         console.log(all, contact)
-        return [...all, contact]
+        return all
     });
-    
+
     pubkey = "";
     petname = "";
 
@@ -63,7 +72,12 @@ function follow(pubkey: string, petname: string):Array<string[]> {
  */
 async function saveContactList(): Promise<any> {
     let $contacts = get(contacts)
-    return publish(3, "", $contacts).then(() => {
+    let storeContacts = []
+    $contacts.forEach(c =>{
+        storeContacts.push(['p', c.pubkey, c.relay, c.petname])    
+    })
+
+    return publish(3, "", storeContacts).then(() => {
         addToast({
             message: "Contact list has been saved",
             type: "success",
@@ -73,8 +87,13 @@ async function saveContactList(): Promise<any> {
     });
 }
 
-async function publishList(list:string[][]): Promise<any> {
-    return publish(3, "", list).then(() => {
+async function publishList(list: Array<{ pubkey: string, relay: string, petname: string }>): Promise<any> {
+    let saveList = []
+    list.forEach(c =>{
+        saveList.push(['p', c.pubkey, c.relay, c.petname])    
+    })
+
+    return publish(3, "", saveList).then(() => {
         addToast({
             message: "Contact list has been saved",
             type: "success",
@@ -106,14 +125,18 @@ async function getContacts(pubkey: string): Promise<any> {
                 });
                 console.debug('Received contacts processed ', contactList)
 
-                contacts.set(contactList);
+                let contact:Array<{ pubkey: string, relay: string, petname: string }> = []
+                contactList.forEach(cl => {
+                    contact.push({pubkey: cl[1], relay: cl[2], petname: cl[3]})
+                })
+                contacts.set(contact);
 
                 return contactList;
             }
         );
 }
 
-function getList() {
+function getList(): Array<{ pubkey: string, relay: string, petname: string }> {
     return get(contacts)
 }
 

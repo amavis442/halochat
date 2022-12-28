@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { pool, relays } from "../state/pool";
+  import { relays } from "../state/pool";
   import { addToast } from "../partials/Toast/toast";
   import Button from "../partials/Button.svelte";
   import Text from "../partials/Text.svelte";
   import Link from "../partials/Link.svelte";
+  import type { Relay } from "nostr-tools";
 
   let url: string = "";
   let read: boolean = true;
@@ -11,14 +12,14 @@
 
   function deleteRelay(url: string) {
     relays.update((data) => {
-      data = data.filter(d => {
-        console.log('Url:', url, 'Url reg:', d.url)
-        return d.url != url
+      data = data.filter((d: Relay) => {
+        console.log("Url:", url, "Url reg:", d.url);
+        return d.url != url;
       });
-      console.log('Data:' , data)
+      console.log("Data:", data);
       return data;
     });
-    console.log($relays)
+    console.log($relays);
 
     addToast({
       message: "Relay removed!",
@@ -34,7 +35,6 @@
       !url.match(/^wss?:\/\/[\w.:\/-]+$/) &&
       !url.match(/^http?:\/\/[\w.:\/-]+$/)
     ) {
-     
       addToast({
         message: "Please start websocket url with wss://",
         type: "error",
@@ -46,9 +46,9 @@
 
     relays.update((data) => {
       if (!data) data = [];
-      const result = data.find(d=>d.url ==url);
+      const result = data.find((d: Relay) => d.url == url);
       if (!result) {
-        data.push({url:url, read: read, write: write});
+        data.push({ url: url, read: read, write: write });
         return data;
       }
       return data;
@@ -74,7 +74,6 @@
   function resetRelays() {
     relays.set([]);
   }
-
 </script>
 
 <div class="xl:w-8/12 lg:w-10/12 md:w-10/12 sm:w-full">
@@ -83,7 +82,6 @@
   >
     <form on:submit|preventDefault={onSubmit}>
       <div class="flex gap-4 w-full">
-        
         <div class="flex w-full">
           <Text
             bind:value={url}
@@ -107,7 +105,7 @@
             >
               <span class="text-sm">read</span>
             </label>
-        </div>
+          </div>
           <div class="form-check form-check-inline w-14">
             <input
               type="checkbox"
@@ -123,8 +121,6 @@
             </label>
           </div>
         </div>
-
- 
       </div>
 
       <div class="md:flex md:items-center mb-6">

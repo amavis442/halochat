@@ -5,7 +5,7 @@
 
   export let url: string = "";
   export let endpoint: string;
-  let preview;
+  let preview: { images: any[]; description: any; mediaType: string; url: any; title: any; };
 
   onMount(async () => {
     log("Getting preview data");

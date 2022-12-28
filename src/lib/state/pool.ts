@@ -1,5 +1,5 @@
 import { writable, get } from 'svelte/store'
-import { getLocalJson, setLocalJson } from '../util/storage'
+import { getLocalJson, setLocalJson, setting } from '../util/storage'
 import { now } from "../util/time";
 import { account } from '../stores/account';
 import { getRootTag, getReplyTag } from '../util/tags';
@@ -26,7 +26,7 @@ export class relayPool {
   addRelay = (url: string) => {
     let relay = relayInit(url)
     relay.connect()
-
+    //@ts-ignore is in it but not in the type declaration 
     relay.on('error', () => {
       console.log(`failed to connect to ${url}`)
       addToast({
@@ -41,7 +41,7 @@ export class relayPool {
       console.log(`connected to ${url}`)
     })
 
-    relay.on('notice', (evt) => {
+    relay.on('notice', (evt: Event) => {
       console.log(`Got an notice from ${url}`, evt)
     })
 
@@ -56,7 +56,7 @@ export class relayPool {
   removeRelay = (url: string) => {
     if (this.hasRelay(url)) {
       this.relays[url].close()
-      delete(this.relays[url])
+      delete (this.relays[url])
     }
   }
 
@@ -65,7 +65,7 @@ export class relayPool {
 
     console.log($relays)
     for (const [url, relay] of Object.entries(this.relays)) {
-      let $relay = $relays.find(r => r.url == url)
+      let $relay = $relays.find((r: Relay) => r.url == url)
       if ($relay && $relay.write && relay.status == 1) {
         if (relay.status !== 1) {
           await waitForOpenConnection(relay)
@@ -93,7 +93,8 @@ export class relayPool {
 
   close = () => {
     for (const [url, relay] of Object.entries(this.relays)) {
-      relay.close
+      console.log(`Closing connection to ${url}`)
+      relay.close()
     }
   }
 
@@ -184,14 +185,14 @@ export const getData = async (filter: Filter): Promise<Event[]> => {
       let timeoutId = setTimeout(() => {
         subs.forEach(item => item.unsub())
         reject(`getData:: Request took to long (15s) unsub all subscription to free slots`)
-      } , 30000);
+      }, 30000);
 
       if (relay.status !== 1) {
         console.log(`Relay ${url} has status ${relay.status}`)
-        
+
         relayReturns.push(url)
         if (relayReturns.length >= numRelays) {
-          
+
           reject(new Error('No relays with open connection'))
         }
         continue
@@ -209,11 +210,11 @@ export const getData = async (filter: Filter): Promise<Event[]> => {
           //resolve(result)
         })
 
-        sub.on('eose', (r: any) => {
+        sub.on('eose', () => {
           console.debug(`getData:: Received EOSE from ${url}`)
           relayReturns.push(url)
           relayReturns = uniq(relayReturns)
-          console.debug('ESOE', relayReturns.length,Object.entries(pool.getRelays()).length)
+          console.debug('ESOE', relayReturns.length, Object.entries(pool.getRelays()).length)
           if (relayReturns.length >= Object.entries(pool.getRelays()).length) {
             clearInterval(timeoutId)
             subs.forEach(item => item.unsub())
@@ -265,10 +266,10 @@ function copyTags(evt: Event) {
       newtags.push(t);
     }
   });
-  
+
   let relays = pool.getRelays()
   let relayUrl = Object.keys(relays)[0]
- 
+
   newtags.push(["p", evt.pubkey, relayUrl]);
   newtags.push(["e", evt.id, relayUrl, "reply"]);
 
@@ -314,11 +315,11 @@ export async function publish(kind: number, content = '', tags = []): Promise<an
   return pool.publish(sendEvent)
 }
 
-export const relays = writable(getLocalJson("halochat/relays") || [])
+export const relays = writable(getLocalJson(setting.Relays) || [])
 relays.subscribe($relays => {
   try {
     Object.keys(pool.getRelays()).forEach((url: string) => {
-      if ($relays && !$relays.find(r => r.url == url)) {
+      if ($relays && !$relays.find((r: Relay) => r.url == url)) {
         pool.removeRelay(url)
         console.log('Remove relay from pool:', url)
       }
@@ -337,5 +338,5 @@ relays.subscribe($relays => {
       }
     }
   }
-  setLocalJson("halochat/relays", $relays)
+  setLocalJson(setting.Relays, $relays)
 })

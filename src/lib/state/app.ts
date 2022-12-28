@@ -1,21 +1,21 @@
 import { get, writable, type Writable } from 'svelte/store'
-import { users, annotateUsers, formatUser } from '../stores/users'
-import { delay, now } from "../util/time"
+import { users, annotateUsers, formatUser, initUser } from '../stores/users'
+import { now } from "../util/time"
 import { find } from "../util/misc"
-import { uniq, pluck, difference, uniqBy, last } from 'ramda'
+import { uniqBy } from 'ramda'
 import type { User, TextNote, Reaction, Account } from './types'
 import type { Event, Filter, Relay, Sub } from 'nostr-tools'
 import { pool, getData, waitForOpenConnection } from './pool'
 import { prop, sort, descend } from "ramda";
-import { setLocalJson, getLocalJson } from '../util/storage'
+import { setLocalJson, getLocalJson, setting } from '../util/storage'
 import { getRootTag, getReplyTag, getLastETag } from '../util/tags';
 import { log } from '../util/misc';
 import { blocklist } from '../stores/block'
 import { account } from '../stores/account'
 
-let $users:Array<User> = get(users)
-let $blocklist:Array<{pubkey:string, added:number}> = get(blocklist)
-let $account:Account = get(account);
+let $users: Array<User> = get(users)
+let $blocklist: Array<{ pubkey: string, added: number }> = get(blocklist)
+let $account: Account = get(account);
 if (!$users) $users = []
 if (!$blocklist) $blocklist = []
 
@@ -32,9 +32,9 @@ export const queue: Writable<Array<string>> = writable([])
 
 export const loading: Writable<boolean> = writable(false)
 
-export const blocktext = writable(getLocalJson("halochat/blocktext") || [])
-blocklist.subscribe((value) => {
-    setLocalJson('halochat/blocktext', value)
+export const blocktext = writable(getLocalJson(setting.Blocktext) || [])
+blocktext.subscribe((value) => {
+    setLocalJson(setting.Blocktext, value)
 })
 
 export const feedStack = writable([])
@@ -44,7 +44,7 @@ export const feedStack = writable([])
  * 
  * @see https://github.com/nostr-protocol/nips/blob/master/02.md
  */
-export function getContactlist(pubkey): Promise<Array<Event>> {
+export function getContactlist(pubkey: string): Promise<Array<Event>> {
     let filter: Filter = {
         kinds: [3],
         authors: [pubkey]
@@ -127,15 +127,7 @@ export async function fetchUser(pubkey: string, relay: string): Promise<User> {
                 user = formatUser(fetchResultUsers[0], relay)
             }
             if (fetchResultUsers.length == 0) {
-                let unkownUser = {
-                    pubkey: pubkey,
-                    name: 'unknown',
-                    about: '',
-                    picture: 'profile-placeholder.png',
-                    content: '',
-                    refreshed: now(),
-                    relays: [relay]
-                }
+                let unkownUser: User = initUser(pubkey, relay)
                 user = unkownUser
             }
             annotateUsers(user)
@@ -161,16 +153,7 @@ export async function fetchUsers(pubkeys: Array<string>, relay: string): Promise
     return getData(filter)
         .then((fetchResultUsers: Array<Event>) => {
             for (let i = 0; i < pubkeys.length; i++) {
-                let user: User = {
-                    pubkey: pubkeys[i],
-                    name: 'unknown',
-                    about: '',
-                    picture: 'profile-placeholder.png',
-                    content: '',
-                    refreshed: now(),
-                    relays: [relay]
-                }
-
+                let user: User = initUser(pubkeys[i], relay)
                 if (fetchResultUsers.length) {
                     let evt: Event = fetchResultUsers.find(e => e.pubkey = pubkeys[i])
                     user = formatUser(evt, relay)
@@ -246,7 +229,7 @@ async function processReplyFeed(evt: Event, replies: Array<Event>, relay: string
     let $feedStack = get(feedStack)
     let rootNote: TextNote | null
 
-    log('processReplyFeed:: start. Based on these replies ', replies)
+    log(`processReplyFeed:: start ${relay}. Based on these replies `, replies)
     if (replies.length > 0) {
         replies = uniqBy(prop('id'), replies)
 
@@ -294,7 +277,7 @@ async function processReplyFeed(evt: Event, replies: Array<Event>, relay: string
                     let keys = Object.keys(map)
                     console.log('processReplyFeed:: Keys', keys, list, map, rootNode)
 
-                    let parent
+                    let parent: TextNote | null
                     for (let i = 0; i < keys.length; i++) {
                         parent = list[keys[i]] ? list[keys[i]] : null
                         if (!parent) {
@@ -376,8 +359,11 @@ batchUser.subscribe(data => {
 async function annotateNote(note: TextNote, relay: string): Promise<TextNote> {
     log('annotateNote: User ', note.pubkey)
     if (!note.user) {
-        let result = Array.isArray($users) ? $users.filter((u: User) => u.pubkey == note.pubkey) : null
-        note.user = result && result.length ? result[0] : []
+        note.user = initUser(note.pubkey, relay)
+        let result: Array<User> | null = Array.isArray($users) ? $users.filter((u: User) => u.pubkey == note.pubkey) : null
+        if (result && result.length) {
+            note.user = result[0]
+        }
     }
 
     if (!note.user || note.user.refreshed > now() - (60 * 10)) {
@@ -637,10 +623,11 @@ function handleReaction(evt: Event, relay: string) {
  * @param evt 
  * @param relay 
  */
-function handleDelete(evt, relay) {
+function handleDelete(evt: Event, relay: string) {
     let pubkey = evt.pubkey
-    let eventsToDelete: Array<any> = evt.tags.filter((e: Event) => e[0] == 'e')
+    let eventsToDelete: Array<any> = evt.tags.filter((t: Array<any>) => t[0] == 'e')
     let $feed = get(feed)
+    console.log(`handleDelete:: Got a delete request from ${relay}`, evt)
 
     let rootNotes: Array<TextNote> = $feed.filter(e => e.tree == 0)
     for (let i = 0; i < rootNotes.length; i++) {
@@ -702,11 +689,11 @@ export class Listener {
 
             this.subs[url] = relay.sub([this.filter], { id: this.id })
 
-            this.subs[url].on('event', event => {
+            this.subs[url].on('event', (event: Event) => {
                 onEvent(event, url)
             })
-            this.subs[url].on('eose', r => {
-                (r: string) => { log('Eose from ', r) }
+            this.subs[url].on('eose', (r: string) => {
+                log(`Eose from ${r}`)
             })
         }
 
@@ -724,7 +711,10 @@ export class Listener {
 let feedQueue: Array<{ textnote: Event, url: string }> = []
 let feedQueueTimer = null
 
-export let lastSeen = writable(getLocalJson('halochat/lastseen') || now() - 60 * 60)
+export let lastSeen = writable(getLocalJson(setting.Lastseen) || now() - 60 * 60)
+lastSeen.subscribe(value => {
+    setLocalJson(setting.Lastseen, value)
+})
 export function onEvent(evt: Event, relay: string) {
     switch (evt.kind) {
         case 0:

@@ -1,34 +1,15 @@
 <script lang="ts">
-  import { getData, publish, publishReply, relays } from "./state/pool";
+  import { getData, relays } from "./state/pool";
   import { onMount, onDestroy } from "svelte";
   import { get, writable } from "svelte/store";
-
   import type { TextNote as Note, Account } from "./state/types";
-  import type { Event, Filter } from "nostr-tools";
+  import type { Filter } from "nostr-tools";
   import { account } from "./stores/account";
   import { now } from "./util/time";
   import TextNote from "./TextNote.svelte";
   import TreeNote from "./TreeNote.svelte";
-
-  import { Modals, closeModal } from "svelte-modals";
   import Spinner from "./partials/Spinner/Spinner.svelte";
   import Anchor from "./partials/Anchor.svelte";
-  import { log } from "./util/misc";
-
-  let msg = "";
-  let replyTo: Event | null = null;
-
-  function sendMessage() {
-    if (replyTo) {
-      log(replyTo);
-      publishReply(msg, replyTo);
-    }
-    if (!replyTo) {
-      publish(1, msg);
-    }
-    replyTo = null;
-    msg = "";
-  }
 
   let moreLoading = Promise<void>;
 
@@ -108,23 +89,3 @@
     </div>
   </div>
 </div>
-
-<Modals>
-  <div
-    slot="backdrop"
-    class="backdrop"
-    on:click={closeModal}
-    on:keyup={closeModal}
-  />
-</Modals>
-
-<style>
-  .backdrop {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    right: 0;
-    left: 0;
-    background: rgba(0, 0, 0, 0.5);
-  }
-</style>

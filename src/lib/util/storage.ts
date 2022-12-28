@@ -1,13 +1,19 @@
+export enum setting {
+    Relays = 'halochat/relays',
+    Account = 'halochat/account',
+    Blocklist = 'halochat/blocklist',
+    Blocktext = 'halochat/blocktext',
+    Contacts = 'halochat/contacts',
+    Lastseen = 'halochat/lastseen'
+}
+
 export const allowedKeys = [
-    'halochat/relays',
-    'halochat/users',
-    'halochat/notes',
-    'halochat/account',
-    'halochat/notestack',
-    'halochat/blocklist',
-    'halochat/blocktext',
-    'halochat/followlist',
-    'halochat/lastseen'
+    setting.Relays.toString(),
+    setting.Account.toString(),
+    setting.Blocklist.toString(),
+    setting.Blocktext.toString(),
+    setting.Contacts.toString(),
+    setting.Lastseen.toString()
 ]
 
 export function getLocalJson(k: string) {

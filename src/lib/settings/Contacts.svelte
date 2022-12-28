@@ -10,7 +10,6 @@
   import { users } from "../stores/users";
   import { onMount } from "svelte";
   import { account } from "../stores/account";
-  import { log } from "../util/misc";
   import contacts from "../state/contacts";
 
   let pubkey = "";
@@ -32,7 +31,7 @@
 
   let userDiff = [];
   $: userDiff = differenceWith(
-    (a: User, b: Array<string>) => a.pubkey == b[1],
+    (a: User, b: { pubkey: string, relay: string, petname: string }) => a.pubkey == b.pubkey,
     $users,
     contacts.getList()
   ).filter((u) => u.pubkey != $account.pubkey);

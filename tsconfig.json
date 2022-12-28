@@ -14,9 +14,10 @@
     "allowJs": true,
     "checkJs": true,
     "isolatedModules": true,
-    "lib": ["WebWorker", "ESNext","scripthost"]
+    "lib": ["WebWorker", "ESNext","scripthost"],
+    "skipLibCheck": true
   },
   "include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.js", "src/**/*.svelte"],
-  "exclude": ["node_modules"],
+  "exclude": ["node_modules","./node_modules/**","dist"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
