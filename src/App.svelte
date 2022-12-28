@@ -35,10 +35,10 @@
             <Link to="/followfeed" title="Contacts that you follow">Following</Link>
           </p>
           <p class="nav-p">
-            <Link to="contacts" title="Admin list of contacts to follow">Contacts</Link>
+            <Link to="posts" title="Posts you made">Posts</Link>
           </p>
           <p class="nav-p">
-            <Link to="posts" title="Posts you made">Posts</Link>
+            <Link to="contacts" title="Admin list of contacts to follow">Contacts</Link>
           </p>
           <p class="nav-p">
             <Link to="relays" title="Relays to use">Relays</Link>

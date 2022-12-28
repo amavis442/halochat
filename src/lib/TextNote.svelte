@@ -215,7 +215,8 @@
               <strong class="text-black text-sm font-medium">
                 {#if followed}
                   <i class="fa-solid fa-bookmark" />
-                {/if}{normalizeName(user)}
+                {/if}
+                <span title="{note.pubkey}">{normalizeName(user)}</span>
                 <small class="text-gray">{getTime(note.created_at)}</small>
               </strong>
             </div>

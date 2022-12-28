@@ -55,7 +55,7 @@ export function formatUser(evt: Event, relay: string) {
 export const initUser = (pubkey: string, relay: string): User => {
   return {
     pubkey: pubkey,
-    name: 'unknown',
+    name: pubkey,
     about: '',
     picture: 'profile-placeholder.png',
     content: '',

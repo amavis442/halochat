@@ -163,18 +163,18 @@ export const createEvent = async (kind: number, content: string = '', tags: stri
   return note
 }
 
-export const getData = async (filter: Filter): Promise<Event[]> => {
+export const getData = async (filter: Filter, name?:string): Promise<Event[]> => {
   const $relays = get(relays)
   const numRelays = $relays.length
 
   let connectionStatus = await isAlive()
-  console.log(connectionStatus)
+  console.log('All relays connected: ', connectionStatus)
 
   return new Promise((resolve, reject) => {
     let subs: Array<Sub> = []
     let result: Array<Event> = []
     let relayReturns: string[] = []
-    const subId = 'getter' + now()
+    const subId = name ? name : 'getter' + now()
 
     if (!Object.entries(pool.getRelays()).length) {
       reject('Pool of relays is empty.')
@@ -184,7 +184,8 @@ export const getData = async (filter: Filter): Promise<Event[]> => {
       //let $relay = $relays.find(r => r.url == url)
       let timeoutId = setTimeout(() => {
         subs.forEach(item => item.unsub())
-        reject(`getData:: Request took to long (15s) unsub all subscription to free slots`)
+        console.error(`getData:: Request(${subId}) took to long (15s) unsub all subscription to free slots. Filter/Request: ` + JSON.stringify(filter))
+        resolve(result) // Resolve what we got. Relay can behave badly/slowish
       }, 30000);
 
       if (relay.status !== 1) {

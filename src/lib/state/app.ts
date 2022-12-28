@@ -2,7 +2,7 @@ import { get, writable, type Writable } from 'svelte/store'
 import { users, annotateUsers, formatUser, initUser } from '../stores/users'
 import { now } from "../util/time"
 import { find } from "../util/misc"
-import { uniqBy } from 'ramda'
+import { head, uniq, uniqBy } from 'ramda'
 import type { User, TextNote, Reaction, Account } from './types'
 import type { Event, Filter, Relay, Sub } from 'nostr-tools'
 import { pool, getData, waitForOpenConnection } from './pool'
@@ -145,12 +145,19 @@ export async function fetchUser(pubkey: string, relay: string): Promise<User> {
  * @returns 
  */
 export async function fetchUsers(pubkeys: Array<string>, relay: string): Promise<Array<User>> {
+    pubkeys = uniq(pubkeys)
+    pubkeys = pubkeys.map(pubkey => {
+        if (!$users.find((u: User) => u.pubkey == pubkey && u.name != pubkey)) {
+            return pubkey
+        }
+    })
+
     let filter: Filter = {
         kinds: [0],
         authors: pubkeys
     }
     let result = []
-    return getData(filter)
+    return getData(filter, "fetchUsers")
         .then((fetchResultUsers: Array<Event>) => {
             for (let i = 0; i < pubkeys.length; i++) {
                 let user: User = initUser(pubkeys[i], relay)
@@ -260,7 +267,7 @@ async function processReplyFeed(evt: Event, replies: Array<Event>, relay: string
                 '#e': k
             }
             log('processReplyFeed:: Attempt to find rootNote with this filter', filter)
-            rootNote = await getData(filter)
+            rootNote = await getData(filter, 'GetterProcessReplyFeed' + evt.id)
                 .then((data: Event | Array<Event> | null) => {
                     console.log('processReplyFeed:: Return data: ', data)
                     if (Array.isArray(data)) data = data[0] // Can happen if all of a sudden all relays respond at the same time
@@ -337,16 +344,12 @@ function syncNoteTree(rootNote: TextNote) {
             return data
         })
     }
+    let $feed = get(feed)
+    $feed = $feed
 }
 
-let batchUser = writable([])
-batchUser.subscribe(data => {
-    if (data.length > 10) {
-        fetchUsers(data, '')
-    }
-    return []
-})
 
+let userMapping = []
 
 
 /**
@@ -359,7 +362,10 @@ batchUser.subscribe(data => {
 async function annotateNote(note: TextNote, relay: string): Promise<TextNote> {
     log('annotateNote: User ', note.pubkey)
     if (!note.user) {
-        note.user = initUser(note.pubkey, relay)
+
+        $users.push(initUser(note.pubkey, relay))
+        let user = $users.find(u => u.pubkey = note.pubkey)
+        note.user = user
         let result: Array<User> | null = Array.isArray($users) ? $users.filter((u: User) => u.pubkey == note.pubkey) : null
         if (result && result.length) {
             note.user = result[0]
@@ -370,6 +376,9 @@ async function annotateNote(note: TextNote, relay: string): Promise<TextNote> {
         log('annotateNote:: fetch user data for ', note.pubkey)
     }
 
+    if (!note.user || note.user.name == note.user.pubkey) {
+        userMapping.push({ pubkey: note.pubkey, user: note.user }) // this should make referencing easier, i think
+    }
     return note
 }
 
@@ -386,6 +395,10 @@ function blockText(evt: Event): boolean {
     if (evt.content.match(/Verifying\ My\ Public\ Key/)) return true
     return false
 }
+
+let queueUser: Writable<Array<string>> = writable([])
+let $queueUser = get(queueUser)
+
 /**
  * Kind 1
  * 
@@ -416,9 +429,10 @@ async function handleTextNote(): Promise<void> {
 
     let $lastSeen = get(lastSeen)
     let tags = evt.tags.filter(t => t[0] == 'e')
+
     if (tags.length == 0) {
         if ($lastSeen < evt.created_at) {
-            $lastSeen = evt.created_at
+            lastSeen.set(evt.created_at)
         }
     }
 
@@ -430,6 +444,16 @@ async function handleTextNote(): Promise<void> {
     if (blockText(evt)) {
         checkQueue()
         return
+    }
+
+    if (!$queueUser) $queueUser = []
+    $queueUser.push(evt.pubkey)
+    $queueUser = uniq($queueUser)
+    if ($queueUser.length > 5) {
+        console.log('Users: Array gonna get some user data')
+        fetchUsers($queueUser, '')
+        $queueUser = []
+        console.log('Users: Array gonna get some user data new state', $queueUser)
     }
 
     let $feed = get(feed)
@@ -503,14 +527,24 @@ async function handleTextNote(): Promise<void> {
         }
     }
 
+    let sIds = []
+    sIds.push(evt.id)
+    /*if (rootTag.length) {
+        sIds.push(rootTag[1])
+    }*/
     // get all the events under this eventId
     let filter: Filter = {
+        ids: [rootTag[1]],
         kinds: [1],
-        '#e': [evt.id]
+        '#e': sIds
     }
     log('handleTextNote: Filter to get replies ', filter)
-    getData(filter)
-        .then((replies: Array<Event>) => processReplyFeed(evt, replies, relay))
+
+    getData(filter, 'GetterHandleTextNote' + evt.id)
+        .then((replies: Array<Event>) => {
+            console.log('handleTextNote:: Replies for ', filter, '\n', replies)
+            return processReplyFeed(evt, replies, relay)
+        })
         .then((rootNote: TextNote | null) => {
             log('handleTextNote: Current stack: ', $feedStack)
             if (rootNote) syncNoteTree(rootNote)
@@ -672,13 +706,6 @@ export class Listener {
         }
         this.timer = null
     }
-    isAlive() {
-        Object.values(pool.getRelays()).forEach((relay: Relay) => {
-            if (relay.status === 2 || relay.status === 3) {
-                relay.connect() // reconnect
-            }
-        })
-    }
     async start() {
         for (const [url, relay] of Object.entries(pool.getRelays())) {
             if (relay.status !== 1) {
@@ -692,8 +719,8 @@ export class Listener {
             this.subs[url].on('event', (event: Event) => {
                 onEvent(event, url)
             })
-            this.subs[url].on('eose', (r: string) => {
-                log(`Eose from ${r}`)
+            this.subs[url].on('eose', () => {
+                log(`Eose from ${url}`)
             })
         }
 
