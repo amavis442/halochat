@@ -427,6 +427,7 @@ async function handleTextNote(): Promise<void> {
         pool.getRelays()['ws://localhost:8008'].publish(evt)
     }
 
+    /*
     let $lastSeen = get(lastSeen)
     let tags = evt.tags.filter(t => t[0] == 'e')
 
@@ -435,7 +436,8 @@ async function handleTextNote(): Promise<void> {
             lastSeen.set(evt.created_at)
         }
     }
-
+    */
+   
     if ($account.pubkey != evt.pubkey && $blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == evt.pubkey)) {
         log('handleTextNote:: user on blocklist ', evt)
         checkQueue()
@@ -784,7 +786,7 @@ export function onEvent(evt: Event, relay: string) {
             break;
 
         default:
-            log(`Got an unhandled kind ${evt.kind}`)
+            
     }
 }
 

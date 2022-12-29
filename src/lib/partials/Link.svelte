@@ -4,8 +4,8 @@
 
 <a
   href={href}
-  class="text-blue-600 visited:text-purple-600"
+  class="text-blue-600 visited:text-purple-600 {$$props['class'] ? $$props['class'] : ''}"
   target="_blank"
-  rel="noreferrer">
+  rel="noreferrer" >
   <slot />
 </a>

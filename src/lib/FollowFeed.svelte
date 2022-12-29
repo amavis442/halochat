@@ -11,8 +11,10 @@
   import { getTime, now } from "./util/time";
   import { log } from "./util/misc";
   import contacts from './state/contacts';
-  import Feeder from './Feeder.svelte';
-
+  import Feeder from './partials/Feeder.svelte';
+  import TextNote from "./TextNote.svelte";
+  import TreeNote from "./TreeNote.svelte";
+  
   let msg = "";
   let replyTo: Event | null = null;
 
@@ -71,18 +73,27 @@
       listener.stop();
     }
   });
-
-  function scrollHandler(e: any) {
-    const { scrollTop, scrollHeight, clientHeight } = e.target;
-    if (scrollTop + clientHeight >= scrollHeight - 15) {
-      //debounceFunc();
-    }
-  }
 </script>
 
-<Feeder
-  bind:msg={msg}
-  {scrollHandler}
-  {sendMessage}
-  {userHasAccount}
-/>
+<Feeder scrollHandler={() => { console.log('Scroll')}} bind:msg {sendMessage}>
+  <slot>
+    {#each $feed ? $feed : [] as note (note.id)}
+      <ul class="items-center w-full border-hidden">
+        <li>
+          <div class="flex flex-col items-top p-2 w-full overflow-hidden mb-2">
+            <TextNote {note} {userHasAccount} />
+            {#if note?.replies && note.replies.length > 0}
+              <TreeNote
+                notes={note.replies}
+                {userHasAccount}
+                expanded={false}
+                num={note.replies.length}
+                level={1}
+              />
+            {/if}
+          </div>
+        </li>
+      </ul>
+    {/each}
+  </slot>
+</Feeder>

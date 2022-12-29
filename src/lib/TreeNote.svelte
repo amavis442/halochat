@@ -28,7 +28,8 @@
 </script>
 
 <div class="w-full">
-  <div class="flex block items-top w-full min-w-full justify-center">
+  
+  <div class="flex block items-top w-full min-w-full justify-center mb-2">
     <Button click={toggle} class="">
       {#if expanded}
         Hide {num} repl{#if num == 1}y{:else}ies{/if}
