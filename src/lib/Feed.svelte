@@ -13,7 +13,7 @@
   import TextNote from "./TextNote.svelte";
   import TreeNote from "./TreeNote.svelte";
   import Button from "./partials/Button.svelte";
-  import { head, prop, uniq, uniqBy } from "ramda";
+  import { descend, head, prop, sort, uniq, uniqBy } from "ramda";
 
   let msg = "";
   let replyTo: NoteEvent | null = null;
@@ -104,6 +104,8 @@
       updateLastSeen(head($page))
     }
     $page = uniqBy(prop('id'), $page)
+    let byCreatedAt = descend<TextNote>(prop("created_at"));
+    sort(byCreatedAt, $page)
   }
 </script>
 
