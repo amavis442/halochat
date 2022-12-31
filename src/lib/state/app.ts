@@ -2,11 +2,11 @@ import { get, writable, type Writable } from 'svelte/store'
 import { users, annotateUsers, formatUser, initUser } from '../stores/users'
 import { now } from "../util/time"
 import { find } from "../util/misc"
-import { head, uniq, uniqBy } from 'ramda'
+import { uniq, uniqBy } from 'ramda'
 import type { User, TextNote, Reaction, Account } from './types'
 import type { Event, Filter, Relay, Sub } from 'nostr-tools'
 import { pool, getData, waitForOpenConnection } from './pool'
-import { prop, sort, descend } from "ramda";
+import { prop, sort, ascend } from "ramda";
 import { setLocalJson, getLocalJson, setting } from '../util/storage'
 import { getRootTag, getReplyTag, getLastETag } from '../util/tags';
 import { log } from '../util/misc';
@@ -39,6 +39,7 @@ blocktext.subscribe((value) => {
 
 export const feedStack = writable([])
 
+export const notifications = writable(0)
 /**
  * Kind 3
  * 
@@ -224,6 +225,99 @@ function initNote(note: TextNote) {
     return note
 }
 
+async function handleTags(note: TextNote) {
+    if (note.tags.length) {
+        let rootTag = getRootTag(note.tags)
+        let replyTag = getReplyTag(note.tags)
+
+        // Is root
+        if (rootTag.length == 0 && replyTag.length == 0) return note
+
+        // Is reply to root
+        if (rootTag.length && replyTag.length && rootTag == replyTag) {
+            let $feed = get(feed)
+
+            let rootNote = $feed.find((n: TextNote) => n.id == rootTag[1])
+            if (rootNote) {
+                note.tree = 1
+                if (!rootNote.replies) rootNote.replies = []
+                rootNote.replies.push(note)
+                rootNote.replies = uniqBy(prop('id'), rootNote.replies)
+                return rootNote
+            }
+            if (!rootNote) {
+                let filter: Filter = { kinds: [1], '#e': [rootTag[1]] }
+                getData(filter)
+                    .then((result: Array<Event>) => {
+                        if (result && result.length) {
+                            rootNote = result[0]
+                            rootNote = initNote(rootNote)
+                            rootNote.replies.push(note)
+                            return rootNote
+                        }
+                        return note
+                    })
+            }
+            return note
+        }
+
+        //Is reply to reply
+        if (rootTag.length && replyTag.length && rootTag != replyTag) {
+            let $feed = get(feed)
+
+            let rootNote = $feed.find(n => n.id == rootTag[1])
+            if (rootNote && rootNote.replies && rootNote.replies.length) {
+                let replyNote: TextNote | null = find(rootNote, replyTag[1])
+                if (replyNote) {
+                    note.tree = replyNote.tree + 1
+                    replyNote.replies.push(note)
+                    replyNote.replies = uniqBy(prop('id'), replyNote.replies)
+                }
+                return rootNote
+            }
+
+            if (!rootNote) {
+                let filter: Filter = { kinds: [1], '#e': [rootTag[1]] }
+                getData(filter)
+                    .then((result: Array<Event>) => {
+                        if (result && result.length) {
+                            rootNote = initNote(rootNote)
+                            for (let i = 0; i < result.length; i++) {
+                                let item: TextNote = initNote(result[i])
+                                if (item.id == rootTag[i]) {
+                                    rootNote = item
+                                }
+                                replyTag = getReplyTag(item.tags)
+                                if (replyTag && rootNote && replyTag[1] == rootNote.id) {
+                                    item.tree = rootNote.tree + 1
+                                    rootNote.replies.push(item)
+                                }
+                            }
+                            return rootNote
+                        }
+                        return note
+                    }).then()
+            }
+            return note
+
+        }
+    }
+    return note
+}
+
+async function handleUser(note: TextNote) {
+    let foundUser: User = $users.find((u: User) => u.pubkey == note.pubkey)
+    if (!foundUser) {
+        return fetchUsers([note.pubkey], '')
+            .then((users: Array<User>) => {
+                note.user = users[0]
+                return note
+            })
+    }
+    note.user = foundUser
+    return note
+}
+
 /**
  * Expensive operation and last resort to get a root to make a tree
  * 
@@ -327,7 +421,7 @@ async function processReplyFeed(evt: Event, replies: Array<Event>, relay: string
 function syncNoteTree(rootNote: TextNote) {
     if (typeof rootNote !== 'undefined' && rootNote) {
         log('syncNoteTree: Add/update a note: ', rootNote)
-        let byCreatedAt = descend<TextNote>(prop("created_at"));
+        let byCreatedAt = ascend<TextNote>(prop("created_at"));
         feed.update((data: Array<TextNote>) => {
             if (!data || !data.length) {
                 data = []
@@ -338,7 +432,7 @@ function syncNoteTree(rootNote: TextNote) {
                 log('syncNoteTree: Updated note ', note)
                 return data
             }
-            data.unshift(rootNote)
+            data.push(rootNote)
             data = uniqBy(prop('id'), data)
             data = sort(byCreatedAt, data)
             return data
@@ -423,21 +517,6 @@ async function handleTextNote(): Promise<void> {
     let evt = eventItem.textnote
     const relay = eventItem.url
 
-    if (pool.hasRelay('ws://localhost:8008')) {
-        pool.getRelays()['ws://localhost:8008'].publish(evt)
-    }
-
-    /*
-    let $lastSeen = get(lastSeen)
-    let tags = evt.tags.filter(t => t[0] == 'e')
-
-    if (tags.length == 0) {
-        if ($lastSeen < evt.created_at) {
-            lastSeen.set(evt.created_at)
-        }
-    }
-    */
-   
     if ($account.pubkey != evt.pubkey && $blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == evt.pubkey)) {
         log('handleTextNote:: user on blocklist ', evt)
         checkQueue()
@@ -448,16 +527,6 @@ async function handleTextNote(): Promise<void> {
         return
     }
 
-    if (!$queueUser) $queueUser = []
-    $queueUser.push(evt.pubkey)
-    $queueUser = uniq($queueUser)
-    if ($queueUser.length > 5) {
-        console.log('Users: Array gonna get some user data')
-        fetchUsers($queueUser, '')
-        $queueUser = []
-        console.log('Users: Array gonna get some user data new state', $queueUser)
-    }
-
     let $feed = get(feed)
     if ($feed.find(f => f.content == evt.content)) {
         checkQueue()
@@ -466,7 +535,6 @@ async function handleTextNote(): Promise<void> {
 
     let note: TextNote = initNote(evt)
     note.relays = [relay]
-    let rootNote: TextNote
     let $feedStack = get(feedStack)
 
     console.debug('handleTextNote: input ', evt)
@@ -475,83 +543,16 @@ async function handleTextNote(): Promise<void> {
     }
     $feedStack[evt.id] = note
 
-    let rootTag = getRootTag(evt.tags)
-    let replyTag = getReplyTag(evt.tags)
-    // Root, no need to look up replies
-    if (rootTag.length == 0 && replyTag.length == 0) {
-        handleMentions(note)
-            .then((note) => annotateNote(note, relay))
-            .then((note) => {
-                rootNote = note
-                syncNoteTree(rootNote)
-            })
-        checkQueue()
-        return
-    }
-
-    // Reply to root only 1 e tag
-    if ($feed && rootTag.length && replyTag.length && replyTag[1] == rootTag[1]) {
-        log("handleTextNote: Replytag and RootTag are the same", rootTag, replyTag, evt)
-        let rootNote = $feed.find((n: TextNote) => n.id == rootTag[1])
-        if (rootNote) { // Put getting extra data in a WebWorker for speed.
-            handleMentions(note)
-                .then((note) => annotateNote(note, relay))
-                .then((note) => {
-                    note.tree = 1
-                    if (!rootNote.replies) rootNote.replies = []
-                    rootNote.replies.push(note)
-                    rootNote.replies = uniqBy(prop('id'), rootNote.replies)
-                    syncNoteTree(rootNote)
-                });
+    handleMentions(note)
+        .then((note) => handleDeletions(note))
+        .then((note) => handleReactions(note))
+        .then((note) => handleUser(note))
+        .then((note) => handleTags(note))
+        .then((note) => {
+            syncNoteTree(note)
             checkQueue()
-            return
-        }
-    }
-
-    // First try to find the parent in the existing tree before more expensive operations
-    // are needed
-    if ($feed && rootTag.length && replyTag.length && rootTag[1] != replyTag[1]) {
-        let rootNote = $feed.find(n => n.id == rootTag[1])
-        if (rootNote && rootNote.replies && rootNote.replies.length) {
-            let replyNote: TextNote | null = find(rootNote, replyTag[1])
-            if (!replyNote) log('handleTextNote: Need to do expensive stuff and get the whole tree from a relay.', evt)
-            if (replyNote) {
-                handleMentions(note)
-                    .then((note) => annotateNote(note, relay))
-                    .then((note) => {
-                        note.tree = 2
-                        replyNote.replies.push(note)
-                        replyNote.replies = uniqBy(prop('id'), replyNote.replies)
-                        syncNoteTree(rootNote)
-                    });
-                return
-            }
-        }
-    }
-
-    let sIds = []
-    sIds.push(evt.id)
-    /*if (rootTag.length) {
-        sIds.push(rootTag[1])
-    }*/
-    // get all the events under this eventId
-    let filter: Filter = {
-        ids: [rootTag[1]],
-        kinds: [1],
-        '#e': sIds
-    }
-    log('handleTextNote: Filter to get replies ', filter)
-
-    getData(filter, 'GetterHandleTextNote' + evt.id)
-        .then((replies: Array<Event>) => {
-            console.log('handleTextNote:: Replies for ', filter, '\n', replies)
-            return processReplyFeed(evt, replies, relay)
         })
-        .then((rootNote: TextNote | null) => {
-            log('handleTextNote: Current stack: ', $feedStack)
-            if (rootNote) syncNoteTree(rootNote)
-        })
-    checkQueue()
+
 }
 
 async function handleMentions(note: TextNote): Promise<TextNote> {
@@ -653,6 +654,31 @@ function handleReaction(evt: Event, relay: string) {
     }
 }
 
+async function handleReactions(note: TextNote) {
+    let filter: Filter = {
+        kinds: [7],
+        ids: [note.id]
+    }
+    console.log('handleReactions', filter)
+
+    return getData(filter, 'getReactions')
+        .then((result: Array<Reaction>) => {
+            if (!note.upvotes) note.upvotes = 0
+            if (!note.downvotes) note.downvotes = 0
+
+            for (let i = 0; i < result.length; i++) {
+                let item: Reaction = result[i]
+                if (!note.reactions.find(r => r.id == item.id)) {
+                    if (item.content == '+' || item.content == "") note.upvotes = note.upvotes + 1
+                    if (item.content == '-') note.downvotes = note.downvotes + 1
+                    note.reactions.push(item)
+                }
+            }
+            console.log('handleReactions: Got reactions ', note.reactions)
+            return note
+        })
+}
+
 /**
  * @todo: this will be time consuming, need to find a faster way to parse the tree for the ids i want
  * 
@@ -676,6 +702,10 @@ function handleDelete(evt: Event, relay: string) {
             }
         }
     }
+}
+
+async function handleDeletions(note: TextNote) {
+    return note
 }
 
 export async function isAlive() {
@@ -745,6 +775,11 @@ lastSeen.subscribe(value => {
     setLocalJson(setting.Lastseen, value)
 })
 export function onEvent(evt: Event, relay: string) {
+
+    if (pool.hasRelay('ws://localhost:8008') && relay != 'ws://localhost:8008') {
+        pool.getRelays()['ws://localhost:8008'].publish(evt)
+    }
+
     switch (evt.kind) {
         case 0:
             handleMetadata(evt, relay)
@@ -786,7 +821,7 @@ export function onEvent(evt: Event, relay: string) {
             break;
 
         default:
-            
+
     }
 }
 

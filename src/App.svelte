@@ -13,10 +13,10 @@
   import { Modals, closeModal } from "svelte-modals";
   import { users } from "./lib/stores/users";
   import Posts from "./lib/Posts.svelte";
-  import { feed } from "./lib/state/app";
+  import { notifications } from "./lib/state/app";
+
   export let url = "";
-  let notifications = 0;
-  $: notifications = $feed.length;
+  
   users.set([]); // new Session, means new users, else the browser will complain of storage full
 </script>
 
@@ -35,12 +35,12 @@
             <div class="justify-end w-full">
             Global 
           </div>
-            {#if notifications}
+            {#if $notifications}
             <div class="justify-end">
               <span
                 class="inline-block py-1 px-1.5 leading-none text-center whitespace-nowrap align-baseline font-bold bg-red-600 text-white rounded ml-2"
                 >
-                {notifications}
+                {$notifications}
                 </span>
               </div>
             {/if}

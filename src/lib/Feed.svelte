@@ -1,6 +1,6 @@
 <script lang="ts">
   import { publish, publishReply, relays } from "./state/pool";
-  import { onMount, onDestroy } from "svelte";
+  import { onMount, onDestroy, afterUpdate } from "svelte";
   import { get, writable } from "svelte/store";
   import { Listener, lastSeen } from "./state/app";
   import type { TextNote as NoteEvent, Account } from "./state/types";
@@ -14,7 +14,8 @@
   import TreeNote from "./TreeNote.svelte";
   import Button from "./partials/Button.svelte";
   import { descend, head, prop, sort, uniq, uniqBy } from "ramda";
-
+  import { notifications } from "./state/app";
+ 
   let msg = "";
   let replyTo: NoteEvent | null = null;
   let moreLoading = Promise<void>;
@@ -34,6 +35,7 @@
   }
 
   let page = writable([]);
+  let pageNumber = 0;
   onMount(async () => {
     if ($relays && $relays.length) {
       listener = new Listener({ since: $lastSeen }, "globalfeed");
@@ -49,19 +51,20 @@
     $page = [];
     console.debug("Page content", $page, $page.length);
     let timer = setInterval(() => {
-      if ($feed.length && $page.length < 11) {
-        //$page = [$page, ...$feed.slice(0, 10)]
-        let item = $feed.shift();
-        $page.unshift(item);
-        console.log("Page item", item);
+      if ($feed.length && $page.length < 11 && $feed.length > $page.length) {
+        let item = $feed.slice(-1);
+        pageNumber = 1;
+        $page.push(item[0]);
+        console.log("Page items", item[0]);
       }
       if ($page.length > 9) {
         console.log("Page limit reached");
         clearInterval(timer);
       }
+      $page = uniqBy(prop('id'), $page)
+      let byCreatedAt = descend<TextNote>(prop("created_at"));
+      $page = sort(byCreatedAt, $page)
       updateLastSeen(head($page))
-      $page = uniq($page)
-      $page = $page;
     }, 1000);
   });
 
@@ -74,15 +77,19 @@
 
   function scrollHandler(e: any) {
     const { scrollTop, scrollHeight, clientHeight } = e.target;
-    console.log(scrollTop, scrollHeight, clientHeight);
+    //console.log(scrollTop, scrollHeight, clientHeight);
 
     if (scrollTop <= 15) {
-      console.log("Should use bounce");
+      //console.log("Should use bounce");
     }
   }
 
   function updateLastSeen(note:TextNote){
-    let tags = note.tags.filter(t => t[0] == 'e')
+    if (!note) return
+    let tags = []
+    if (note.tags && note.tags.length) {
+      tags = note.tags.filter(t => t[0] == 'e')
+    }
 
     if (tags.length == 0) {
         if ($lastSeen < note.created_at) {
@@ -94,19 +101,25 @@
   function loadMore() {
     console.log($feed.length);
     if ($feed.length) {
-      let maxItems = $feed.length < 10 ? $feed.length : 11;
-      //$page = [$page, ...$feed.slice(0, 10)]
-      for (let i = 0; i < maxItems; i++) {
-        let item = $feed.shift();
+      let items = $feed.slice($page.length, $page.length + 10);
+
+      for (let i = 0; i < items.length; i++) {
+        let item = items[i]
         $page.unshift(item);
         console.log("Page item", item), typeof item;
+        pageNumber++;
       }
-      updateLastSeen(head($page))
     }
     $page = uniqBy(prop('id'), $page)
     let byCreatedAt = descend<TextNote>(prop("created_at"));
-    sort(byCreatedAt, $page)
+    $page = sort(byCreatedAt, $page)
+    updateLastSeen(head($page))
   }
+
+  afterUpdate(() => {
+    notifications.set($feed.length - $page.length);
+  })
+
 </script>
 
 <Feeder bind:msg {scrollHandler} {sendMessage}>
@@ -115,7 +128,7 @@
         <Button click={loadMore} class="flex w-full justify-center">Load 10 more notes <span
           class="inline-block py-1 px-1.5 leading-none text-center whitespace-nowrap align-baseline font-bold bg-red-600 text-white rounded ml-2"
           >
-          {$feed.length}
+          {$feed.length - $page.length}
           </span>
         </Button>
       </div>{/if}
