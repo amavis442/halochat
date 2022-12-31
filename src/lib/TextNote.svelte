@@ -278,18 +278,19 @@
       <div class="w-full">
         {#if userHasAccount}
           <p class="mt-4 flex space-x-8 w-full p-1">
-            <span class={votedFor == "-" ? "text-blue-700" : ""}>
-              <button type="button" on:click={downvoteHandler}>
-                <i class="fa-solid fa-thumbs-down" />
-              </button>
-              {note?.downvotes ? note.downvotes : 0}
-            </span>
             <span class={votedFor == "+" ? "text-blue-700" : ""}>
               <button type="button" on:click={upvoteHandler}>
                 <i class="fa-solid fa-thumbs-up " />
               </button>
               {note?.upvotes ? note.upvotes : 0}
             </span>
+            <span class={votedFor == "-" ? "text-blue-700" : ""}>
+              <button type="button" on:click={downvoteHandler}>
+                <i class="fa-solid fa-thumbs-down" />
+              </button>
+              {note?.downvotes ? note.downvotes : 0}
+            </span>
+
 
             <span>
               <button type="button" on:click={createTextNote}>
