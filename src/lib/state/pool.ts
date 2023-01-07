@@ -163,9 +163,13 @@ export const createEvent = async (kind: number, content: string = '', tags: stri
   return note
 }
 
-export const getData = async (filter: Filter, name?:string): Promise<Event[]> => {
+export const getData = async (filters: Filter[], name?: string): Promise<Event[]> => {
   const $relays = get(relays)
   const numRelays = $relays.length
+
+  if (!Array.isArray(filters)) {
+    filters = [filters]
+  }
 
   let connectionStatus = await isAlive()
   console.log('All relays connected: ', connectionStatus)
@@ -184,7 +188,7 @@ export const getData = async (filter: Filter, name?:string): Promise<Event[]> =>
       //let $relay = $relays.find(r => r.url == url)
       let timeoutId = setTimeout(() => {
         subs.forEach(item => item.unsub())
-        console.error(`getData:: Request(${subId}) took to long (15s) unsub all subscription to free slots. Filter/Request: ` + JSON.stringify(filter))
+        console.error(`getData:: Request(${subId}) took to long (15s) unsub all subscription to free slots. Filter/Request: ` + JSON.stringify(filters))
         resolve(result) // Resolve what we got. Relay can behave badly/slowish
       }, 30000);
 
@@ -200,7 +204,7 @@ export const getData = async (filter: Filter, name?:string): Promise<Event[]> =>
       }
       console.debug(`getData:: Request data from ${url}`)
       try {
-        let sub = relay.sub([filter], { id: subId })
+        let sub = relay.sub(filters, { id: subId })
         subs.push(sub)
 
         sub.on('event', (event: Event) => {
