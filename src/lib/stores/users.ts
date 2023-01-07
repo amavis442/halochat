@@ -14,12 +14,10 @@ export const users = writable([]);
 export function annotateUsers(user: User) {
   users.update(data => {
     if (!Array.isArray(data)) data = []
-    let foundUser = data.find((item: User) => user.pubkey == item.pubkey)
+    let foundUser:User = data.find((item: User) => user.pubkey == item.pubkey)
     if (foundUser) {
-      foundUser = {
-        ...foundUser,
-        user
-      }
+      user = {...foundUser}
+      foundUser = user 
       log('annotateUsers: ', foundUser)
       return data
     }
