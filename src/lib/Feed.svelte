@@ -1,11 +1,13 @@
 <script lang="ts">
   import { publish, publishReply, relays } from "./state/pool";
   import { onMount, onDestroy, afterUpdate } from "svelte";
-  import { get, writable } from "svelte/store";
+  import { get, writable, type Writable } from "svelte/store";
   import { Listener, lastSeen } from "./state/app";
   import type { TextNote as NoteEvent, Account } from "./state/types";
   import { account } from "./stores/account";
   import { feed } from "./state/app";
+  import { feedStack, mute } from "./state/app";
+
   import contacts from "./state/contacts";
   import { log } from "./util/misc";
   import Feeder from "./partials/Feeder.svelte";
@@ -13,9 +15,11 @@
   import TextNote from "./TextNote.svelte";
   import TreeNote from "./TreeNote.svelte";
   import Button from "./partials/Button.svelte";
-  import { descend, head, prop, sort, uniq, uniqBy } from "ramda";
+  import { descend, head, keys, pick, prop, sort, uniq, uniqBy } from "ramda";
   import { notifications } from "./state/app";
- 
+  import { getRootTag } from "./util/tags";
+  import { deleteNodeFromTree } from "./util/misc";
+
   let msg = "";
   let replyTo: NoteEvent | null = null;
   let moreLoading = Promise<void>;
@@ -34,8 +38,9 @@
     msg = "";
   }
 
+  let pageNumber: number = 0;
   let page = writable([]);
-  let pageNumber = 0;
+
   onMount(async () => {
     if ($relays && $relays.length) {
       listener = new Listener({ since: $lastSeen }, "globalfeed");
@@ -50,22 +55,6 @@
     }
     $page = [];
     console.debug("Page content", $page, $page.length);
-    let timer = setInterval(() => {
-      if ($feed.length && $page.length < 11 && $feed.length > $page.length) {
-        let item = $feed.slice(-1);
-        pageNumber = 1;
-        $page.push(item[0]);
-        console.log("Page items", item[0]);
-      }
-      if ($page.length > 9) {
-        console.log("Page limit reached");
-        clearInterval(timer);
-      }
-      $page = uniqBy(prop('id'), $page)
-      let byCreatedAt = descend<TextNote>(prop("created_at"));
-      $page = sort(byCreatedAt, $page)
-      updateLastSeen(head($page))
-    }, 1000);
   });
 
   onDestroy(() => {
@@ -84,51 +73,78 @@
     }
   }
 
-  function updateLastSeen(note:TextNote){
-    if (!note) return
-    let tags = []
+  function updateLastSeen(note: TextNote) {
+    if (!note) return;
+    let tags = [];
     if (note.tags && note.tags.length) {
-      tags = note.tags.filter(t => t[0] == 'e')
+      tags = note.tags.filter((t) => t[0] == "e");
     }
 
     if (tags.length == 0) {
-        if ($lastSeen < note.created_at) {
-            lastSeen.set(note.created_at)
-        }
+      if ($lastSeen < note.created_at) {
+        lastSeen.set(note.created_at);
+      }
     }
   }
 
   function loadMore() {
-    console.log($feed.length);
-    if ($feed.length) {
-      let items = $feed.slice($page.length, $page.length + 10);
-
-      for (let i = 0; i < items.length; i++) {
-        let item = items[i]
-        $page.unshift(item);
-        console.log("Page item", item), typeof item;
-        pageNumber++;
-      }
+    pageNumber = pageNumber + 1;
+    console.log("Feed length ", $feed.length, " PageNumber ", pageNumber);
+    if ($feed.length - $page.length > 0) {
+      $page = $page.concat($feed.slice(pageNumber * 10, (pageNumber + 1) * 10));
     }
-    $page = uniqBy(prop('id'), $page)
+    $page = $page;
+
     let byCreatedAt = descend<TextNote>(prop("created_at"));
-    $page = sort(byCreatedAt, $page)
-    updateLastSeen(head($page))
+    $page = sort(byCreatedAt, $page);
+    updateLastSeen(head($page));
   }
 
   afterUpdate(() => {
-    notifications.set($feed.length - $page.length);
-  })
+    notifications.update((data) => $feed.length - $page.length);
+  });
 
+  mute.subscribe(($mutes) => {
+    for (const mute of $mutes) {
+      if ($feedStack[mute]) {
+        let rootTag = getRootTag($feedStack[mute].tags);
+
+        console.log("Detected mute change", mute, rootTag);
+        if (rootTag && rootTag.length && rootTag[0] == "e") {
+          let parentNode = $page.find((p) => p.id == rootTag[1]);
+          console.log(
+            "Detected mute change and rootTag is ",
+            rootTag,
+            parentNode,
+            $feedStack[rootTag[1]]
+          );
+          if (parentNode) {
+            deleteNodeFromTree(parentNode, mute);
+            console.log(
+              "Detected mute change and running deleteNodeFromTree",
+              mute
+            );
+            $page = $page;
+          }
+        }
+        if (!rootTag || rootTag.length == 0) {
+          $page = $page.filter((p) => p.id != mute);
+        }
+      }
+    }
+  });
 </script>
 
 <Feeder bind:msg {scrollHandler} {sendMessage}>
   <slot>
-    {#if $feed.length > 9}<div class="flex h-8 w-full justify-center mt-2">
-        <Button click={loadMore} class="flex w-full justify-center">Load 10 more notes <span
-          class="inline-block py-1 px-1.5 leading-none text-center whitespace-nowrap align-baseline font-bold bg-red-600 text-white rounded ml-2"
+    {#if $feed.length - $page.length > 0}<div
+        class="flex h-8 w-full justify-center mt-2"
+      >
+        <Button click={loadMore} class="flex w-full justify-center"
+          >Load 10 more notes <span
+            class="inline-block py-1 px-1.5 leading-none text-center whitespace-nowrap align-baseline font-bold bg-red-600 text-white rounded ml-2"
           >
-          {$feed.length - $page.length}
+            {$feed.length - $page.length}
           </span>
         </Button>
       </div>{/if}
@@ -139,11 +155,10 @@
             <TextNote {note} {userHasAccount} />
             {#if note?.replies && note.replies.length > 0}
               <TreeNote
-                notes={note.replies}
+                replies={note.replies}
                 {userHasAccount}
                 expanded={false}
                 num={note.replies.length}
-                level={1}
               />
             {/if}
           </div>

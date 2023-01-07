@@ -11,17 +11,15 @@
   import { now } from "./util/time";
   import { addToast } from "./partials/Toast/toast";
   import { users } from "./stores/users";
-  import { feed } from "./state/app";
-  import { deleteNodeFromTree } from "./util/misc";
+  import { feedStack, feed, mute } from "./state/app";
   import Preview from "./partials/Preview/Preview.svelte";
-  import { getRootTag } from "./util/tags";
-
   import { openModal } from "svelte-modals";
   import UserModal from "./partials/Modal/UserModal.svelte";
   import CreateNoteModal from "./partials/Modal/CreateNoteModal.svelte";
 
   import Spinner from "./partials/Spinner/Spinner.svelte";
   import contacts from "./state/contacts";
+  import { createEventDispatcher } from "svelte";
 
   export let note: Note | any; // Todo: Do not know how to type this correctly to make sure in Notes it does not say Note__SvelteComponent_ <> Note type, very annoying
   export let userHasAccount: boolean = false;
@@ -29,9 +27,23 @@
   let user: User;
   let votedFor: string = "";
   let link: string | null = null;
+  const dispatch = createEventDispatcher();
+  let upvotes: number;
+  let downvotes: number;
+
+  $: upvotes = 0;
+  $: downvotes = 0;
 
   beforeUpdate(() => {
     if (note.reactions && $account) {
+      upvotes = 0;
+      downvotes = 0;
+      note.reactions.forEach((reaction: Reaction) => {
+        if (reaction.content == "+" || reaction.content == "")
+          upvotes = upvotes + 1;
+        if (reaction.content == "-") downvotes = downvotes + 1;
+      });
+
       //@ts-ignore
       let pubkeys = pluck("pubkey", note.reactions);
       let fp = pubkeys.find((pk) => pk == $account.pubkey);
@@ -57,11 +69,13 @@
   }
 
   async function upvoteHandler() {
-    await publishReaction("+", note);
+    upvotes = upvotes + 1;
+    publishReaction("+", note);
   }
 
   async function downvoteHandler() {
-    await publishReaction("-", note);
+    downvotes = downvotes + 1;
+    publishReaction("-", note);
   }
 
   /**
@@ -84,7 +98,14 @@
     user.name = user.name + "[BLOCKED]";
     users.update((data) => data); // Hopes this triggers the view
 
-    feed.update((data) => data.filter((n: Note) => n.pubkey != note.pubkey));
+    feedStack.update((data) => {
+      Object.values(data).forEach((item: Note) => {
+        if (item.pubkey == note.pubkey) {
+          item.content = "BANNED";
+        }
+      });
+      return data;
+    });
 
     addToast({
       message: "User " + note.pubkey.slice(0, 10) + " blocked!",
@@ -133,19 +154,14 @@
 
   function removeNote() {
     expanded = false;
-    let rootTag = getRootTag(note.tags);
-    let parentNote = null;
-
-    if (rootTag.length) {
-      parentNote = $feed.find((n: Note) => n.id == rootTag[1]);
-    }
-
-    if (!parentNote) {
-      $feed = $feed.filter((n: Note) => n.id != note.id);
-    } else {
-      deleteNodeFromTree(parentNote, note.id);
-      $feed = $feed; //trigger update
-    }
+    mute.update((data) => {
+      if (!data) {
+        data = [];
+      }
+      data.push(note.id);
+      console.log("Mute ", data);
+      return data;
+    });
 
     addToast({
       message: "Note " + note.id.slice(0, 10) + " has been muted!",
@@ -184,6 +200,12 @@
     });
   }
 
+  function align() {
+    if (note.tree == 0) return "";
+    if (note.tree == 1) return "ml-2";
+    if (note.tree == 2) return "ml-4";
+    if (note.tree > 2) return "ml-6";
+  }
 </script>
 
 {#await promiseReply}
@@ -193,8 +215,12 @@
 {#if note && note.kind == 1}
   <div
     id={note.id}
-    class="flex flex-row w-full min-h-full items-top gap-2 mb-2 overflow-y-auto bg-white rounded-lg p-1 border-l-8 {borderColor}"
-    >
+    class="flex flex-row w-full min-h-full {align()} items-top gap-2 mb-2 overflow-y-auto bg-white rounded-lg p-1 border-l-8 {borderColor} {$$props[
+      'class'
+    ]
+      ? $$props['class']
+      : ''}"
+  >
     <div
       on:click={userInfo}
       on:keyup={() => console.log("keyup")}
@@ -217,7 +243,7 @@
                 {#if followed}
                   <i class="fa-solid fa-bookmark" />
                 {/if}
-                <span title="{note.pubkey}">{normalizeName(user)}</span>
+                <span title={note.pubkey}>{normalizeName(user)}</span>
                 <small class="text-gray">{getTime(note.created_at)}</small>
               </strong>
             </div>
@@ -282,15 +308,14 @@
               <button type="button" on:click={upvoteHandler}>
                 <i class="fa-solid fa-thumbs-up " />
               </button>
-              {note?.upvotes ? note.upvotes : 0}
+              {upvotes}
             </span>
             <span class={votedFor == "-" ? "text-blue-700" : ""}>
               <button type="button" on:click={downvoteHandler}>
                 <i class="fa-solid fa-thumbs-down" />
               </button>
-              {note?.downvotes ? note.downvotes : 0}
+              {downvotes}
             </span>
-
 
             <span>
               <button type="button" on:click={createTextNote}>
