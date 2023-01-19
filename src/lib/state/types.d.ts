@@ -15,6 +15,7 @@ export type TextNote = Event & {
     relays?: Array<string>;
     user?: User;
     tree?: number;
+    dirty?: boolean;
 }
 
 export type User = {

@@ -446,9 +446,7 @@ async function handleTextNote(): Promise<void> {
     let note: TextNote = evt
     initNote(note)
     note.relays.push(relay)
-
-
-    console.debug('handleTextNote: input ', evt)
+   
     if ($feedStack[evt.id]) {
         log('handleTextNote: Already added this input ', evt)
         return
@@ -459,6 +457,7 @@ async function handleTextNote(): Promise<void> {
         return data
     })
 
+    console.debug('handleTextNote: input ', evt)
     let noteId = note.id
 
     return await
@@ -476,6 +475,7 @@ async function handleTextNote(): Promise<void> {
 
                         feed.update(data => {
                             if (!data.find(d => d.id == item.id) && !$mute.find(m => m == item.id) && !$blocklist.find(b => b.pubkey == item.pubkey)) {
+                                item.dirty = true
                                 data.push(item)
                             }
                             return data
@@ -698,6 +698,9 @@ export function onEvent(evt: Event, relay: string) {
         case 1:
             if (evt.pubkey == $account.pubkey) {
                 feedQueue.unshift({ textnote: evt, url: relay })
+                handleTextNote()
+                clearInterval(feedQueueTimer)
+                feedQueueTimer = null
             } else {
                 feedQueue.push({ textnote: evt, url: relay })
             }

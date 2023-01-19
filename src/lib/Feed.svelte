@@ -18,7 +18,7 @@
   import Button from "./partials/Button.svelte";
   import { descend, head, keys, pick, prop, sort, uniq, uniqBy } from "ramda";
   import { notifications } from "./state/app";
-  import { getRootTag } from "./util/tags";
+  import { getReplyTag, getRootTag } from "./util/tags";
   import { deleteNodeFromTree } from "./util/misc";
 
   let msg = "";
@@ -95,7 +95,9 @@
       let byCreatedAt = descend<TextNote>(prop("created_at"));
 
       page.update((data) => {
-        data = data.concat($feed.slice(pageNumber * 10, (pageNumber + 1) * 10));
+        for (let i = pageNumber * 10; i < (pageNumber + 1) * 10; i++) {
+          data[$feed[i].id] = $feed[i];
+        }
         data = sort(byCreatedAt, data);
         updateLastSeen(head(data))
         return data;
@@ -137,9 +139,36 @@
     }
   });
 
+  let byCreatedAt = descend<TextNote>(prop("created_at"));
+  feed.subscribe(($feed) => {
+    $feed.forEach(item => {
+      if (!item.tags.find(tag => tag[0] === 'e') && item.id && item.dirty) {
+        page.update((data) => {
+          if (item) {
+            console.debug('Item is: ', item)
+            let note = data.find((d => d.id == item.id))
+            if (note) {
+              note = item
+            }
+            if (!note) {
+              data.push(item)
+            }
+            console.debug('Item is page', data)
+          }
+          return data
+        })
+        item.dirty = false
+      }
+    })
+    $page = sort(byCreatedAt, $page)
+    updateLastSeen(head($page))
+    console.debug('Page content is (sorted)', $page)
+  })
+  
+
   blocklist.subscribe(($blocked) => {
     for (const pubkey of $blocked) {
-      Object.entries($feedStack).forEach((note) => {
+      Object.entries($feedStack).forEach((note:any) => {
         if (note.pubkey == pubkey) {
           note = null;
         }
