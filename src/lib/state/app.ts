@@ -696,7 +696,11 @@ export function onEvent(evt: Event, relay: string) {
             handleMetadata(evt, relay)
             break
         case 1:
-            feedQueue.push({ textnote: evt, url: relay })
+            if (evt.pubkey == $account.pubkey) {
+                feedQueue.unshift({ textnote: evt, url: relay })
+            } else {
+                feedQueue.push({ textnote: evt, url: relay })
+            }
             if (feedQueueTimer === null) {
                 feedQueueTimer = setInterval(handleTextNote, 500)
             }
