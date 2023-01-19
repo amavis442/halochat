@@ -120,7 +120,7 @@ export async function fetchUser(pubkey: string, relay: string): Promise<User> {
         kinds: [0],
         authors: [pubkey]
     }
-    return getData(filter)
+    return getData([filter])
         .then((fetchResultUsers: Array<Event>) => {
             let user: User
             if (fetchResultUsers.length) {
@@ -157,7 +157,7 @@ export async function fetchUsers(pubkeys: Array<string>, relay: string): Promise
         authors: pubkeys
     }
     let result = []
-    return getData(filter, "fetchUsers")
+    return getData([filter], "fetchUsers")
         .then((fetchResultUsers: Array<Event>) => {
             for (let i = 0; i < pubkeys.length; i++) {
                 let user: User = initUser(pubkeys[i], relay)

@@ -7,6 +7,7 @@
   import { account } from "./stores/account";
   import { feed } from "./state/app";
   import { feedStack, mute } from "./state/app";
+  import { blocklist } from "./stores/block";
 
   import contacts from "./state/contacts";
   import { log } from "./util/misc";
@@ -133,6 +134,37 @@
       }
     }
   });
+
+  
+  blocklist.subscribe(($blocked) => {
+    
+    for (const pubkey of $blocked) {
+      Object.entries($feedStack).forEach((note) =>{
+        if (note.pubkey == pubkey) {
+          note = null
+        } 
+      })
+    }
+
+    page.update(($pages) => {
+        $pages.forEach((item, id) =>{
+          if ($blocked.includes(item.pubkey)) {
+              delete item[id]
+          }
+
+          if (item && item.replies.length) {
+            item.replies.forEach((reply) => {
+              if ($blocked.includes(reply.pubkey)) {
+                delete reply[id] 
+              } 
+            })
+          }
+        })
+        return $pages
+      })  
+  });
+  
+
 </script>
 
 <Feeder bind:msg {scrollHandler} {sendMessage}>
@@ -152,14 +184,16 @@
       <ul class="items-center w-full border-hidden">
         <li>
           <div class="flex flex-col items-top p-2 w-full overflow-hidden mb-2">
-            <TextNote {note} {userHasAccount} />
-            {#if note?.replies && note.replies.length > 0}
-              <TreeNote
-                replies={note.replies}
-                {userHasAccount}
-                expanded={false}
-                num={note.replies.length}
-              />
+            {#if note.content !== 'BANNED'}
+              <TextNote {note} {userHasAccount} />
+              {#if note?.replies && note.replies.length > 0}
+                <TreeNote
+                  replies={note.replies}
+                  {userHasAccount}
+                  expanded={false}
+                  num={note.replies.length}
+                />
+              {/if}
             {/if}
           </div>
         </li>
