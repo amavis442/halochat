@@ -92,13 +92,15 @@
     pageNumber = pageNumber + 1;
     console.log("Feed length ", $feed.length, " PageNumber ", pageNumber);
     if ($feed.length - $page.length > 0) {
-      $page = $page.concat($feed.slice(pageNumber * 10, (pageNumber + 1) * 10));
-    }
-    $page = $page;
+      let byCreatedAt = descend<TextNote>(prop("created_at"));
 
-    let byCreatedAt = descend<TextNote>(prop("created_at"));
-    $page = sort(byCreatedAt, $page);
-    updateLastSeen(head($page));
+      page.update((data) => {
+        data = data.concat($feed.slice(pageNumber * 10, (pageNumber + 1) * 10));
+        data = sort(byCreatedAt, data);
+        updateLastSeen(head(data))
+        return data;
+      });
+    }
   }
 
   afterUpdate(() => {
@@ -135,36 +137,32 @@
     }
   });
 
-  
   blocklist.subscribe(($blocked) => {
-    
     for (const pubkey of $blocked) {
-      Object.entries($feedStack).forEach((note) =>{
+      Object.entries($feedStack).forEach((note) => {
         if (note.pubkey == pubkey) {
-          note = null
-        } 
-      })
+          note = null;
+        }
+      });
     }
 
     page.update(($pages) => {
-        $pages.forEach((item, id) =>{
-          if ($blocked.includes(item.pubkey)) {
-              delete item[id]
-          }
+      $pages.forEach((item, id) => {
+        if ($blocked.includes(item.pubkey)) {
+          delete item[id];
+        }
 
-          if (item && item.replies.length) {
-            item.replies.forEach((reply) => {
-              if ($blocked.includes(reply.pubkey)) {
-                delete reply[id] 
-              } 
-            })
-          }
-        })
-        return $pages
-      })  
+        if (item && item.replies.length) {
+          item.replies.forEach((reply) => {
+            if ($blocked.includes(reply.pubkey)) {
+              delete reply[id];
+            }
+          });
+        }
+      });
+      return $pages;
+    });
   });
-  
-
 </script>
 
 <Feeder bind:msg {scrollHandler} {sendMessage}>
@@ -184,7 +182,7 @@
       <ul class="items-center w-full border-hidden">
         <li>
           <div class="flex flex-col items-top p-2 w-full overflow-hidden mb-2">
-            {#if note.content !== 'BANNED'}
+            {#if note.content !== "BANNED"}
               <TextNote {note} {userHasAccount} />
               {#if note?.replies && note.replies.length > 0}
                 <TreeNote
