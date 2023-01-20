@@ -635,13 +635,13 @@ export async function isAlive() {
 }
 
 export class Listener {
-    filter: Filter
+    filters: Array<Filter>
     subs: { [key: string]: Sub } = {}
     id: string
     timer: string | number | NodeJS.Timeout
 
-    constructor(filter: Filter, id?: string) {
-        this.filter = filter
+    constructor(filters: Array<Filter>, id?: string) {
+        this.filters = filters
         if (!id) {
             this.id = 'listener' + now()
         } else {
@@ -657,7 +657,7 @@ export class Listener {
                 } catch (err) { console.error(err) }
             }
 
-            this.subs[url] = relay.sub([this.filter], { id: this.id })
+            this.subs[url] = relay.sub(this.filters, { id: this.id })
 
             this.subs[url].on('event', (event: Event) => {
                 onEvent(event, url)
@@ -675,6 +675,11 @@ export class Listener {
             console.log(`Stop listening to relay ${url} by unsubscribe to events and eose`)
         }
         clearInterval(this.timer)
+
+        feedQueue = [] 
+        clearInterval(feedQueueTimer)
+        feedQueueTimer = null
+        feedStack.set({})
     }
 }
 
@@ -685,6 +690,7 @@ export let lastSeen = writable(getLocalJson(setting.Lastseen) || now() - 60 * 60
 lastSeen.subscribe(value => {
     setLocalJson(setting.Lastseen, value)
 })
+
 export function onEvent(evt: Event, relay: string) {
 
     if (pool.hasRelay('ws://localhost:8008') && relay != 'ws://localhost:8008') {
@@ -705,7 +711,7 @@ export function onEvent(evt: Event, relay: string) {
                 feedQueue.push({ textnote: evt, url: relay })
             }
             if (feedQueueTimer === null) {
-                feedQueueTimer = setInterval(handleTextNote, 500)
+                feedQueueTimer = setInterval(handleTextNote, 2000)
             }
             break
         case 3:

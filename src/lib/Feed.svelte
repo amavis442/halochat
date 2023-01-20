@@ -44,7 +44,7 @@
 
   onMount(async () => {
     if ($relays && $relays.length) {
-      listener = new Listener({ since: $lastSeen }, "globalfeed");
+      listener = new Listener([{ since: $lastSeen }], "globalfeed");
       listener.start();
       console.log("Last seen:", getTime($lastSeen));
 
@@ -60,7 +60,7 @@
 
   onDestroy(() => {
     if (listener) {
-      feed.set([]);
+      page.set([])
       listener.stop();
     }
   });
@@ -99,7 +99,7 @@
           data[$feed[i].id] = $feed[i];
         }
         data = sort(byCreatedAt, data);
-        updateLastSeen(head(data))
+        updateLastSeen(head(data));
         return data;
       });
     }
@@ -141,34 +141,33 @@
 
   let byCreatedAt = descend<TextNote>(prop("created_at"));
   feed.subscribe(($feed) => {
-    $feed.forEach(item => {
-      if (!item.tags.find(tag => tag[0] === 'e') && item.id && item.dirty) {
+    $feed.forEach((item) => {
+      if (!item.tags.find((tag) => tag[0] === "e") && item.id && item.dirty) {
         page.update((data) => {
           if (item) {
-            console.debug('Item is: ', item)
-            let note = data.find((d => d.id == item.id))
+            console.debug("Item is: ", item);
+            let note = data.find((d) => d.id == item.id);
             if (note) {
-              note = item
+              note = item;
             }
             if (!note) {
-              data.push(item)
+              data.push(item);
             }
-            console.debug('Item is page', data)
+            console.debug("Item is page", data);
           }
-          return data
-        })
-        item.dirty = false
+          return data;
+        });
+        item.dirty = false;
       }
-    })
-    $page = sort(byCreatedAt, $page)
-    updateLastSeen(head($page))
-    console.debug('Page content is (sorted)', $page)
-  })
-  
+    });
+    $page = sort(byCreatedAt, $page);
+    updateLastSeen(head($page));
+    console.debug("Page content is (sorted)", $page);
+  });
 
   blocklist.subscribe(($blocked) => {
     for (const pubkey of $blocked) {
-      Object.entries($feedStack).forEach((note:any) => {
+      Object.entries($feedStack).forEach((note: any) => {
         if (note.pubkey == pubkey) {
           note = null;
         }
@@ -196,17 +195,6 @@
 
 <Feeder bind:msg {scrollHandler} {sendMessage}>
   <slot>
-    {#if $feed.length - $page.length > 0}<div
-        class="flex h-8 w-full justify-center mt-2"
-      >
-        <Button click={loadMore} class="flex w-full justify-center"
-          >Load 10 more notes <span
-            class="inline-block py-1 px-1.5 leading-none text-center whitespace-nowrap align-baseline font-bold bg-red-600 text-white rounded ml-2"
-          >
-            {$feed.length - $page.length}
-          </span>
-        </Button>
-      </div>{/if}
     {#each $page ? $page : [] as note (note.id)}
       <ul class="items-center w-full border-hidden">
         <li>
