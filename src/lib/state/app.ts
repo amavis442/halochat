@@ -431,14 +431,7 @@ async function handleTextNote(): Promise<void> {
     let evt = eventItem.textnote
     const relay = eventItem.url
 
-    if ($account.pubkey != evt.pubkey && $blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == evt.pubkey)) {
-        log('handleTextNote:: user on blocklist ', evt)
-        return
-    }
-    if (blockText(evt)) {
-        return
-    }
-
+    
     /* if (Object.values($feedStack).find((f: TextNote) => f.content == evt.content)) {
         return
     } */
@@ -702,6 +695,13 @@ export function onEvent(evt: Event, relay: string) {
             handleMetadata(evt, relay)
             break
         case 1:
+            if ($account.pubkey != evt.pubkey && $blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == evt.pubkey)) {
+                log('handleTextNote:: user on blocklist ', evt)
+                return
+            }
+            if (blockText(evt)) {
+                return
+            }
             if (evt.pubkey == $account.pubkey) {
                 feedQueue.unshift({ textnote: evt, url: relay })
                 handleTextNote()
