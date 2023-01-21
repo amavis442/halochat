@@ -266,6 +266,7 @@ async function handleTags(noteId: string) {
                             initNote(item)
                             feedStack.update(data => {
                                 data[item.id] = item
+                                return data
                             })
                             rootNote = $feedStack[item.id]
                             if (!rootNote.replies) rootNote.replies = []
@@ -391,6 +392,8 @@ async function annotateNote(note: TextNote, relay: string): Promise<TextNote> {
 function blockText(evt: Event): boolean {
     if (evt.content.match(/followid/)) return true
     if (evt.content.match(/Verifying\ My\ Public\ Key/)) return true
+    if (evt.content.match(/free\ sats/gmi)) return true
+    
     return false
 }
 
