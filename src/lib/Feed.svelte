@@ -46,8 +46,6 @@
     if ($relays && $relays.length) {
       listener = new Listener([{ since: now() - 60 * 60 }], "globalfeed");
       listener.start();
-      console.log("Last seen:", getTime(now() - 60 * 60));
-
       let $account: Account = get(account);
       if ($account.pubkey) {
         userHasAccount = true;
@@ -55,7 +53,6 @@
       }
     }
     $page = [];
-    console.debug("Page content", $page, $page.length);
   });
 
   onDestroy(() => {
@@ -145,7 +142,6 @@
       if (!item.tags.find((tag) => tag[0] === "e") && item.id && item.dirty) {
         page.update((data) => {
           if (item) {
-            console.debug("Item is: ", item);
             let note = data.find((d) => d.id == item.id);
             if (note) {
               note = item;
@@ -153,7 +149,6 @@
             if (!note) {
               data.push(item);
             }
-            console.debug("Item is page", data);
           }
           return data;
         });
@@ -162,7 +157,6 @@
     });
     $page = sort(byCreatedAt, $page);
     updateLastSeen(head($page));
-    console.debug("Page content is (sorted)", $page);
   });
 
   blocklist.subscribe(($blocked) => {

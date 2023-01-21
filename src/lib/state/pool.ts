@@ -171,8 +171,7 @@ export const getData = async (filters: Filter[], name?: string): Promise<Event[]
     filters = [filters]
   }
 
-  let connectionStatus = await isAlive()
-  console.log('All relays connected: ', connectionStatus)
+  await isAlive()
 
   return new Promise((resolve, reject) => {
     let subs: Array<Sub> = []
@@ -185,41 +184,29 @@ export const getData = async (filters: Filter[], name?: string): Promise<Event[]
     }
 
     for (const [url, relay] of Object.entries(pool.getRelays())) {
-      //let $relay = $relays.find(r => r.url == url)
       let timeoutId = setTimeout(() => {
         subs.forEach(item => item.unsub())
-        console.error(`getData:: Request(${subId}) took to long (15s) unsub all subscription to free slots. Filter/Request: ` + JSON.stringify(filters))
         resolve(result) // Resolve what we got. Relay can behave badly/slowish
       }, 30000);
 
       if (relay.status !== 1) {
-        console.log(`Relay ${url} has status ${relay.status}`)
-
         relayReturns.push(url)
         if (relayReturns.length >= numRelays) {
-
           reject(new Error('No relays with open connection'))
         }
         continue
       }
-      console.debug(`getData:: Request data from ${url}`)
       try {
         let sub = relay.sub(filters, { id: subId })
         subs.push(sub)
 
         sub.on('event', (event: Event) => {
-          console.debug(`getData:: Getting EVENT data from ${url}`, event)
           result.push(event)
-          //clearInterval(timeoutId)
-          //subs.forEach(item => item.unsub())
-          //resolve(result)
         })
 
         sub.on('eose', () => {
-          console.debug(`getData:: Received EOSE from ${url}`)
           relayReturns.push(url)
           relayReturns = uniq(relayReturns)
-          console.debug('ESOE', relayReturns.length, Object.entries(pool.getRelays()).length)
           if (relayReturns.length >= Object.entries(pool.getRelays()).length) {
             clearInterval(timeoutId)
             subs.forEach(item => item.unsub())
@@ -233,7 +220,6 @@ export const getData = async (filters: Filter[], name?: string): Promise<Event[]
     }
   })
     .then((data: Event[]) => {
-      console.debug(`getData:: Results `, data)
       return data
     })
 }
@@ -326,7 +312,6 @@ relays.subscribe($relays => {
     Object.keys(pool.getRelays()).forEach((url: string) => {
       if ($relays && !$relays.find((r: Relay) => r.url == url)) {
         pool.removeRelay(url)
-        console.log('Remove relay from pool:', url)
       }
     })
   } catch (error) {
@@ -335,11 +320,8 @@ relays.subscribe($relays => {
 
   if ($relays) {
     for (const relay of $relays) {
-      console.log(`${relay.url}: permissions: ${JSON.stringify(relay)}`);
-
       if (!pool.hasRelay(relay.url)) {
         pool.addRelay(relay.url)
-        console.log('Add relay to pool: ', relay.url)
       }
     }
   }

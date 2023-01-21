@@ -244,13 +244,11 @@ async function handleTags(noteId: string) {
 
         // Is root
         if (rootTag.length == 0 && replyTag.length == 0) {
-            console.log("handleTags:: is Rootnote", note)
             return note
         }
 
         // Is reply to root
         if (rootTag.length && replyTag.length && rootTag == replyTag) {
-            console.log("handleTags:: ", note.tags)
             let rootNote = $feedStack[rootTag[1]] || []
             if (rootNote) {
                 note.tree = (rootNote.tree ? rootNote.tree : 0) + 1
@@ -258,7 +256,6 @@ async function handleTags(noteId: string) {
                 if (!rootNote.replies.find(r => r.id == note.id)) {
                     rootNote.replies.push(note)
                 }
-                console.log("handleTags:: is reply to Rootnote", rootNote, 'Child ', note)
             }
             if (!rootNote) {
                 let filter: Filter = { kinds: [1], 'ids': [replyTag[1]] }
@@ -271,6 +268,7 @@ async function handleTags(noteId: string) {
                                 data[item.id] = item
                             })
                             rootNote = $feedStack[item.id]
+                            if (!rootNote.replies) rootNote.replies = []
                             if (!rootNote.replies.find(r => r.id == note.id)) {
                                 rootNote.replies.push(note)
                             }
@@ -286,22 +284,18 @@ async function handleTags(noteId: string) {
                 let replyNote: TextNote | null = $feedStack[replyTag[1]] || []
                 if (replyNote) {
                     note.tree = (replyNote.tree ? replyNote.tree : 0) + 1
+                    if (!replyNote.replies) replyNote.replies = []
                     if (!replyNote.replies.find(r => r.id == note.id)) {
                         replyNote.replies.push(note)
                     }
                 }
-                console.log("handleTags:: is reply to Replynote", replyNote, ' of rootNote ', rootNote)
             }
-
-            console.log("handleTags:: rootTag <> replyTag", note.tags)
 
             if (!rootNote) {
                 let filter1: Filter = { kinds: [1], '#e': [rootTag[1]] }
                 let filter2: Filter = { ids: [rootTag[1]], kinds: [1] }
-                console.log("handleTags:: rootTag <> replyTag filter", filter1, filter2)
                 return await getData([filter1, filter2])
                     .then((results: Array<Event>) => {
-                        console.log("handleTags:: rootTag <> replyTag result of this filter", results, ' of filter ', filter1, filter2)
                         if (results && results.length) {
 
                             feedStack.update(data => {
@@ -338,7 +332,6 @@ async function handleTags(noteId: string) {
                                 // Add our current el to its parent's `children` array
                                 parentEl.replies = [...(parentEl.replies || []), el];
                             });
-                            console.log("handleTags:: Build tree result ", rootNote, ' from ', results)
                         }
                     })
             }
@@ -431,15 +424,10 @@ async function handleTextNote(): Promise<void> {
     let evt = eventItem.textnote
     const relay = eventItem.url
 
-    
-    /* if (Object.values($feedStack).find((f: TextNote) => f.content == evt.content)) {
-        return
-    } */
-
     let note: TextNote = evt
     initNote(note)
     note.relays.push(relay)
-   
+
     if ($feedStack[evt.id]) {
         log('handleTextNote: Already added this input ', evt)
         return
@@ -450,9 +438,7 @@ async function handleTextNote(): Promise<void> {
         return data
     })
 
-    console.debug('handleTextNote: input ', evt)
     let noteId = note.id
-
     return await
         handleTags(noteId)
             .then(() => handleDeletions(noteId))
@@ -462,7 +448,6 @@ async function handleTextNote(): Promise<void> {
 
             .then(() => {
                 Object.values($feedStack).forEach((item: TextNote) => {
-                    //console.log('feedStack entries', 'id is ', item, 'Event is', item)
                     let tags = item.tags.filter(t => t[0] == 'e')
                     if (!tags.length) {
 
@@ -475,9 +460,7 @@ async function handleTextNote(): Promise<void> {
                         })
                     }
                 })
-                console.log('Feedstack is:', $feedStack)
             })
-
 }
 
 async function handleMentions(noteId: string): Promise<void> {
@@ -532,7 +515,6 @@ async function handleReaction(evt: TextNote, relay: string) {
                 if (evt.content == '-') note.downvotes = note.downvotes + 1
                 evt.relays.push(relay)
                 note.reactions.push(evt)
-                console.log('handleReaction:: Reactions ', note, lastTag[1])
             }
             return data
         })
@@ -549,7 +531,6 @@ async function handleReactions(noteId: string) {
         kinds: [7],
         ids: [noteId]
     }
-    console.log('handleReactions', filter)
 
     return await getData([filter], 'getReactions')
         .then((results: Array<Reaction>) => {
@@ -570,7 +551,6 @@ async function handleReactions(noteId: string) {
                 })
 
             }
-            console.log('handleReactions: Got reactions ', note.reactions, results)
             return note
         })
 }
@@ -585,7 +565,6 @@ function handleDelete(evt: Event, relay: string) {
     let pubkey = evt.pubkey
     let eventsToDelete: Array<any> = evt.tags.filter((t: Array<any>) => t[0] == 'e')
     let $feed = get(feed)
-    console.log(`handleDelete:: Got a delete request from ${relay}`, evt)
 
     let rootNotes: Array<TextNote> = $feed.filter(e => e.tree == 0)
     for (let i = 0; i < rootNotes.length; i++) {
@@ -669,7 +648,7 @@ export class Listener {
         }
         clearInterval(this.timer)
 
-        feedQueue = [] 
+        feedQueue = []
         clearInterval(feedQueueTimer)
         feedQueueTimer = null
         feedStack.set({})
@@ -696,7 +675,7 @@ export function onEvent(evt: Event, relay: string) {
             break
         case 1:
             feedQueue = feedQueue.filter(item => {
-                if ($account.pubkey != evt.pubkey && $blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == item.textnote.pubkey)) { 
+                if ($account.pubkey != evt.pubkey && $blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == item.textnote.pubkey)) {
                     return false
                 }
                 return true

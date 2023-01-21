@@ -114,7 +114,6 @@ async function getContacts(pubkey: string): Promise<any> {
     return getContactlist(pubkey)
         .then(
             (receivedContacts) => {
-                console.debug('Received contacts ', receivedContacts)
                 receivedContacts.forEach((contact) => {
                     let list = contact.tags.filter((c) => c[0] == "p");
                     list.forEach((item) => {
@@ -123,8 +122,6 @@ async function getContacts(pubkey: string): Promise<any> {
                         }
                     });
                 });
-                console.debug('Received contacts processed ', contactList)
-
                 let contact:Array<{ pubkey: string, relay: string, petname: string }> = []
                 contactList.forEach(cl => {
                     contact.push({pubkey: cl[1], relay: cl[2], petname: cl[3]})
