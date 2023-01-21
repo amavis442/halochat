@@ -12,7 +12,7 @@
   import contacts from "./state/contacts";
   import { log } from "./util/misc";
   import Feeder from "./partials/Feeder.svelte";
-  import { getTime } from "./util/time";
+  import { getTime, now } from "./util/time";
   import TextNote from "./TextNote.svelte";
   import TreeNote from "./TreeNote.svelte";
   import Button from "./partials/Button.svelte";
@@ -44,9 +44,9 @@
 
   onMount(async () => {
     if ($relays && $relays.length) {
-      listener = new Listener([{ since: $lastSeen }], "globalfeed");
+      listener = new Listener([{ since: now() - 60 * 60 }], "globalfeed");
       listener.start();
-      console.log("Last seen:", getTime($lastSeen));
+      console.log("Last seen:", getTime(now() - 60 * 60));
 
       let $account: Account = get(account);
       if ($account.pubkey) {
@@ -60,7 +60,7 @@
 
   onDestroy(() => {
     if (listener) {
-      page.set([])
+      page.set([]);
       listener.stop();
     }
   });

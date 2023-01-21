@@ -35,15 +35,6 @@
             <div class="justify-end w-full">
             Global 
           </div>
-            {#if $notifications}
-            <div class="justify-end">
-              <span
-                class="inline-block py-1 px-1.5 leading-none text-center whitespace-nowrap align-baseline font-bold bg-red-600 text-white rounded ml-2"
-                >
-                {$notifications}
-                </span>
-              </div>
-            {/if}
           </Link>
         </p>
         <p class="nav-p">

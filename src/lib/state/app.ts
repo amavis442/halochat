@@ -695,6 +695,12 @@ export function onEvent(evt: Event, relay: string) {
             handleMetadata(evt, relay)
             break
         case 1:
+            feedQueue = feedQueue.filter(item => {
+                if ($account.pubkey != evt.pubkey && $blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == item.textnote.pubkey)) { 
+                    return false
+                }
+                return true
+            })
             if ($account.pubkey != evt.pubkey && $blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == evt.pubkey)) {
                 log('handleTextNote:: user on blocklist ', evt)
                 return
