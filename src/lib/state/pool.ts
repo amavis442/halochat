@@ -5,6 +5,7 @@ import { account } from '../stores/account';
 import { getRootTag, getReplyTag } from '../util/tags';
 import { log } from '../util/misc';
 import { addToast } from '../partials/Toast/toast';
+import EventEmitter from 'events';
 import {
   relayInit,
   getEventHash,
@@ -63,7 +64,9 @@ export class relayPool {
   publish = async (evt: Event) => {
     const $relays = get(relays)
 
+    const eventEmitter = new EventEmitter()
     console.log($relays)
+    let evtIds = []
     for (const [url, relay] of Object.entries(this.relays)) {
       let $relay = $relays.find((r: Relay) => r.url == url)
       if ($relay && $relay.write && relay.status == 1) {
@@ -73,6 +76,10 @@ export class relayPool {
         let pub = relay.publish(evt)
         pub.on('ok', () => {
           console.log(`Publish: ${url} has accepted our event`, evt)
+          if (!evtIds.includes(evt.id)){
+            eventEmitter.emit('published', { note: evt, relay: url })
+            evtIds.push(evt.id)
+          }
         })
         pub.on('seen', () => {
           console.log(`Publish: we saw the event on ${url}`, evt)

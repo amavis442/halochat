@@ -11,6 +11,7 @@ import { getRootTag, getReplyTag, getLastETag } from '../util/tags';
 import { log } from '../util/misc';
 import { blocklist } from '../stores/block'
 import { account } from '../stores/account'
+import EventEmitter from 'events';
 
 let $users: Array<User> = get(users)
 let $blocklist: Array<{ pubkey: string, added: number }> = get(blocklist)
@@ -37,6 +38,12 @@ blocktext.subscribe((value) => {
 })
 
 export const feedStack = writable({})
+
+const eventEmitter = new EventEmitter()
+eventEmitter.on('published', (data) => {
+    onEvent(data.note, data.url)
+})
+
 
 export const notifications = writable(0)
 /**
@@ -393,7 +400,7 @@ function blockText(evt: Event): boolean {
     if (evt.content.match(/followid/)) return true
     if (evt.content.match(/Verifying\ My\ Public\ Key/)) return true
     if (evt.content.match(/free\ sats/gmi)) return true
-    
+
     return false
 }
 
@@ -475,7 +482,7 @@ async function handleMentions(noteId: string): Promise<void> {
         return
     }
 
-    let reg = /#\[[0-9]+\]/
+    let reg = /#\[[0-9]+\]/img
     let matches = note.content.match(reg)
     if (matches && matches.length) {
         log('handleMentions:: ', note)
@@ -677,18 +684,20 @@ export function onEvent(evt: Event, relay: string) {
             handleMetadata(evt, relay)
             break
         case 1:
-            feedQueue = feedQueue.filter(item => {
-                if ($account.pubkey != evt.pubkey && $blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == item.textnote.pubkey)) {
-                    return false
+            if ($account.pubkey != evt.pubkey) {
+                feedQueue = feedQueue.filter(item => {
+                    if ($blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == item.textnote.pubkey)) {
+                        return false
+                    }
+                    return true
+                })
+                if ($blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == evt.pubkey)) {
+                    log('handleTextNote:: user on blocklist ', evt)
+                    return
                 }
-                return true
-            })
-            if ($account.pubkey != evt.pubkey && $blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == evt.pubkey)) {
-                log('handleTextNote:: user on blocklist ', evt)
-                return
-            }
-            if (blockText(evt)) {
-                return
+                if (blockText(evt)) {
+                    return
+                }
             }
             if (evt.pubkey == $account.pubkey) {
                 feedQueue.unshift({ textnote: evt, url: relay })
