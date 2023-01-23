@@ -1,9 +1,10 @@
 import { addToast } from "../partials/Toast/toast";
 import { getContactlist } from "./app";
-import type { Follow } from "./types";
+import type { Follow, User } from "./types";
 import { get, writable, type Writable } from 'svelte/store'
 import { publish } from "./pool";
 import { setLocalJson, getLocalJson, setting } from '../util/storage';
+import { type Event } from 'nostr-tools';
 
 /**
  * @see https://github.com/nostr-protocol/nips/blob/master/02.md
@@ -44,8 +45,8 @@ function follow(pubkey: string, petname: string): Array<{ pubkey: string, relay:
         petname: petname,
     };
 
-    let contact = {pubkey: pubkey, relay: '', petname:petname};
- 
+    let contact = { pubkey: pubkey, relay: '', petname: petname };
+
     console.log('Contact to follow', contact)
 
     contacts.update((all) => {
@@ -73,8 +74,8 @@ function follow(pubkey: string, petname: string): Array<{ pubkey: string, relay:
 async function saveContactList(): Promise<any> {
     let $contacts = get(contacts)
     let storeContacts = []
-    $contacts.forEach(c =>{
-        storeContacts.push(['p', c.pubkey, c.relay, c.petname])    
+    $contacts.forEach(c => {
+        storeContacts.push(['p', c.pubkey, c.relay, c.petname])
     })
 
     return publish(3, "", storeContacts).then(() => {
@@ -89,8 +90,8 @@ async function saveContactList(): Promise<any> {
 
 async function publishList(list: Array<{ pubkey: string, relay: string, petname: string }>): Promise<any> {
     let saveList = []
-    list.forEach(c =>{
-        saveList.push(['p', c.pubkey, c.relay, c.petname])    
+    list.forEach(c => {
+        saveList.push(['p', c.pubkey, c.relay, c.petname])
     })
 
     return publish(3, "", saveList).then(() => {
@@ -114,20 +115,23 @@ async function getContacts(pubkey: string): Promise<any> {
     return getContactlist(pubkey)
         .then(
             (receivedContacts) => {
-                receivedContacts.forEach((contact) => {
-                    let list = contact.tags.filter((c) => c[0] == "p");
-                    list.forEach((item) => {
+                console.debug('Got contacts:', receivedContacts)
+                for (let i = 0; i < receivedContacts.length; i++) {
+                    let contact: Event = receivedContacts[i]
+                    let list = contact.tags.filter((ct) => ct[0] == "p");
+                    for (let n = 0; n < list.length; n++) {
+                        let item = list[n]
                         if (!contactList.find((cl) => cl[1] == item[1])) {
                             contactList = [...contactList, item];
                         }
-                    });
-                });
-                let contact:Array<{ pubkey: string, relay: string, petname: string }> = []
-                contactList.forEach(cl => {
-                    contact.push({pubkey: cl[1], relay: cl[2], petname: cl[3]})
-                })
+                    };
+                };
+                let contact: Array<{ pubkey: string, relay: string, petname: string }> = []
+                for (let l = 0; l < contactList.length;l++) {
+                    let cl = contactList[l]
+                    contact.push({ pubkey: cl[1], relay: cl[2], petname: cl[3] })
+                }
                 contacts.set(contact);
-
                 return contactList;
             }
         );

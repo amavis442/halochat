@@ -6,7 +6,6 @@ import { account } from '../stores/account';
 import { getRootTag, getReplyTag } from '../util/tags';
 import { log } from '../util/misc';
 import { addToast } from '../partials/Toast/toast';
-import EventEmitter from 'events';
 import {
   relayInit,
   getEventHash,
@@ -184,7 +183,7 @@ export const getData = async (filters: Filter[], name?: string): Promise<Event[]
     filters = [filters]
   }
 
-  await isAlive()
+  //await isAlive()
 
   return new Promise((resolve, reject) => {
     let subs: Array<Sub> = []
@@ -220,7 +219,7 @@ export const getData = async (filters: Filter[], name?: string): Promise<Event[]
         sub.on('eose', () => {
           relayReturns.push(url)
           relayReturns = uniq(relayReturns)
-          if (relayReturns.length >= Object.entries(pool.getRelays()).length) {
+          if (relayReturns.length >= Object.entries(pool.getRelays()).length || result.length > 0) { // Not gonna wait for all the relays. If one has data, show it.
             clearInterval(timeoutId)
             subs.forEach(item => item.unsub())
             uniq(result)

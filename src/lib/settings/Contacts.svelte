@@ -49,12 +49,10 @@
       promiseGetContacts = contacts
         .getContacts($account.pubkey)
         .then((data) => {
-          console.log("Got the contact list");
           followPubKeys = data;
-          console.log(followPubKeys, contacts.getList());
+          console.debug(followPubKeys, contacts.getList());
         });
     }
-    console.log("Pubkeys is ", followPubKeys);
   });
 
   let promise: Promise<void>;
