@@ -4,8 +4,9 @@
   import { get, writable } from "svelte/store";
   import { Listener } from "./state/app";
   import { descend, head, keys, pick, prop, sort, uniq, uniqBy } from "ramda";
+  import { users } from "./stores/users";
 
-  import type { TextNote as Note, Account } from "./state/types";
+  import type { TextNote as Note, Account, User } from "./state/types";
   import type { Event } from "nostr-tools";
   import { account } from "./stores/account";
   import { feed } from "./state/app";
@@ -47,9 +48,13 @@
           await contacts.getContacts($account.pubkey);
         }
         let pubkeys = [];
-        contacts.getList().forEach((c) => {
-          pubkeys.push(c[1]);
-        });
+        let $contacts = contacts.getList();
+        for (let i = 0; i < $contacts.length; i++) {
+          let c: { pubkey: string; relay: string; petname: string } =
+            $contacts[i];
+          pubkeys.push(c.pubkey);
+        }
+        console.debug("Contact list pubkeys", pubkeys);
         listener = new Listener(
           [{ since: lastSync, authors: pubkeys }],
           "followcontacts"
@@ -81,6 +86,26 @@
   let byCreatedAt = descend<TextNote>(prop("created_at"));
   const unsubscribeFeed = feed.subscribe(($feed) => {
     $feed.forEach((item) => {
+      if ((item && !item.user) || item.user.name == item.pubkey) {
+        let user: User | undefined = $users.find(
+          (u) => u.pubkey == item.pubkey
+        );
+        if (user) {
+          item.user = user;
+        }
+        if (!user) {
+          let contact = contacts.getList().find((c) => c.pubkey == item.pubkey);
+          item.user = {
+            pubkey: contact.pubkey,
+            name: contact.petname,
+            about: "",
+            picture: "profile-placeholder.png",
+            content: null,
+            refreshed: now(),
+          };
+        }
+      }
+
       if (!item.tags.find((tag) => tag[0] === "e") && item.id && item.dirty) {
         page.update((data) => {
           if (item) {
