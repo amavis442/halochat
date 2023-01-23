@@ -3,7 +3,7 @@
   import { onMount, onDestroy, afterUpdate } from "svelte";
   import { get, writable, type Writable } from "svelte/store";
   import { Listener, lastSeen } from "./state/app";
-  import type { TextNote as NoteEvent, Account } from "./state/types";
+  import type { TextNote as NoteEvent, Account, User } from "./state/types";
   import { account } from "./stores/account";
   import { feed } from "./state/app";
   import { feedStack, mute } from "./state/app";
@@ -20,6 +20,7 @@
   import { notifications } from "./state/app";
   import { getReplyTag, getRootTag } from "./util/tags";
   import { deleteNodeFromTree } from "./util/misc";
+  import { users } from "./stores/users";
 
   let msg = "";
   let replyTo: NoteEvent | null = null;
@@ -49,7 +50,7 @@
       let $account: Account = get(account);
       if ($account.pubkey) {
         userHasAccount = true;
-        contacts.getContacts($account.pubkey);
+        //contacts.getContacts($account.pubkey);
       }
     }
     $page = [];
@@ -59,6 +60,7 @@
     if (listener) {
       page.set([]);
       listener.stop();
+      unsubscribeFeed();
     }
   });
 
@@ -137,8 +139,14 @@
   });
 
   let byCreatedAt = descend<TextNote>(prop("created_at"));
-  feed.subscribe(($feed) => {
+  const unsubscribeFeed = feed.subscribe(($feed) => {
     $feed.forEach((item) => {
+      if ((item && !item.user) || item.user.name == item.pubkey) {
+        let user: User | undefined = $users.find(
+          (u) => u.pubkey == item.pubkey
+        );
+        item.user = user;
+      }
       if (!item.tags.find((tag) => tag[0] === "e") && item.id && item.dirty) {
         page.update((data) => {
           if (item) {

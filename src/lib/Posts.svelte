@@ -43,8 +43,9 @@
 
   onDestroy(() => {
     if (listener) {
-      page.set([])
+      page.set([]);
       listener.stop();
+      unsubscribeFeed();
     }
   });
 
@@ -58,7 +59,7 @@
   }
 
   let byCreatedAt = descend<TextNote>(prop("created_at"));
-  feed.subscribe(($feed) => {
+  const unsubscribeFeed = feed.subscribe(($feed) => {
     $feed.forEach((item) => {
       if (!item.tags.find((tag) => tag[0] === "e") && item.id && item.dirty) {
         page.update((data) => {
