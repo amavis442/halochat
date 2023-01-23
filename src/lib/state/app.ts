@@ -641,6 +641,7 @@ export class Listener {
                     await waitForOpenConnection(relay)
                 } catch (err) { console.error(err) }
             }
+            console.log(`Start listening to relay ${url} with listener subscribe id ${this.id}`)
 
             this.subs[url] = relay.sub(this.filters, { id: this.id })
 
