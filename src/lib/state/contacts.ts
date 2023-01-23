@@ -65,7 +65,13 @@ function follow(pubkey: string, petname: string): Array<{ pubkey: string, relay:
         timeout: 3000,
     });
 
-    return get(contacts)
+    let result = []
+    let $contacts = get(contacts)
+    for (let i = 0; i < $contacts.length; i++) {
+        let c = $contacts[i];
+        result.push(['p', c.pubkey, c.relay, c.petname]);
+    }
+    return result;
 }
 
 /**
@@ -74,10 +80,12 @@ function follow(pubkey: string, petname: string): Array<{ pubkey: string, relay:
 async function saveContactList(): Promise<any> {
     let $contacts = get(contacts)
     let storeContacts = []
-    $contacts.forEach(c => {
+    for (let i = 0; i < $contacts.length; i++) {
+        let c = $contacts[i];
         storeContacts.push(['p', c.pubkey, c.relay, c.petname])
-    })
-
+    }
+    console.debug('Publish contacts to follow: ', storeContacts)
+    /*
     return publish(3, "", storeContacts).then(() => {
         addToast({
             message: "Contact list has been saved",
@@ -86,15 +94,19 @@ async function saveContactList(): Promise<any> {
             timeout: 3000,
         });
     });
+    */
 }
 
-async function publishList(list: Array<{ pubkey: string, relay: string, petname: string }>): Promise<any> {
-    let saveList = []
-    list.forEach(c => {
-        saveList.push(['p', c.pubkey, c.relay, c.petname])
-    })
-
-    return publish(3, "", saveList).then(() => {
+async function publishList(): Promise<any> {
+    let $contacts = get(contacts)
+    let storeContacts = []
+    for (let i = 0; i < $contacts.length; i++) {
+        let c = $contacts[i];
+        storeContacts.push(['p', c.pubkey, c.relay, c.petname])
+    }
+    console.debug('Publish contacts to follow: ', storeContacts)
+    
+    return publish(3, "", storeContacts).then(() => {
         addToast({
             message: "Contact list has been saved",
             type: "success",
@@ -102,6 +114,7 @@ async function publishList(list: Array<{ pubkey: string, relay: string, petname:
             timeout: 3000,
         });
     });
+    
 }
 
 /**
@@ -127,7 +140,7 @@ async function getContacts(pubkey: string): Promise<any> {
                     };
                 };
                 let contact: Array<{ pubkey: string, relay: string, petname: string }> = []
-                for (let l = 0; l < contactList.length;l++) {
+                for (let l = 0; l < contactList.length; l++) {
                     let cl = contactList[l]
                     contact.push({ pubkey: cl[1], relay: cl[2], petname: cl[3] })
                 }

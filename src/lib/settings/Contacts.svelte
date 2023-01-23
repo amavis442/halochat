@@ -50,7 +50,7 @@
         .getContacts($account.pubkey)
         .then((data) => {
           followPubKeys = data;
-          console.debug(followPubKeys, contacts.getList());
+          console.debug('Contactlist: ', followPubKeys, 'Contacts', contacts.getList());
         });
     }
   });
