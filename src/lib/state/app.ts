@@ -5,7 +5,7 @@ import { find } from "../util/misc"
 import { uniq } from 'ramda'
 import type { User, TextNote, Reaction, Account } from './types'
 import type { Event, Filter, Relay, Sub } from 'nostr-tools'
-import { pool, getData, waitForOpenConnection } from './pool'
+import { pool, getData, waitForOpenConnection, published } from './pool'
 import { setLocalJson, getLocalJson, setting } from '../util/storage'
 import { getRootTag, getReplyTag, getLastETag } from '../util/tags';
 import { log } from '../util/misc';
@@ -39,10 +39,6 @@ blocktext.subscribe((value) => {
 
 export const feedStack = writable({})
 
-const eventEmitter = new EventEmitter()
-eventEmitter.on('published', (data) => {
-    onEvent(data.note, data.url)
-})
 
 
 export const notifications = writable(0)
@@ -319,7 +315,12 @@ async function handleTags(noteId: string) {
                             /**
                              * @see https://typeofnan.dev/an-easy-way-to-build-a-tree-with-object-references/
                              */
-                            results.forEach((el: TextNote) => {
+                            for (let i = 0; i < results.length; i++) {
+                                let el: TextNote = results[i]
+                                if (el.kind != 1) {
+                                    continue
+                                }
+
                                 let tag = getReplyTag(el.tags)
                                 let rootTag = getRootTag(el.tags)
                                 if (!rootNote && rootTag == replyTag) {
@@ -339,11 +340,11 @@ async function handleTags(noteId: string) {
                                 el.tree = (parentEl.tree ? parentEl.tree : 0) + 1
                                 // Add our current el to its parent's `children` array
                                 parentEl.replies = [...(parentEl.replies || []), el];
-                            });
-                        }
-                    })
+                            };
             }
-        }
+        })
+    }
+}
     }
 }
 
@@ -434,6 +435,8 @@ async function handleTextNote(): Promise<void> {
     let evt = eventItem.textnote
     const relay = eventItem.url
 
+    if (evt.kind != 1) return
+
     let note: TextNote = evt
     initNote(note)
     note.relays.push(relay)
@@ -451,11 +454,6 @@ async function handleTextNote(): Promise<void> {
     let noteId = note.id
     return await
         handleTags(noteId)
-            .then(() => handleDeletions(noteId))
-            .then(() => handleReactions(noteId))
-            .then(() => handleMentions(noteId))
-            .then(() => handleUser(noteId))
-
             .then(() => {
                 Object.values($feedStack).forEach((item: TextNote) => {
                     let tags = item.tags.filter(t => t[0] == 'e')
@@ -471,6 +469,11 @@ async function handleTextNote(): Promise<void> {
                     }
                 })
             })
+            .then(() => handleDeletions(noteId))
+            .then(() => handleReactions(noteId)) // Can be very slow
+            .then(() => handleMentions(noteId))
+            .then(() => handleUser(noteId)) // Can be very slow
+            .then(() => { console.debug('Done handle note') })
 }
 
 async function handleMentions(noteId: string): Promise<void> {
@@ -513,10 +516,10 @@ async function handleReaction(evt: TextNote, relay: string) {
     let lastTag = getLastETag(evt.tags)
     if (!lastTag) {
         log('handleReaction:: Misformed tags.. ignore it', 'Tags:', evt.tags, 'Event:', evt)
-        return
+        return false
     }
     initNote(evt)
-    await new Promise((resolve) => {
+    //await new Promise((resolve) => {
         feedStack.update(data => {
             let note: TextNote = data[lastTag[1]] || null
             if (note && note.reactions && !note.reactions.find(r => r.id == evt.id)) {
@@ -528,8 +531,8 @@ async function handleReaction(evt: TextNote, relay: string) {
             }
             return data
         })
-        resolve(true)
-    })
+      //  resolve(true)
+    //})
 }
 
 async function handleReactions(noteId: string) {
@@ -642,14 +645,52 @@ export class Listener {
             this.subs[url] = relay.sub(this.filters, { id: this.id })
 
             this.subs[url].on('event', (event: Event) => {
+
+                if ($account.pubkey != event.pubkey) {
+                    if ($blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == event.pubkey)) {
+                        return
+                    }
+                    if (blockText(event)) {
+                        return
+                    }
+                }
                 onEvent(event, url)
             })
+
             this.subs[url].on('eose', () => {
                 log(`Eose from ${url}`)
             })
         }
 
         this.timer = setInterval(isAlive, 1000 * 60 * 5) // check every 5 minutes
+
+        // Own events are first class.
+        published.subscribe((data: { note: TextNote, relay: string }) => {
+            if (data && data.note) {
+                console.debug('Incomming Publish ... ', data.note, data.relay)
+                switch(data.note.kind) {
+                    case 0:
+                        handleMetadata(data.note, data.relay)
+                        break;
+                    case 1:
+                        feedQueue.unshift({ textnote: data.note, url: data.relay })
+                        handleTextNote()
+                        break;
+                    case 7:
+                        handleReaction(data.note, data.relay)
+                        break;    
+                }
+            }
+        })
+
+        blocklist.subscribe((all) => {
+            feedQueue = feedQueue.filter(item => {
+                if ($blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == item.textnote.pubkey)) {
+                    return false
+                }
+                return true
+            })
+        })
     }
     stop() {
         for (const [url, sub] of Object.entries(this.subs)) {
@@ -665,13 +706,15 @@ export class Listener {
     }
 }
 
-let feedQueue: Array<{ textnote: Event, url: string }> = []
+export let feedQueue: Array<{ textnote: Event, url: string }> = []
 let feedQueueTimer = null
 
 export let lastSeen = writable(getLocalJson(setting.Lastseen) || now() - 60 * 60)
 lastSeen.subscribe(value => {
     setLocalJson(setting.Lastseen, value)
 })
+
+
 
 export function onEvent(evt: Event, relay: string) {
 
@@ -684,31 +727,11 @@ export function onEvent(evt: Event, relay: string) {
             handleMetadata(evt, relay)
             break
         case 1:
-            if ($account.pubkey != evt.pubkey) {
-                feedQueue = feedQueue.filter(item => {
-                    if ($blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == item.textnote.pubkey)) {
-                        return false
-                    }
-                    return true
-                })
-                if ($blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == evt.pubkey)) {
-                    log('handleTextNote:: user on blocklist ', evt)
-                    return
-                }
-                if (blockText(evt)) {
-                    return
-                }
-            }
-            if (evt.pubkey == $account.pubkey) {
-                feedQueue.unshift({ textnote: evt, url: relay })
-                handleTextNote()
-                clearInterval(feedQueueTimer)
-                feedQueueTimer = null
-            } else {
+            if (evt.pubkey != $account.pubkey) {
                 feedQueue.push({ textnote: evt, url: relay })
             }
             if (feedQueueTimer === null) {
-                feedQueueTimer = setInterval(handleTextNote, 2000)
+                feedQueueTimer = setInterval(handleTextNote, 500)
             }
             break
         case 3:

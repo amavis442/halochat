@@ -1,4 +1,5 @@
-import { writable, get } from 'svelte/store'
+import { writable, get, type Writable } from 'svelte/store'
+import type { TextNote } from './types'
 import { getLocalJson, setLocalJson, setting } from '../util/storage'
 import { now } from "../util/time";
 import { account } from '../stores/account';
@@ -20,6 +21,8 @@ import {
 import 'websocket-polyfill';
 import { isAlive } from './app';
 import { uniq } from 'ramda';
+
+export let published: Writable<{ note: TextNote, relay: string }> = writable({ note: null, relay: '' })
 
 export class relayPool {
   relays: { [key: string]: Relay } = {}
@@ -63,10 +66,11 @@ export class relayPool {
 
   publish = async (evt: Event) => {
     const $relays = get(relays)
-
-    const eventEmitter = new EventEmitter()
-    console.log($relays)
+    
     let evtIds = []
+    
+
+    console.log($relays)
     for (const [url, relay] of Object.entries(this.relays)) {
       let $relay = $relays.find((r: Relay) => r.url == url)
       if ($relay && $relay.write && relay.status == 1) {
@@ -76,8 +80,10 @@ export class relayPool {
         let pub = relay.publish(evt)
         pub.on('ok', () => {
           console.log(`Publish: ${url} has accepted our event`, evt)
-          if (!evtIds.includes(evt.id)){
-            eventEmitter.emit('published', { note: evt, relay: url })
+          if (evt && evt.id && evt.kind && !evtIds.includes(evt.id)) {
+            published.update((all) => {
+              return { note: evt, relay: '' }
+            })
             evtIds.push(evt.id)
           }
         })
