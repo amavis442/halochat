@@ -22,7 +22,7 @@ Features
 - [ ] Infinite scroller
 - [x] Follow
 - [ ] Channels
-
+- [ ] Notifications
 
 Status as in [Nips](https://github.com/nostr-protocol/nips)
 
