@@ -44,11 +44,13 @@
       let $account: Account = get(account);
       if ($account.pubkey) {
         userHasAccount = true;
-        if (!contacts.getList().length) {
+        let $contacts = contacts.getList();
+        if (!$contacts.length) {
+          console.debug('Getting contacts')
           await contacts.getContacts($account.pubkey);
         }
         let pubkeys = [];
-        let $contacts = contacts.getList();
+        
         for (let i = 0; i < $contacts.length; i++) {
           let c: { pubkey: string; relay: string; petname: string } =
             $contacts[i];
@@ -93,7 +95,7 @@
         if (user) {
           item.user = user;
         }
-        if (!user) {
+        if (!user && contacts.getList().length) {
           let contact = contacts.getList().find((c) => c.pubkey == item.pubkey);
           item.user = {
             pubkey: contact.pubkey,
