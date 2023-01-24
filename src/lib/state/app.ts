@@ -362,6 +362,7 @@ async function handleUser(noteId: string) {
             })
     }
     note.user = foundUser
+    feed.update((data) => data)
 }
 
 
@@ -473,7 +474,8 @@ async function handleTextNote(): Promise<void> {
             .then(() => handleReactions(noteId)) // Can be very slow
             .then(() => handleMentions(noteId))
             .then(() => handleUser(noteId)) // Can be very slow
-            .then(() => { console.debug('Done handle note') })
+            .then(() => { console.debug('Done handle note'); feed.update((data) => data) })
+
 }
 
 async function handleMentions(noteId: string): Promise<void> {
@@ -531,6 +533,7 @@ async function handleReaction(evt: TextNote, relay: string) {
             }
             return data
         })
+        feed.update((data) => data) // Hope this will trigger an subscribe trigger event and updates the view
       //  resolve(true)
     //})
 }
