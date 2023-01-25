@@ -4,9 +4,9 @@
   import Button from "../Button.svelte";
 
   // provided by <Modals />
-  export let isOpen;
-  export let note;
-  export let followed;
+  export let isOpen = false;
+  export let note = {};
+  export let followed = false;
   export let onUnfollowUser;
   export let onFollowUser;
   let user = {};
@@ -49,8 +49,7 @@
               : note.pubkey.slice(0, 10)}
           </h5>
           <p class="text-gray-700 text-base mb-4">
-            {user.about}
-          </p>
+            {user.about} 
         </div>
       </div>
 

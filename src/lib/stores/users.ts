@@ -7,7 +7,7 @@ import { log } from '../util/misc'
 export const users = writable([]);
 
 /**
- * No requests made
+ * Add missing data of user else only placeholder data is available.
  * 
  * @param user 
  */

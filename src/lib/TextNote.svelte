@@ -116,7 +116,7 @@
   }
 
   function isFollowed(): boolean {
-    if (contacts.getList().find((c) => c[1] == note.pubkey)) {
+    if (contacts.getList().find((c) => c.pubkey == note.pubkey)) {
       return true;
     }
     return false;
@@ -139,7 +139,7 @@
       return;
     }
     contacts.follow(note.pubkey, user.name);
-    contacts.saveContactList();
+    contacts.publishList();
     followed = true;
   }
 
@@ -148,7 +148,7 @@
 
     let c = contacts.unFollow(note.pubkey);
     console.log(c);
-    contacts.publishList(c);
+    contacts.publishList();
     followed = false;
   }
 
@@ -206,6 +206,16 @@
     if (note.tree == 2) return "ml-4";
     if (note.tree > 2) return "ml-6";
   }
+
+  /*
+  users.subscribe(($users: Array<User>) => {
+    let user = $users.find((u: User) => u.pubkey == note.pubkey);
+    if (user) {
+      note.user = user;
+    }
+    console.debug('User update')
+  });
+  */
 </script>
 
 {#await promiseReply}
@@ -240,10 +250,10 @@
           <div class="flex gap-2 h-12 w-full ">
             <div class="text-left order-first w-6/12">
               <strong class="text-black text-sm font-medium">
+                <span title={note.pubkey}>{normalizeName(user)}</span>
                 {#if followed}
                   <i class="fa-solid fa-bookmark" />
                 {/if}
-                <span title={note.pubkey}>{normalizeName(user)}</span>
                 <small class="text-gray">{getTime(note.created_at)}</small>
               </strong>
             </div>

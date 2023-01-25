@@ -46,11 +46,11 @@
         userHasAccount = true;
         let $contacts = contacts.getList();
         if (!$contacts.length) {
-          console.debug('Getting contacts')
+          console.debug("Getting contacts");
           await contacts.getContacts($account.pubkey);
         }
         let pubkeys = [];
-        
+
         for (let i = 0; i < $contacts.length; i++) {
           let c: { pubkey: string; relay: string; petname: string } =
             $contacts[i];
@@ -58,7 +58,10 @@
         }
         console.debug("Contact list pubkeys", pubkeys);
         listener = new Listener(
-          [{ since: lastSync, authors: pubkeys }],
+          [
+            { since: lastSync, authors: pubkeys, kinds: [0, 1, 7] } /*,
+            { since: lastSync, kinds: [7], "#p": pubkeys }, */
+          ],
           "followcontacts"
         );
         listener.start();
@@ -88,7 +91,7 @@
   let byCreatedAt = descend<TextNote>(prop("created_at"));
   const unsubscribeFeed = feed.subscribe(($feed) => {
     $feed.forEach((item) => {
-      if ((item && !item.user) || item.user.name == item.pubkey) {
+      if (((item && !item.user) || item.user.name == item.pubkey)) {
         let user: User | undefined = $users.find(
           (u) => u.pubkey == item.pubkey
         );
@@ -97,21 +100,23 @@
         }
         if (!user && contacts.getList().length) {
           let contact = contacts.getList().find((c) => c.pubkey == item.pubkey);
-          item.user = {
-            pubkey: contact.pubkey,
-            name: contact.petname,
-            about: "",
-            picture: "profile-placeholder.png",
-            content: null,
-            refreshed: now(),
-          };
+          if (contact) {
+            item.user = {
+              pubkey: contact.pubkey,
+              name: contact.petname,
+              about: "",
+              picture: "profile-placeholder.png",
+              content: null,
+              refreshed: now(),
+            };
+          }
         }
       }
 
       if (!item.tags.find((tag) => tag[0] === "e") && item.id && item.dirty) {
         page.update((data) => {
           if (item) {
-            console.debug("Item is: ", item);
+            //console.debug("Item is: ", item);
             let note = data.find((d) => d.id == item.id);
             if (note) {
               note = item;
@@ -119,7 +124,7 @@
             if (!note) {
               data.push(item);
             }
-            console.debug("Item is page", data);
+            //console.debug("Item is page", data);
           }
           return data;
         });
@@ -127,8 +132,8 @@
       }
     });
     $page = sort(byCreatedAt, $page);
-    console.debug("Page content is (sorted)", $page);
-  });
+    //console.debug("Page content is (sorted)", $page);
+  });  
 </script>
 
 <Feeder {scrollHandler} bind:msg {sendMessage}>

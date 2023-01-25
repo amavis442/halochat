@@ -45,7 +45,10 @@
 
   onMount(async () => {
     if ($relays && $relays.length) {
-      listener = new Listener([{ since: now() - 60 * 60 }], "globalfeed");
+      listener = new Listener(
+        [{ since: now() - 60 * 60, kinds: [0, 1, 5, 7] }],
+        "globalfeed"
+      );
       listener.start();
       let $account: Account = get(account);
       if ($account.pubkey) {
@@ -193,6 +196,24 @@
       return $pages;
     });
   });
+
+  /*
+  users.subscribe(($users: Array<User>) => {
+    for (let i = 0;i < $users.length; i++) {
+      let user = $users[i]
+      //if (contacts.getList().find(c => c.pubkey == user.pubkey) {
+
+      //}
+      for (let n = 0;n < Object.values($feedStack).length;  n++) {
+        let fs:TextNote = Object.values($feedStack)[n];
+        if (fs.pubkey == user.pubkey) {
+          fs.user = user
+        }
+      }
+    }
+    //page.update((data) => data);
+  });
+  */
 </script>
 
 <Feeder bind:msg {scrollHandler} {sendMessage}>

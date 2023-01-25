@@ -37,6 +37,7 @@
         };
 
         listener = new Listener([filter1, filter2], "userpostfeed");
+        listener.start();
       }
     }
   });
@@ -64,7 +65,7 @@
       if (!item.tags.find((tag) => tag[0] === "e") && item.id && item.dirty) {
         page.update((data) => {
           if (item) {
-            console.debug("Item is: ", item);
+            //console.debug("Item is: ", item);
             let note = data.find((d) => d.id == item.id);
             if (note) {
               note = item;
@@ -72,7 +73,7 @@
             if (!note) {
               data.push(item);
             }
-            console.debug("Item is page", data);
+            //console.debug("Item is page", data);
           }
           return data;
         });
@@ -80,7 +81,7 @@
       }
     });
     $page = sort(byCreatedAt, $page);
-    console.debug("Page content is (sorted)", $page);
+    //console.debug("Page content is (sorted)", $page);
   });
 </script>
 
