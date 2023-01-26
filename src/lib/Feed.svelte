@@ -44,6 +44,8 @@
   let page = writable([]);
 
   onMount(async () => {
+    page.set([])
+    feed.set([])
     if ($relays && $relays.length) {
       listener = new Listener(
         [{ since: now() - 60 * 60, kinds: [0, 1, 5, 7] }],

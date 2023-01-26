@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { publish, publishReply, relays } from "./state/pool";
+  import { getData, publish, publishReply, relays } from "./state/pool";
   import { onMount, onDestroy } from "svelte";
   import { get, writable } from "svelte/store";
   import { Listener } from "./state/app";
   import { descend, head, keys, pick, prop, sort, uniq, uniqBy } from "ramda";
-  import { users } from "./stores/users";
+  import { annotateUsers, users } from "./stores/users";
 
   import type { TextNote as Note, Account, User } from "./state/types";
   import type { Event } from "nostr-tools";
   import { account } from "./stores/account";
-  import { feed } from "./state/app";
+  import { feed, fetchUsers } from "./state/app";
   import { getTime, now } from "./util/time";
   import { log } from "./util/misc";
   import contacts from "./state/contacts";
@@ -38,6 +38,8 @@
   let userHasAccount: boolean = false;
   let listener: Listener;
   onMount(async () => {
+    page.set([]);
+    feed.set([]);
     if ($relays && $relays.length) {
       let lastSync: number = now() - 60 * 60 * 24 * 7;
 
@@ -56,17 +58,19 @@
             $contacts[i];
           pubkeys.push(c.pubkey);
         }
-        console.debug("Contact list pubkeys", pubkeys);
         listener = new Listener(
-          [
-            { since: lastSync, authors: pubkeys, kinds: [0, 1, 7] } /*,
-            { since: lastSync, kinds: [7], "#p": pubkeys }, */
-          ],
+          [{ since: lastSync, authors: pubkeys, kinds: [0, 1, 7] }],
           "followcontacts"
         );
-        listener.start();
+        console.debug("Contact list pubkeys", pubkeys);
+        await fetchUsers(pubkeys, '')
 
-        console.log($feed, getTime(lastSync));
+        console.log(
+          "Before start of listening to feed",
+          $feed,
+          getTime(lastSync)
+        );
+        listener.start();
       }
     }
   });
@@ -90,8 +94,17 @@
 
   let byCreatedAt = descend<TextNote>(prop("created_at"));
   const unsubscribeFeed = feed.subscribe(($feed) => {
-    $feed.forEach((item) => {
-      if (((item && !item.user) || item.user.name == item.pubkey)) {
+    for (let i = 0; i < $feed.length; i++) {
+      let item = $feed[i];
+
+      if (
+        !item.tags.find((tag) => tag[0] === "e") &&
+        (!item.id || !contacts.getList().find((cl) => cl.pubkey == item.pubkey))
+      ) {
+        continue; // Even when you ask only certain authors, some crappy/buggy relay sends more. Can also be this client is at fault.
+      }
+
+      if ((item && !item.user) || item.user.name == item.pubkey) {
         let user: User | undefined = $users.find(
           (u) => u.pubkey == item.pubkey
         );
@@ -130,10 +143,11 @@
         });
         item.dirty = false;
       }
-    });
-    $page = sort(byCreatedAt, $page);
+    }
+    //$page = sort(byCreatedAt, $page);
+    page.update((data) => sort(byCreatedAt, data))
     //console.debug("Page content is (sorted)", $page);
-  });  
+  });
 </script>
 
 <Feeder {scrollHandler} bind:msg {sendMessage}>
@@ -142,16 +156,10 @@
       <ul class="items-center w-full border-hidden">
         <li>
           <div class="flex flex-col items-top p-2 w-full overflow-hidden mb-2">
-            {#if note.content !== "BANNED"}
+            {#if note.content !== "BANNED" && ((note.tree == 0 && contacts
+                  .getList()
+                  .find((c) => c.pubkey == note.pubkey)) || note.tree > 0)}
               <TextNote {note} {userHasAccount} />
-              {#if note?.replies && note.replies.length > 0}
-                <TreeNote
-                  replies={note.replies}
-                  {userHasAccount}
-                  expanded={false}
-                  num={note.replies.length}
-                />
-              {/if}
             {/if}
           </div>
         </li>

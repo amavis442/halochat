@@ -21,6 +21,8 @@
   let userHasAccount: boolean = false;
   let page = writable([]);
   onMount(async () => {
+    page.set([])
+    feed.set([])
     if ($relays && $relays.length) {
       let $account: Account = get(account);
       if ($account.pubkey) {
@@ -93,14 +95,6 @@
           <div class="flex flex-col items-top p-2 w-full overflow-hidden mb-2">
             {#if note.content !== "BANNED"}
               <TextNote {note} {userHasAccount} />
-              {#if note?.replies && note.replies.length > 0}
-                <TreeNote
-                  replies={note.replies}
-                  {userHasAccount}
-                  expanded={false}
-                  num={note.replies.length}
-                />
-              {/if}
             {/if}
           </div>
         </li>

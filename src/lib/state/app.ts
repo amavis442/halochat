@@ -119,6 +119,12 @@ function handleMetadata(evt: Event, relay: string) {
  * @returns 
  */
 export async function fetchUser(pubkey: string, relay: string): Promise<User> {
+    let $users = get(users)
+    let user = $users.find(u => u.pubkey == pubkey)
+    if (user && user.refreshed > now() - 60 * 30) {
+        return user
+    }
+    
     let filter: Filter = {
         kinds: [0],
         authors: [pubkey]
@@ -159,7 +165,7 @@ export async function fetchUsers(pubkeys: Array<string>, relay: string): Promise
         kinds: [0],
         authors: pubkeys
     }
-    getData([filter], "fetchUsers")
+    return getData([filter], "fetchUsers")
         .then((fetchResultUsers: Array<Event>) => {
             for (let i = 0; i < pubkeys.length; i++) {
                 let user: User = initUser(pubkeys[i], relay)
@@ -258,23 +264,27 @@ function initNote(note: TextNote | null, relay: string) {
 
 async function handleTags(note: TextNote) {
     let $feedStack = get(feedStack)
+    let tags = note.tags.filter(t => t[0] == 'e')
 
-    if (note.tags.length) {
-        let rootTag = getRootTag(note.tags)
-        let replyTag = getReplyTag(note.tags)
+    // Is root
+    if (tags.length == 0) {
+        let user = $users.find(u => u.pubkey == note.pubkey)
+        if (user) note.user = user
+        return note
+    }
 
-        // Is root
-        if (rootTag.length == 0 && replyTag.length == 0) {
-            return note
-        }
+    if (tags.length > 0) {
+        let rootTag = getRootTag(tags)
+        let replyTag = getReplyTag(tags)
 
         // Is reply to root
-        if (rootTag.length && replyTag.length && rootTag == replyTag) {
+        if (rootTag.length > 0 && replyTag.length > 0 && rootTag == replyTag) {
             let rootNote = $feedStack[rootTag[1]] || null
             if (rootNote) {
                 note.tree = (rootNote.tree ? rootNote.tree : 0) + 1
-                //if (!rootNote.replies) rootNote.replies = []
-                if (!rootNote.replies.find(r => r.id == note.id)) {
+                if (!rootNote.replies.find(r => r.id == note.id) && rootNote.id != note.id) {
+                    let user = $users.find(u => u.pubkey == note.pubkey)
+                    if (user) note.user = user
                     rootNote.replies.push(note)
                 }
             }
@@ -290,7 +300,9 @@ async function handleTags(note: TextNote) {
                                 rootNote = $feedStack[item.id]
                                 item.tree = (rootNote.tree ? rootNote.tree : 0) + 1
                                 //if (!rootNote.replies) rootNote.replies = []
-                                if (!rootNote.replies.find(r => r.id == item.id)) {
+                                if (!rootNote.replies.find(r => r.id == item.id) && rootNote.id != item.id) {
+                                    let user = $users.find(u => u.pubkey == item.pubkey)
+                                    if (user) item.user = user
                                     rootNote.replies.push(item)
                                 }
                             }
@@ -300,14 +312,16 @@ async function handleTags(note: TextNote) {
         }
 
         //Is reply to reply
-        if (rootTag.length && replyTag.length && rootTag != replyTag) {
+        if (rootTag.length > 0 && replyTag.length > 0 && rootTag != replyTag) {
             let rootNote = $feedStack[rootTag[1]] || null
             if (rootNote && rootNote.replies && rootNote.replies.length) {
                 let replyNote: TextNote | null = $feedStack[replyTag[1]] || []
                 if (replyNote) {
                     note.tree = (replyNote.tree ? replyNote.tree : 0) + 1
                     if (!replyNote.replies) replyNote.replies = []
-                    if (!replyNote.replies.find(r => r.id == note.id)) {
+                    if (!replyNote.replies.find(r => r.id == note.id) && replyNote.id != note.id) {
+                        let user = $users.find(u => u.pubkey == note.pubkey)
+                        if (user) note.user = user
                         replyNote.replies.push(note)
                     }
                 }
@@ -355,9 +369,10 @@ async function handleTags(note: TextNote) {
                                 }
 
                                 el.tree = (parentEl.tree ? parentEl.tree : 0) + 1
+                                let user = $users.find(u => u.pubkey == el.pubkey)
+                                if (user) el.user = user
                                 // Add our current el to its parent's `children` array
                                 parentEl.replies = [...(parentEl.replies || []), el];
-                                //parentEl.replies = uniq(parentEl.replies)
                             };
                         }
                     })
@@ -453,7 +468,9 @@ async function handleTextNote(): Promise<void> {
     let note: TextNote = evt
     initNote(note, relay)
     //note.relays.push(relay)
-
+    if (note.pubkey == 'e623bb2e90351b30818de33debd506aa9eae04d8268be65ceb2dcc1ef6881765') {
+        console.error('(479)Mag hier niet komen', note)
+      }
 
     if ($feedStack[evt.id]) {
         log('handleTextNote: Already added this input ', evt)
@@ -475,6 +492,8 @@ async function handleTextNote(): Promise<void> {
                         if (!$feed.find(d => d.id == item.id) && !$mute.find(m => m == item.id) && !$blocklist.find(b => b.pubkey == item.pubkey)) {
                             item.dirty = true
                             $feed.push(item)
+                            if (item.pubkey == '3ecda80315afffdcd175')
+                            throw new Error('(288)Mag hier nooit komen....' + JSON.stringify(note))
                         }
                     }
                 })
@@ -640,8 +659,15 @@ export class Listener {
         this.timer = null
     }
     async start() {
+        // Cleanup first
         feedStack.set({})
-        
+        feedQueue = []
+        feed.set([])
+        for (const [url, sub] of Object.entries(this.subs)) {
+            sub.unsub()
+            console.log(`Stop listening to relay ${url} by unsubscribe to events and eose`)
+        }
+
         for (const [url, relay] of Object.entries(pool.getRelays())) {
             if (relay.status !== 1) {
                 try {
@@ -711,6 +737,7 @@ export class Listener {
         clearInterval(feedQueueTimer)
         feedQueueTimer = null
         feedStack.set({})
+        feed.set([])
     }
 }
 

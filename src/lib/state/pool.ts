@@ -96,9 +96,9 @@ export class relayPool {
       if (relay.status !== 1) {
         console.error(`Not publishing: Relay ${url} has state ${relay.status} and should be 1 = OPEN (0 CONNECTING, 1 OPEN, 2 CLOSING, 3 CLOSE)`)
       }
-      if (!$relay.write) {
+      /* if (!$relay.write) {
         console.error(`Publish: ${url} has no write permissions set`)
-      }
+      } */
     }
     return
   }
@@ -183,7 +183,7 @@ export const getData = async (filters: Filter[], name?: string): Promise<Event[]
     filters = [filters]
   }
 
-  //await isAlive()
+  await isAlive()
 
   return new Promise((resolve, reject) => {
     let subs: Array<Sub> = []

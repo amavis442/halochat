@@ -238,7 +238,7 @@
         class="w-14 h-14 rounded-full"
         src={user && user.picture ? user.picture : "profile-placeholder.png"}
         alt={note.pubkey.slice(0, 5)}
-        title="ID: {note.id}\nContent: {note.content}\nTree: {note.tree}"
+        title="ID: {note.id} .. Pubkey: {note.pubkey} .. Content: {note.content} .. Tree: {note.tree} .. Tags: {JSON.stringify(note.tags)} ... Replies: {note.replies.length} ... User: {JSON.stringify(note.user)}"
       />
     </div>
 
@@ -348,7 +348,7 @@
         {/if}
 
         {#if repliesExpanded}
-            {#if note.replies}
+            {#if note.replies && note.replies.length > 0}
               <ul>
               {#each note.replies ? note.replies : [] as textnote (textnote.id)}
                 <li>

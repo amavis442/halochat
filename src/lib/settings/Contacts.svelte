@@ -153,6 +153,7 @@
             {:else}
               <span class="font-bold">{contact[1]}</span>
             {/if}
+            <small>({contact[1]})</small>
           </li>
         {/each}
       </ul>
