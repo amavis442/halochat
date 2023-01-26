@@ -2,7 +2,7 @@ import { get, writable, type Writable } from 'svelte/store'
 import { users, annotateUsers, formatUser, initUser } from '../stores/users'
 import { now } from "../util/time"
 import { find } from "../util/misc"
-import { uniq } from 'ramda'
+import { uniq, uniqBy, prop } from 'ramda'
 import type { User, TextNote, Reaction, Account } from './types'
 import type { Event, Filter, Relay, Sub } from 'nostr-tools'
 import { pool, getData, waitForOpenConnection, published } from './pool'
@@ -11,7 +11,6 @@ import { getRootTag, getReplyTag, getLastETag } from '../util/tags';
 import { log } from '../util/misc';
 import { blocklist } from '../stores/block'
 import { account } from '../stores/account'
-import EventEmitter from 'events';
 
 let $users: Array<User> = get(users)
 let $blocklist: Array<{ pubkey: string, added: number }> = get(blocklist)
@@ -86,8 +85,9 @@ export async function getFollowList(pubkey: string) {
             return { ids: pubkeys, list: followList };
         })
         .then((data) => fetchUsers(data.ids, ""))
-        .then((users: Array<User>) => {
-            users.forEach((user: User) => {
+        .then(() => {
+            let $users = get(users)
+            $users.forEach((user: User) => {
                 followList[user.pubkey] = user;
             });
             contacts.set(followList)
@@ -273,7 +273,7 @@ async function handleTags(note: TextNote) {
             let rootNote = $feedStack[rootTag[1]] || null
             if (rootNote) {
                 note.tree = (rootNote.tree ? rootNote.tree : 0) + 1
-                if (!rootNote.replies) rootNote.replies = []
+                //if (!rootNote.replies) rootNote.replies = []
                 if (!rootNote.replies.find(r => r.id == note.id)) {
                     rootNote.replies.push(note)
                 }
@@ -284,12 +284,15 @@ async function handleTags(note: TextNote) {
                     .then((results: Array<Event>) => {
                         if (results && results.length) {
                             let item: TextNote = results[0]
-                            initNote(item, '')
-                            $feedStack[item.id] = item
-                            rootNote = $feedStack[item.id]
-                            if (!rootNote.replies) rootNote.replies = []
-                            if (!rootNote.replies.find(r => r.id == note.id)) {
-                                rootNote.replies.push(note)
+                            if (!$feedStack[item.id]) {
+                                initNote(item, '')
+                                $feedStack[item.id] = item
+                                rootNote = $feedStack[item.id]
+                                item.tree = (rootNote.tree ? rootNote.tree : 0) + 1
+                                //if (!rootNote.replies) rootNote.replies = []
+                                if (!rootNote.replies.find(r => r.id == item.id)) {
+                                    rootNote.replies.push(item)
+                                }
                             }
                         }
                     })
@@ -354,6 +357,7 @@ async function handleTags(note: TextNote) {
                                 el.tree = (parentEl.tree ? parentEl.tree : 0) + 1
                                 // Add our current el to its parent's `children` array
                                 parentEl.replies = [...(parentEl.replies || []), el];
+                                //parentEl.replies = uniq(parentEl.replies)
                             };
                         }
                     })
@@ -636,6 +640,8 @@ export class Listener {
         this.timer = null
     }
     async start() {
+        feedStack.set({})
+        
         for (const [url, relay] of Object.entries(pool.getRelays())) {
             if (relay.status !== 1) {
                 try {

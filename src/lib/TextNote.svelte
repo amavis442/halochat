@@ -207,15 +207,13 @@
     if (note.tree > 2) return "ml-6";
   }
 
-  /*
-  users.subscribe(($users: Array<User>) => {
-    let user = $users.find((u: User) => u.pubkey == note.pubkey);
-    if (user) {
-      note.user = user;
-    }
-    console.debug('User update')
-  });
-  */
+  let repliesExpanded: boolean = false;
+  function toggleReplies() {
+    repliesExpanded = !repliesExpanded;
+  }
+
+  note.replies = uniqBy(prop('id'), note.replies)
+
 </script>
 
 {#await promiseReply}
@@ -225,7 +223,7 @@
 {#if note && note.kind == 1}
   <div
     id={note.id}
-    class="flex flex-row w-full min-h-full {align()} items-top gap-2 mb-2 overflow-y-auto bg-white rounded-lg p-1 border-l-8 {borderColor} {$$props[
+    class="flex flex-row w-full min-h-full {align()} items-top gap-2 mb-2 overflow-y-auto bg-white rounded-lg p-1 border-l-4 border-t-2 {borderColor} {$$props[
       'class'
     ]
       ? $$props['class']
@@ -240,7 +238,7 @@
         class="w-14 h-14 rounded-full"
         src={user && user.picture ? user.picture : "profile-placeholder.png"}
         alt={note.pubkey.slice(0, 5)}
-        title={JSON.stringify(note)}
+        title="ID: {note.id}\nContent: {note.content}\nTree: {note.tree}"
       />
     </div>
 
@@ -335,7 +333,30 @@
                 {note.replies.length}
               {/if}
             </span>
+            <span>
+              {#if note.replies && note.replies.length > 0}
+                <button type="button" on:click={toggleReplies} class="">
+                  {#if repliesExpanded}
+                    Hide {note.replies.length} repl{#if note.replies.length == 1}y{:else}ies{/if}
+                  {:else}
+                    Show {note.replies.length} repl{#if note.replies.length == 1}y{:else}ies{/if}
+                  {/if}
+                </button>
+              {/if}
+            </span>
           </p>
+        {/if}
+
+        {#if repliesExpanded}
+            {#if note.replies}
+              <ul>
+              {#each note.replies ? note.replies : [] as textnote (textnote.id)}
+                <li>
+                  <svelte:self note={textnote} {userHasAccount} />
+                </li>
+                {/each}  
+              </ul>
+            {/if}
         {/if}
       </div>
     </div>
