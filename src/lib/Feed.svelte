@@ -47,8 +47,12 @@
     page.set([])
     feed.set([])
     if ($relays && $relays.length) {
+      let lastSync = $lastSeen 
+      if (lastSync < now() - 60 * 60) {
+        lastSync = now() - 60 * 60
+      } 
       listener = new Listener(
-        [{ since: now() - 60 * 60, kinds: [0, 1, 5, 7] }],
+        [{ since: lastSync, kinds: [0, 1, 5, 7] }],
         "globalfeed"
       );
       listener.start();

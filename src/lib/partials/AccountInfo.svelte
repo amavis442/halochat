@@ -1,6 +1,52 @@
 <script lang="ts">
+  import { onMount, beforeUpdate } from "svelte";
   import { account } from "../stores/account";
   import Anchor from "./Anchor.svelte";
+  import { log } from "../util/misc";
+
+  let url: string = "";
+  let endpoint: string = import.meta.env.VITE_PREVIEW_LINK + "/preview/link";
+  let preview: {
+    images: any[];
+    description: any;
+    mediaType: string;
+    url: any;
+    title: any;
+  };
+
+  beforeUpdate(async () => {
+    if ($account.picture) {
+      url = $account.picture
+      console.log(endpoint, url)
+      
+      const json = await fetch(
+        endpoint,
+        {
+          method: "POST",
+          body: JSON.stringify({ url: url }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      )
+        .then((res) => {
+          log("Reponse from preview app.");
+          return res.json();
+        })
+        .then((data) => {
+          log("Json is ", data);
+          return data;
+        })
+        .catch((err) => {
+          log("error", err);
+        });
+
+      if (json) {
+        preview = json;
+      }
+      
+    }
+  });
 </script>
 
 <div class="flex items-top justify-center ">
@@ -16,6 +62,7 @@
               : "profile-placeholder.png"}
             class="w-12 h-12 rounded-full"
             alt={$account.name.slice(0, 10)}
+            crossorigin="anonymous"
           />
         </span>
       </div>

@@ -238,6 +238,7 @@
         class="w-14 h-14 rounded-full"
         src={user && user.picture ? user.picture : "profile-placeholder.png"}
         alt={note.pubkey.slice(0, 5)}
+        crossorigin="anonymous" 
         title="ID: {note.id} .. Pubkey: {note.pubkey} .. Content: {note.content} .. Tree: {note.tree} .. Tags: {JSON.stringify(note.tags)} ... Replies: {note.replies.length} ... User: {JSON.stringify(note.user)}"
       />
     </div>

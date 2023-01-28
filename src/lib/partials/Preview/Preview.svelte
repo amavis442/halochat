@@ -42,11 +42,11 @@
     >
       <Link href={url}>
         {#if preview.images}
-          <img src={preview.images[0]} alt={preview.description} />
+          <img src={preview.images[0]} alt={preview.description} crossorigin="anonymous"/>
           <div class="h-px bg-medium" />
         {/if}
         {#if preview.mediaType == "image"}
-          <img src={preview.url} alt={preview.url} />
+          <img src={preview.url} alt={preview.url} crossorigin="anonymous"/>
           <div class="h-px bg-medium" />
         {/if}
 
