@@ -203,9 +203,9 @@
     });
   });
 
-  /*
+  
   users.subscribe(($users: Array<User>) => {
-    for (let i = 0;i < $users.length; i++) {
+    /* for (let i = 0;i < $users.length; i++) {
       let user = $users[i]
       //if (contacts.getList().find(c => c.pubkey == user.pubkey) {
 
@@ -216,10 +216,9 @@
           fs.user = user
         }
       }
-    }
-    //page.update((data) => data);
+    } */
+    page.update((data) => data);
   });
-  */
 </script>
 
 <Feeder bind:msg {scrollHandler} {sendMessage}>

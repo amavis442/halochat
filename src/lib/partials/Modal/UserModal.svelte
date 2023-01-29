@@ -40,6 +40,7 @@
               ? user.picture
               : "profile-placeholder.png"}
             alt={note.pubkey.slice(0, 5)}
+            crossorigin="anonymous"
           />
         </div>
         <div class="w-full pl-6 pb-6">

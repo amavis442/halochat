@@ -98,6 +98,7 @@
     user.name = user.name + "[BLOCKED]";
     users.update((data) => data); // Hopes this triggers the view
 
+
     feedStack.update((data) => {
       Object.values(data).forEach((item: Note) => {
         if (item.pubkey == note.pubkey) {
@@ -202,9 +203,11 @@
 
   function align() {
     if (note.tree == 0) return "";
+    /*
     if (note.tree == 1) return "ml-2";
     if (note.tree == 2) return "ml-4";
     if (note.tree > 2) return "ml-6";
+    */
   }
 
   let repliesExpanded: boolean = false;
@@ -213,7 +216,7 @@
   }
 
   note.replies = uniqBy(prop('id'), note.replies)
-
+  $: user = note.user;
 </script>
 
 {#await promiseReply}

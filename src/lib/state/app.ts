@@ -11,7 +11,7 @@ import { getRootTag, getReplyTag, getLastETag } from '../util/tags';
 import { log } from '../util/misc';
 import { blocklist } from '../stores/block'
 import { account } from '../stores/account'
-import { dbSave } from '../../db'
+import { dbGetMetaEvent, dbSave } from '../../db'
 
 let $users: Array<User> = get(users)
 let $blocklist: Array<{ pubkey: string, added: number }> = get(blocklist)
@@ -263,6 +263,26 @@ function initNote(note: TextNote | null, relay: string) {
     }
 }
 
+async function placeHolderUser(note:TextNote, relay:string) 
+{
+   
+    let user:User = $users.find(u => u.pubkey == note.pubkey)
+    if (user) {
+        note.user = user
+        return note
+    }
+
+    let evt:Event = await dbGetMetaEvent(0, note.pubkey)
+    if (!user) user = initUser(evt.pubkey, relay)
+    if (evt) {
+        user = formatUser(evt, relay)
+    }
+    annotateUsers(user)
+    user = $users.find(u => u.pubkey == note.pubkey)
+    note.user = user // Need the pointer/ref to this user
+    return note
+}
+
 async function handleTags(note: TextNote) {
     let $feedStack = get(feedStack)
     let tags = note.tags.filter(t => t[0] == 'e')
@@ -271,6 +291,7 @@ async function handleTags(note: TextNote) {
     if (tags.length == 0) {
         let user = $users.find(u => u.pubkey == note.pubkey)
         if (user) note.user = user
+        if (!user) await placeHolderUser(note, '')
         return note
     }
 
@@ -286,6 +307,7 @@ async function handleTags(note: TextNote) {
                 if (!rootNote.replies.find(r => r.id == note.id) && rootNote.id != note.id) {
                     let user = $users.find(u => u.pubkey == note.pubkey)
                     if (user) note.user = user
+                    if (!user) await placeHolderUser(note, '')
                     rootNote.replies.push(note)
                 }
             }
@@ -304,6 +326,7 @@ async function handleTags(note: TextNote) {
                                 if (!rootNote.replies.find(r => r.id == item.id) && rootNote.id != item.id) {
                                     let user = $users.find(u => u.pubkey == item.pubkey)
                                     if (user) item.user = user
+                                    if (!user) placeHolderUser(item, '')
                                     rootNote.replies.push(item)
                                 }
                             }
@@ -323,6 +346,7 @@ async function handleTags(note: TextNote) {
                     if (!replyNote.replies.find(r => r.id == note.id) && replyNote.id != note.id) {
                         let user = $users.find(u => u.pubkey == note.pubkey)
                         if (user) note.user = user
+                        if (!user) await placeHolderUser(note, '')
                         replyNote.replies.push(note)
                     }
                 }
@@ -372,6 +396,7 @@ async function handleTags(note: TextNote) {
                                 el.tree = (parentEl.tree ? parentEl.tree : 0) + 1
                                 let user = $users.find(u => u.pubkey == el.pubkey)
                                 if (user) el.user = user
+                                if (!user) placeHolderUser(el, '')
                                 // Add our current el to its parent's `children` array
                                 parentEl.replies = [...(parentEl.replies || []), el];
                             };
@@ -382,11 +407,18 @@ async function handleTags(note: TextNote) {
     }
 }
 
-async function handleUser(note: TextNote): Promise<void> {
+async function handleUser(note: TextNote, relay?:string): Promise<void> {
     if (!note?.user) initNote(note, '')
     let foundUser: User = $users.find((u: User) => u.pubkey == note.pubkey && u.name != u.pubkey)
     if (!foundUser) {
-        fetchUsers([note.pubkey], '');
+        let evt:Event = await dbGetMetaEvent(0, note.pubkey)
+        if (evt) {
+            foundUser = initUser(evt.pubkey, relay)
+            foundUser = formatUser(evt, relay)
+            annotateUsers(foundUser)
+        } else {        
+            fetchUsers([note.pubkey], relay);
+        }
     }
     if (foundUser) {
         note.user = foundUser;
@@ -469,9 +501,6 @@ async function handleTextNote(): Promise<void> {
     let note: TextNote = evt
     initNote(note, relay)
     //note.relays.push(relay)
-    if (note.pubkey == 'e623bb2e90351b30818de33debd506aa9eae04d8268be65ceb2dcc1ef6881765') {
-        console.error('(479)Mag hier niet komen', note)
-      }
 
     if ($feedStack[evt.id]) {
         log('handleTextNote: Already added this input ', evt)
@@ -489,12 +518,10 @@ async function handleTextNote(): Promise<void> {
                 let $feed = get(feed)
                 Object.values($feedStack).forEach((item: TextNote) => {
                     let tags = item.tags.filter(t => t[0] == 'e')
-                    if (!tags.length) {
+                    if (tags.length == 0) {
                         if (!$feed.find(d => d.id == item.id) && !$mute.find(m => m == item.id) && !$blocklist.find(b => b.pubkey == item.pubkey)) {
                             item.dirty = true
                             $feed.push(item)
-                            if (item.pubkey == '3ecda80315afffdcd175')
-                            throw new Error('(288)Mag hier nooit komen....' + JSON.stringify(note))
                         }
                     }
                 })
@@ -502,7 +529,7 @@ async function handleTextNote(): Promise<void> {
             .then(() => handleDeletions(note))
             .then(() => handleReactions(note)) // Can be very slow
             .then(() => handleMentions(note))
-            .then(() => handleUser(note)) // Can be very slow
+            .then(() => handleUser(note, relay)) // Can be very slow
             .then(() => { console.debug('Done handle note'); feed.update((data) => data) })
 
 }

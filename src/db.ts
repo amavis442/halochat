@@ -1,4 +1,5 @@
 import { initBackend } from 'absurd-sql/dist/indexeddb-main-thread';
+import type { Event } from 'nostr-tools';
 
 const worker = new Worker(new URL('db.worker.ts', import.meta.url), { "type": "module" });
 const hub = {}
@@ -12,7 +13,7 @@ worker.onmessage = ev => {
         console.info(e, ev.data) // absurd-sql does something it should not.
         return 
     }
-    
+
     let { id, success, error, data } = JSON.parse(ev.data)
     if (!success) {
         hub[id].reject(new Error(`${id}: ${error}`))
@@ -46,7 +47,7 @@ export async function dbGetUnreadNotificationsCount(ourPubKey, since) {
     return call('dbGetUnreadNotificationsCount', [ourPubKey, since])
 }
 
-export async function dbGetMetaEvent(kind, pubkey) {
+export async function dbGetMetaEvent(kind, pubkey): Promise<Event> {
     return call('dbGetMetaEvent', [kind, pubkey])
 }
 

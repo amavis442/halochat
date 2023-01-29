@@ -154,7 +154,8 @@
             <button on:click={() => deleteRelay(relay.url)}>
               <span class="fa-solid fa-trash" />
             </button>
-            {relay.url} [Read: {relay.read}, Write: {relay.write}]
+            [Read: {#if relay.read}<i class="fa-regular fa-circle-check  text-green-500"></i>{:else}<i class="fa-regular fa-circle-xmark text-red-600"></i>{/if}, Write: {#if relay.write}<i class="fa-regular fa-circle-check  text-green-500"></i>{:else}<i class="fa-regular fa-circle-xmark text-red-600"></i>{/if}]
+            {relay.url} 
           </li>
         {/each}
       </ul>
