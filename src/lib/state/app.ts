@@ -11,6 +11,7 @@ import { getRootTag, getReplyTag, getLastETag } from '../util/tags';
 import { log } from '../util/misc';
 import { blocklist } from '../stores/block'
 import { account } from '../stores/account'
+import { dbSave } from '../../db'
 
 let $users: Array<User> = get(users)
 let $blocklist: Array<{ pubkey: string, added: number }> = get(blocklist)
@@ -751,7 +752,7 @@ lastSeen.subscribe(value => {
 
 
 
-export function onEvent(evt: Event, relay: string) {
+export async function onEvent(evt: Event, relay: string) {
 
     if (pool.hasRelay('ws://localhost:8008') && relay != 'ws://localhost:8008') {
         pool.getRelays()['ws://localhost:8008'].publish(evt)
@@ -760,6 +761,7 @@ export function onEvent(evt: Event, relay: string) {
     switch (evt.kind) {
         case 0:
             handleMetadata(evt, relay)
+            await dbSave(evt, relay)
             break
         case 1:
             if (evt.pubkey != $account.pubkey) {
@@ -770,6 +772,7 @@ export function onEvent(evt: Event, relay: string) {
             }
             break
         case 3:
+            await dbSave(evt, relay)
             // Update contact list, and seeing other contact lists
             break
         case 5:
@@ -792,7 +795,9 @@ export function onEvent(evt: Event, relay: string) {
             break;
         case 44: //mute user
             break;
-
+        case 10001:
+            await dbSave(evt, relay)
+            break;
         default:
 
     }
