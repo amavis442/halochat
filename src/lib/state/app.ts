@@ -12,6 +12,7 @@ import { log } from '../util/misc';
 import { blocklist } from '../stores/block'
 import { account } from '../stores/account'
 import { dbGetMetaEvent, dbSave } from '../../db'
+import type Text from '../partials/Text.svelte'
 
 let $users: Array<User> = get(users)
 let $blocklist: Array<{ pubkey: string, added: number }> = get(blocklist)
@@ -125,7 +126,7 @@ export async function fetchUser(pubkey: string, relay: string): Promise<User> {
     if (user && user.refreshed > now() - 60 * 30) {
         return user
     }
-    
+
     let filter: Filter = {
         kinds: [0],
         authors: [pubkey]
@@ -263,16 +264,15 @@ function initNote(note: TextNote | null, relay: string) {
     }
 }
 
-async function placeHolderUser(note:TextNote, relay:string) 
-{
-   
-    let user:User = $users.find(u => u.pubkey == note.pubkey)
+async function placeHolderUser(note: TextNote, relay: string) {
+
+    let user: User = $users.find(u => u.pubkey == note.pubkey)
     if (user) {
         note.user = user
         return note
     }
 
-    let evt:Event = await dbGetMetaEvent(0, note.pubkey)
+    let evt: Event = await dbGetMetaEvent(0, note.pubkey)
     if (!user) user = initUser(evt.pubkey, relay)
     if (evt) {
         user = formatUser(evt, relay)
@@ -298,9 +298,9 @@ async function handleTags(note: TextNote) {
     if (tags.length > 0) {
         let rootTag = getRootTag(tags)
         let replyTag = getReplyTag(tags)
-
+        
         // Is reply to root
-        if (rootTag.length > 0 && replyTag.length > 0 && rootTag == replyTag) {
+        if (rootTag.length > 0 && replyTag.length > 0 && rootTag[1] == replyTag[1]) {
             let rootNote = $feedStack[rootTag[1]] || null
             if (rootNote) {
                 note.tree = (rootNote.tree ? rootNote.tree : 0) + 1
@@ -311,24 +311,22 @@ async function handleTags(note: TextNote) {
                     rootNote.replies.push(note)
                 }
             }
-            if (!rootNote) {
-                let filter: Filter = { kinds: [1], 'ids': [replyTag[1]] }
+
+            if (!rootNote) { // find rootNote
+                let filter: Filter = { kinds: [1], 'ids': [rootTag[1]] }
                 return await getData([filter])
                     .then((results: Array<Event>) => {
                         if (results && results.length) {
-                            let item: TextNote = results[0]
-                            if (!$feedStack[item.id]) {
-                                initNote(item, '')
-                                $feedStack[item.id] = item
-                                rootNote = $feedStack[item.id]
-                                item.tree = (rootNote.tree ? rootNote.tree : 0) + 1
-                                //if (!rootNote.replies) rootNote.replies = []
-                                if (!rootNote.replies.find(r => r.id == item.id) && rootNote.id != item.id) {
-                                    let user = $users.find(u => u.pubkey == item.pubkey)
-                                    if (user) item.user = user
-                                    if (!user) placeHolderUser(item, '')
-                                    rootNote.replies.push(item)
-                                }
+                            let item: TextNote = results[0] // This should be the root of the thread
+                            initNote(item, '')
+                            $feedStack[item.id] = item
+                            rootNote = $feedStack[item.id]
+                            note.tree = (rootNote.tree ? rootNote.tree : 0) + 1
+                            if (!rootNote.replies.find((r: TextNote) => r.id == note.id)) {
+                                let user = $users.find(u => u.pubkey == note.pubkey)
+                                if (user) note.user = user
+                                if (!user) placeHolderUser(note, '')
+                                rootNote.replies.push(note)
                             }
                         }
                     })
@@ -336,10 +334,10 @@ async function handleTags(note: TextNote) {
         }
 
         //Is reply to reply
-        if (rootTag.length > 0 && replyTag.length > 0 && rootTag != replyTag) {
+        if (rootTag.length > 0 && replyTag.length > 0 && rootTag[1] != replyTag[1]) {
             let rootNote = $feedStack[rootTag[1]] || null
-            if (rootNote && rootNote.replies && rootNote.replies.length) {
-                let replyNote: TextNote | null = $feedStack[replyTag[1]] || []
+            if (rootNote && rootNote.replies && rootNote.replies.length) { // Check if it has children to add this reply to
+                let replyNote: TextNote | null = $feedStack[replyTag[1]] || [] // ReplyTag is the parent of the current note processed
                 if (replyNote) {
                     note.tree = (replyNote.tree ? replyNote.tree : 0) + 1
                     if (!replyNote.replies) replyNote.replies = []
@@ -358,16 +356,22 @@ async function handleTags(note: TextNote) {
                 return await getData([filter1, filter2])
                     .then((results: Array<Event>) => {
                         if (results && results.length) {
-
                             feedStack.update(data => {
-                                results.reduce((acc, el, i) => {
-                                    acc[el.id] = el;
-                                    initNote(el, '')
-                                    data[el.id] = el
-                                    return acc;
-                                }, {});
+                                for (let i = 0; i < results.length; i++) {
+                                    let item:Event = results[i]
+                                    if (!data[item.id] && item.kind == 1) {
+                                        initNote(item, '')
+                                        data[item.id] = item
+                                    }
+                                }
                                 return data
                             })
+                        }
+                        return results;
+                    })
+                    .then((results: Array<Event>) => {
+                            let rootNote:TextNote = $feedStack[rootTag[1]]
+                            if (!rootNote) return; // No starting point found for this thread
 
                             /**
                              * @see https://typeofnan.dev/an-easy-way-to-build-a-tree-with-object-references/
@@ -377,46 +381,44 @@ async function handleTags(note: TextNote) {
                                 if (el.kind != 1) {
                                     continue
                                 }
-                                let tag = getReplyTag(el.tags)
-                                let rootTag = getRootTag(el.tags)
-                                if (!rootNote && rootTag == replyTag) {
-                                    if ($feedStack[rootTag[1]]) {
-                                        rootNote = $feedStack[rootTag[1]]
-                                    }
-                                }
+                               
+                                let note: TextNote = $feedStack[el.id]
+                                let replyTag = getReplyTag(note.tags) //The parent of current note
+
+                                let user = $users.find(u => u.pubkey == note.pubkey)
+                                if (user) note.user = user
+                                if (!user) placeHolderUser(note, '')
 
                                 // Use our mapping to locate the parent element in our data array
-                                let note = $feedStack[tag[1]]
-                                let parentEl: TextNote = note;
-                                if (!parentEl) {
-                                    let rootTag = getRootTag(el.tags)
-                                    parentEl = $feedStack[rootTag[1]] || {}
+                                let parentEl: TextNote 
+                                if (replyTag.length > 0) {
+                                    parentEl = $feedStack[replyTag[1]]
+                                    note.tree = (parentEl.tree ? parentEl.tree : 0) + 1
+                                } else {
+                                    note.tree = (rootNote.tree ? rootNote.tree : 0) + 1
+                                    parentEl = rootNote
                                 }
-
-                                el.tree = (parentEl.tree ? parentEl.tree : 0) + 1
-                                let user = $users.find(u => u.pubkey == el.pubkey)
-                                if (user) el.user = user
-                                if (!user) placeHolderUser(el, '')
+                                
                                 // Add our current el to its parent's `children` array
-                                parentEl.replies = [...(parentEl.replies || []), el];
+                                parentEl.replies = [...(parentEl.replies || []), note];
                             };
-                        }
-                    })
+                        })
+                    
             }
         }
     }
 }
 
-async function handleUser(note: TextNote, relay?:string): Promise<void> {
+async function handleUser(note: TextNote, relay?: string): Promise<void> {
     if (!note?.user) initNote(note, '')
     let foundUser: User = $users.find((u: User) => u.pubkey == note.pubkey && u.name != u.pubkey)
     if (!foundUser) {
-        let evt:Event = await dbGetMetaEvent(0, note.pubkey)
+        let evt: Event = await dbGetMetaEvent(0, note.pubkey)
         if (evt) {
             foundUser = initUser(evt.pubkey, relay)
             foundUser = formatUser(evt, relay)
             annotateUsers(foundUser)
-        } else {        
+        } else {
             fetchUsers([note.pubkey], relay);
         }
     }
