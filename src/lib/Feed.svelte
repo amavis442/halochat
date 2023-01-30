@@ -9,16 +9,13 @@
   import { feedStack, mute } from "./state/app";
   import { blocklist } from "./stores/block";
 
-  import contacts from "./state/contacts";
   import { log } from "./util/misc";
   import Feeder from "./partials/Feeder.svelte";
-  import { getTime, now } from "./util/time";
+  import { now } from "./util/time";
   import TextNote from "./TextNote.svelte";
-  import TreeNote from "./TreeNote.svelte";
-  import Button from "./partials/Button.svelte";
-  import { descend, head, keys, pick, prop, sort, uniq, uniqBy } from "ramda";
+  import { descend, head, prop, sort } from "ramda";
   import { notifications } from "./state/app";
-  import { getReplyTag, getRootTag } from "./util/tags";
+  import { getRootTag } from "./util/tags";
   import { deleteNodeFromTree } from "./util/misc";
   import { users } from "./stores/users";
 
@@ -44,13 +41,13 @@
   let page = writable([]);
 
   onMount(async () => {
-    page.set([])
-    feed.set([])
+    page.set([]);
+    feed.set([]);
     if ($relays && $relays.length) {
-      let lastSync = $lastSeen 
+      let lastSync = $lastSeen;
       if (lastSync < now() - 60 * 60) {
-        lastSync = now() - 60 * 60
-      } 
+        lastSync = now() - 60 * 60;
+      }
       listener = new Listener(
         [{ since: lastSync, kinds: [0, 1, 3, 5, 7] }],
         "globalfeed"
@@ -70,6 +67,8 @@
       page.set([]);
       listener.stop();
       unsubscribeFeed();
+      blocklistSubscribe();
+      userSubscribe();
     }
   });
 
@@ -176,7 +175,7 @@
     updateLastSeen(head($page));
   });
 
-  blocklist.subscribe(($blocked) => {
+  let blocklistSubscribe = blocklist.subscribe(($blocked) => {
     for (const pubkey of $blocked) {
       Object.entries($feedStack).forEach((note: any) => {
         if (note.pubkey == pubkey) {
@@ -203,8 +202,7 @@
     });
   });
 
-  
-  users.subscribe(($users: Array<User>) => {
+  let userSubscribe = users.subscribe(($users: Array<User>) => {
     /* for (let i = 0;i < $users.length; i++) {
       let user = $users[i]
       //if (contacts.getList().find(c => c.pubkey == user.pubkey) {
@@ -219,6 +217,14 @@
     } */
     page.update((data) => data);
   });
+
+  function handleBan(event) {
+    let {id, pubkey, tree, parentId} = event.detail
+    let rootNote = $feed.find(f => f.id == parentId)
+    deleteNodeFromTree(rootNote, id)
+    console.debug('BAN ', pubkey, tree)
+  }
+
 </script>
 
 <Feeder bind:msg {scrollHandler} {sendMessage}>
@@ -228,7 +234,7 @@
         <li>
           <div class="flex flex-col items-top p-2 w-full overflow-hidden mb-2">
             {#if note.content !== "BANNED"}
-              <TextNote {note} {userHasAccount} />
+              <TextNote {note} {userHasAccount} on:banUser={handleBan}/>
             {/if}
           </div>
         </li>

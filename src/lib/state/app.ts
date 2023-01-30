@@ -300,7 +300,7 @@ async function handleTags(note: TextNote) {
         let replyTag = getReplyTag(tags)
         
         // Is reply to root
-        if (rootTag.length > 0 && replyTag.length > 0 && rootTag[1] == replyTag[1]) {
+        if (rootTag.length > 0 && replyTag.length > 0 && rootTag[1] && replyTag[1] && rootTag[1] == replyTag[1]) {
             let rootNote = $feedStack[rootTag[1]] || null
             if (rootNote) {
                 note.tree = (rootNote.tree ? rootNote.tree : 0) + 1
@@ -334,7 +334,7 @@ async function handleTags(note: TextNote) {
         }
 
         //Is reply to reply
-        if (rootTag.length > 0 && replyTag.length > 0 && rootTag[1] != replyTag[1]) {
+        if (rootTag.length > 0 && replyTag.length > 0 && rootTag[1] && replyTag[1] && rootTag[1] != replyTag[1]) {
             let rootNote = $feedStack[rootTag[1]] || null
             if (rootNote && rootNote.replies && rootNote.replies.length) { // Check if it has children to add this reply to
                 let replyNote: TextNote | null = $feedStack[replyTag[1]] || [] // ReplyTag is the parent of the current note processed
@@ -372,13 +372,20 @@ async function handleTags(note: TextNote) {
                     .then((results: Array<Event>) => {
                             let rootNote:TextNote = $feedStack[rootTag[1]]
                             if (!rootNote) return; // No starting point found for this thread
-
+                            initNote(rootNote, '' )
+                            if (import.meta.env.DEV) {
+                                rootNote.content += "\n\n ** 5 ** " + rootNote.tags.length + "\n" + note.id + "\n" + JSON.stringify(note.tags) 
+                            }
+                            let user = $users.find(u => u.pubkey == rootNote.pubkey)
+                            if (user) rootNote.user = user
+                            if (!user) placeHolderUser(rootNote, '')
+             
                             /**
                              * @see https://typeofnan.dev/an-easy-way-to-build-a-tree-with-object-references/
                              */
                             for (let i = 0; i < results.length; i++) {
                                 let el: TextNote = results[i]
-                                if (el.kind != 1) {
+                                if (el.kind != 1 || el.id == rootNote.id) {
                                     continue
                                 }
                                
@@ -390,18 +397,26 @@ async function handleTags(note: TextNote) {
                                 if (!user) placeHolderUser(note, '')
 
                                 // Use our mapping to locate the parent element in our data array
-                                let parentEl: TextNote 
+                                let parentEl: TextNote = rootNote
                                 if (replyTag.length > 0) {
                                     parentEl = $feedStack[replyTag[1]]
-                                    note.tree = (parentEl.tree ? parentEl.tree : 0) + 1
-                                } else {
-                                    note.tree = (rootNote.tree ? rootNote.tree : 0) + 1
-                                    parentEl = rootNote
-                                }
-                                
+                                    initNote(parentEl, '')
+                                } 
+
+                                if (!parentEl?.replies) parentEl.replies = []
                                 // Add our current el to its parent's `children` array
-                                parentEl.replies = [...(parentEl.replies || []), note];
+                                parentEl.replies = [...(parentEl?.replies || []), note];
                             };
+
+                            rootNote.tree = 0
+                            for (let i = 0; i < rootNote.replies.length; i++) {
+                                rootNote.replies[i].tree = 1
+                                if (rootNote.replies[i].replies.length > 0) {
+                                    for (let n = 0; n < rootNote.replies[i].replies.length; n++) {
+                                        rootNote.replies[i].replies[n].tree = 2
+                                    }
+                                }
+                            }
                         })
                     
             }
