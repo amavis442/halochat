@@ -4,7 +4,7 @@
   import { get, writable } from "svelte/store";
   import { Listener } from "./state/app";
   import { descend, prop, sort } from "ramda";
-  import {  users } from "./stores/users";
+  import { users } from "./stores/users";
 
   import type { TextNote as Note, Account, User } from "./state/types";
   import type { Event } from "nostr-tools";
@@ -58,11 +58,14 @@
           pubkeys.push(c.pubkey);
         }
         listener = new Listener(
-          [{ since: lastSync, authors: pubkeys, kinds: [0, 1, 7] }],
+          [
+            { since: lastSync, authors: pubkeys, kinds: [0, 1] },
+            { kinds: [7], "#p": pubkeys },
+          ],
           "followcontacts"
         );
         console.debug("Contact list pubkeys", pubkeys);
-        await fetchUsers(pubkeys, '')
+        await fetchUsers(pubkeys, "");
 
         console.log(
           "Before start of listening to feed",
@@ -144,7 +147,7 @@
       }
     }
     //$page = sort(byCreatedAt, $page);
-    page.update((data) => sort(byCreatedAt, data))
+    page.update((data) => sort(byCreatedAt, data));
     //console.debug("Page content is (sorted)", $page);
   });
 </script>
