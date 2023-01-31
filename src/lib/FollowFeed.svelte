@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { getData, publish, publishReply, relays } from "./state/pool";
+  import { publish, publishReply, relays } from "./state/pool";
   import { onMount, onDestroy } from "svelte";
   import { get, writable } from "svelte/store";
   import { Listener } from "./state/app";
-  import { descend, head, keys, pick, prop, sort, uniq, uniqBy } from "ramda";
-  import { annotateUsers, users } from "./stores/users";
+  import { descend, prop, sort } from "ramda";
+  import {  users } from "./stores/users";
 
   import type { TextNote as Note, Account, User } from "./state/types";
   import type { Event } from "nostr-tools";
@@ -15,7 +15,6 @@
   import contacts from "./state/contacts";
   import Feeder from "./partials/Feeder.svelte";
   import TextNote from "./TextNote.svelte";
-  import TreeNote from "./TreeNote.svelte";
 
   let msg = "";
   let replyTo: Event | null = null;

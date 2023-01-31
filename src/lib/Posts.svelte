@@ -63,7 +63,18 @@
 
   let byCreatedAt = descend<TextNote>(prop("created_at"));
   const unsubscribeFeed = feed.subscribe(($feed) => {
-    $feed.forEach((item) => {
+    for (let i = 0; i < $feed.length; i++) {
+      let item = $feed[i];
+
+      /*
+      if (
+        !item.tags.find((tag) => tag[0] === "e") &&
+        (!item.id || item.pubkey != $account.pubkey)
+      ) {
+        continue; // Even when you ask only certain authors, some crappy/buggy relay sends more. Can also be this client is at fault.
+      }
+      */
+     
       if (!item.tags.find((tag) => tag[0] === "e") && item.id && item.dirty) {
         page.update((data) => {
           if (item) {
@@ -81,7 +92,7 @@
         });
         item.dirty = false;
       }
-    });
+    };
     $page = sort(byCreatedAt, $page);
     //console.debug("Page content is (sorted)", $page);
   });
