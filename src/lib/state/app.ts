@@ -298,7 +298,7 @@ async function handleTags(note: TextNote) {
     if (tags.length > 0) {
         let rootTag = getRootTag(tags)
         let replyTag = getReplyTag(tags)
-        
+
         // Is reply to root
         if (rootTag.length > 0 && replyTag.length > 0 && rootTag[1] && replyTag[1] && rootTag[1] == replyTag[1]) {
             let rootNote = $feedStack[rootTag[1]] || null
@@ -358,7 +358,7 @@ async function handleTags(note: TextNote) {
                         if (results && results.length) {
                             feedStack.update(data => {
                                 for (let i = 0; i < results.length; i++) {
-                                    let item:Event = results[i]
+                                    let item: Event = results[i]
                                     if (!data[item.id] && item.kind == 1) {
                                         initNote(item, '')
                                         data[item.id] = item
@@ -370,55 +370,62 @@ async function handleTags(note: TextNote) {
                         return results;
                     })
                     .then((results: Array<Event>) => {
-                            let rootNote:TextNote = $feedStack[rootTag[1]]
-                            if (!rootNote) return; // No starting point found for this thread
-                            initNote(rootNote, '' )
-                            if (import.meta.env.DEV) {
-                                rootNote.content += "\n\n ** 5 ** " + rootNote.tags.length + "\n" + note.id + "\n" + JSON.stringify(note.tags) 
+                        let rootNote: TextNote = $feedStack[rootTag[1]]
+                        if (!rootNote) return; // No starting point found for this thread
+                        initNote(rootNote, '')
+
+                        let user = $users.find(u => u.pubkey == rootNote.pubkey)
+                        if (user) rootNote.user = user
+                        if (!user) placeHolderUser(rootNote, '')
+
+                        /**
+                         * @see https://typeofnan.dev/an-easy-way-to-build-a-tree-with-object-references/
+                         */
+                        for (let i = 0; i < results.length; i++) {
+                            let el: TextNote = results[i]
+                            if (el.kind != 1 || el.id == rootNote.id) {
+                                continue
                             }
-                            let user = $users.find(u => u.pubkey == rootNote.pubkey)
-                            if (user) rootNote.user = user
-                            if (!user) placeHolderUser(rootNote, '')
-             
-                            /**
-                             * @see https://typeofnan.dev/an-easy-way-to-build-a-tree-with-object-references/
-                             */
-                            for (let i = 0; i < results.length; i++) {
-                                let el: TextNote = results[i]
-                                if (el.kind != 1 || el.id == rootNote.id) {
-                                    continue
-                                }
-                               
-                                let note: TextNote = $feedStack[el.id]
-                                let replyTag = getReplyTag(note.tags) //The parent of current note
 
-                                let user = $users.find(u => u.pubkey == note.pubkey)
-                                if (user) note.user = user
-                                if (!user) placeHolderUser(note, '')
+                            let note: TextNote = $feedStack[el.id]
+                            let replyTag = getReplyTag(note.tags) //The parent of current note
 
-                                // Use our mapping to locate the parent element in our data array
-                                let parentEl: TextNote = rootNote
-                                if (replyTag.length > 0) {
-                                    parentEl = $feedStack[replyTag[1]]
-                                    initNote(parentEl, '')
-                                } 
+                            let user = $users.find(u => u.pubkey == note.pubkey)
+                            if (user) note.user = user
+                            if (!user) placeHolderUser(note, '')
 
-                                if (!parentEl?.replies) parentEl.replies = []
-                                // Add our current el to its parent's `children` array
-                                parentEl.replies = [...(parentEl?.replies || []), note];
-                            };
+                            // Use our mapping to locate the parent element in our data array
+                            let parentEl: TextNote = rootNote
+                            if (replyTag.length > 0) {
+                                parentEl = $feedStack[replyTag[1]]
+                                initNote(parentEl, '')
+                            }
 
-                            rootNote.tree = 0
-                            for (let i = 0; i < rootNote.replies.length; i++) {
-                                rootNote.replies[i].tree = 1
-                                if (rootNote.replies[i].replies.length > 0) {
-                                    for (let n = 0; n < rootNote.replies[i].replies.length; n++) {
-                                        rootNote.replies[i].replies[n].tree = 2
+                            if (import.meta.env.DEV) {
+                                el.content += "\n\n ** 5 ** Tree: " + el.tree + '\n\n Tag length: ' + el.tags.length + "\n Note id: " + el.id + "\n Tag content: " + JSON.stringify(el.tags)
+                            }
+
+                            if (!parentEl?.replies) parentEl.replies = []
+                            // Add our current el to its parent's `children` array
+                            parentEl.replies = [...(parentEl?.replies || []), note];
+                        };
+
+                        rootNote.tree = 0
+                        const tree = (node: TextNote) => {
+                            if (node.replies.length > 0) {
+                                for (let i = 0; i < node.replies.length; i++) {
+                                    let child = node.replies[i]
+                                    child.tree = node.tree + 1
+                                    if (child.replies.length > 0) {
+                                        for (let n = 0; n < child.replies.length; n++) {
+                                            tree(child.replies[n])
+                                        }
                                     }
                                 }
                             }
-                        })
-                    
+                        }
+                        tree(rootNote)
+                    })
             }
         }
     }

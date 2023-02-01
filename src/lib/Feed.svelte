@@ -45,9 +45,12 @@
     feed.set([]);
     if ($relays && $relays.length) {
       let lastSync = $lastSeen;
-      if (lastSync < now() - 60 * 60) {
+      /*if (lastSync < now() - 60 * 60) {
         lastSync = now() - 60 * 60;
-      }
+      }*/
+      
+      lastSync = now() - 60 * 60;
+
       listener = new Listener(
         [{ since: lastSync, kinds: [0, 1, 3, 5, 7] }],
         "globalfeed"
