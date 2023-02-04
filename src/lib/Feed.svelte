@@ -48,7 +48,7 @@
       /*if (lastSync < now() - 60 * 60) {
         lastSync = now() - 60 * 60;
       }*/
-      
+
       lastSync = now() - 60 * 60;
 
       listener = new Listener(
@@ -222,26 +222,21 @@
   });
 
   function handleBan(event) {
-    let {id, pubkey, tree, parentId} = event.detail
-    let rootNote = $feed.find(f => f.id == parentId)
-    deleteNodeFromTree(rootNote, id)
-    console.debug('BAN ', pubkey, tree)
+    let { id, pubkey, tree, parentId } = event.detail;
+    let rootNote = $feed.find((f) => f.id == parentId);
+    deleteNodeFromTree(rootNote, id);
+    console.debug("BAN ", pubkey, tree);
   }
-
 </script>
 
 <Feeder bind:msg {scrollHandler} {sendMessage}>
   <slot>
-    {#each $page ? $page : [] as note (note.id)}
-      <ul class="items-center w-full border-hidden">
-        <li>
-          <div class="flex flex-col items-top p-2 w-full overflow-hidden mb-2">
-            {#if note.content !== "BANNED"}
-              <TextNote {note} {userHasAccount} on:banUser={handleBan}/>
-            {/if}
-          </div>
-        </li>
-      </ul>
-    {/each}
+    <ul class="items-center w-full border-hidden">
+      {#each $page ? $page : [] as note (note.id)}
+        {#if note.content !== "BANNED"}
+          <TextNote {note} {userHasAccount} on:banUser={handleBan} />
+        {/if}
+      {/each}
+    </ul>
   </slot>
 </Feeder>

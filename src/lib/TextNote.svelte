@@ -19,7 +19,7 @@
 
   import Spinner from "./partials/Spinner/Spinner.svelte";
   import contacts from "./state/contacts";
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher } from "svelte";
   import { getRootTag } from "./util/tags";
 
   const dispatch = createEventDispatcher();
@@ -115,12 +115,14 @@
       timeout: 3000,
     });
 
-    dispatch('banUser', {
-			id: note.id,
+    dispatch("banUser", {
+      id: note.id,
       pubkey: note.pubkey,
       tree: note.tree,
-      parentId: getRootTag(note.tags).length ? getRootTag(note.tags)[1] : note.id 
-		});
+      parentId: getRootTag(note.tags).length
+        ? getRootTag(note.tags)[1]
+        : note.id,
+    });
   }
 
   function isFollowed(): boolean {
@@ -227,20 +229,18 @@
 
   function firstBlock() {
     if (note.tree === 0) {
-      return "border-l-4 border-t-2 " + borderColor
+      return "border-l-4 border-t-2 " + borderColor;
     }
-    return ''
+    return "";
   }
 
   function childBlock() {
     if (note.tree > 0) {
-      return "border-l-4 border-t-2 " + borderColor
+      return "border-l-4 border-t-2 " + borderColor;
     }
-    
-    return ''
+
+    return "";
   }
-
-
 </script>
 
 {#await promiseReply}
@@ -248,157 +248,171 @@
 {/await}
 
 {#if note && note.kind == 1}
-  <div class="flex flex-col overflow-y-auto bg-white rounded-lg p-1 {firstBlock()} {$$props[
-    'class'
-  ]
-    ? $$props['class']
-    : ''}">
-    <div
-      id={note.id}
-      class="flex flex-row w-full min-h-full {align()} items-top gap-2 mb-2 overflow-y-auto bg-white rounded-lg p-1 {childBlock()}" 
-    >
+  <li>
+    <div class="flex flex-col items-top p-2 w-full overflow-hidden mb-2">
       <div
-        on:click={userInfo}
-        on:keyup={() => console.log("keyup")}
-        class="w-16 mr-2"
+        class="flex flex-col overflow-y-auto bg-white rounded-lg p-1 {firstBlock()} {$$props[
+          'class'
+        ]
+          ? $$props['class']
+          : ''}"
       >
-        <img
-          class="w-14 h-14 rounded-full"
-          src={user && user.picture ? user.picture : "profile-placeholder.png"}
-          alt={note.pubkey.slice(0, 5)}
-          crossorigin="anonymous"
-          title="ID: {note.id} .. Tree: {note.tree} .. Pubkey: {note.pubkey} .. Content: {note.content} .. Tags: {JSON.stringify(
-            note.tags
-          )} ... Replies: {note.replies.length} ... User: {JSON.stringify(
-            note.user
-          )}"
-        />
-      </div>
+        <div
+          id={note.id}
+          class="flex flex-row w-full min-h-full {align()} items-top gap-2 mb-2 overflow-y-auto bg-white rounded-lg p-1 {childBlock()}"
+        >
+          <div
+            on:click={userInfo}
+            on:keyup={() => console.log("keyup")}
+            class="w-16 mr-2"
+          >
+            <img
+              class="w-14 h-14 rounded-full"
+              src={user && user.picture
+                ? user.picture
+                : "profile-placeholder.png"}
+              alt={note.pubkey.slice(0, 5)}
+              crossorigin="anonymous"
+              title="ID: {note.id} .. Tree: {note.tree} .. Pubkey: {note.pubkey} .. Content: {note.content} .. Tags: {JSON.stringify(
+                note.tags
+              )} ... Replies: {note.replies.length} ... User: {JSON.stringify(
+                note.user
+              )}"
+            />
+          </div>
 
-      <div class="flex-col w-full">
-        <div class="px-2">
-          <div class="h-12">
-            <div class="flex gap-2 h-12 w-full ">
-              <div class="text-left order-first w-6/12">
-                <strong class="text-black text-sm font-medium">
-                  <span title={note.pubkey}>{normalizeName(user)}</span>
-                  {#if followed}
-                    <i class="fa-solid fa-bookmark" />
-                  {/if}
-                  <small class="text-gray">{getTime(note.created_at)}</small>
-                </strong>
-              </div>
+          <div class="flex-col w-full">
+            <div class="px-2">
+              <div class="h-12">
+                <div class="flex gap-2 h-12 w-full ">
+                  <div class="text-left order-first w-6/12">
+                    <strong class="text-black text-sm font-medium">
+                      <span title={note.pubkey}>{normalizeName(user)}</span>
+                      {#if followed}
+                        <i class="fa-solid fa-bookmark" />
+                      {/if}
+                      <small class="text-gray">{getTime(note.created_at)}</small
+                      >
+                    </strong>
+                  </div>
 
-              <div class="text-right order-last md:w-6/12">
-                <span class="text-right">
-                  {#if userHasAccount}
-                    <div class="relative">
-                      <button class="dropdown-toggle" on:click={toggleMenu}>
-                        <i class="fa-solid fa-ellipsis" />
-                      </button>
-                      {#if expanded}
-                        <div role="menu" tabindex="-1" class="dropdown-menu">
-                          <ul class="py-2 w-44 text-left">
-                            <li>
-                              <button
-                                class="downdown-menu-button"
-                                on:click={banUser}
-                              >
-                                <i class="fa-solid fa-ban" /> Block user
-                              </button>
-                            </li>
-                            <li>
-                              <button
-                                class="downdown-menu-button"
-                                on:click={removeNote}
-                              >
-                                <i class="fa-solid fa-comment-slash" /> Mute post
-                              </button>
-                            </li>
-                          </ul>
+                  <div class="text-right order-last md:w-6/12">
+                    <span class="text-right">
+                      {#if userHasAccount}
+                        <div class="relative">
+                          <button class="dropdown-toggle" on:click={toggleMenu}>
+                            <i class="fa-solid fa-ellipsis" />
+                          </button>
+                          {#if expanded}
+                            <div
+                              role="menu"
+                              tabindex="-1"
+                              class="dropdown-menu"
+                            >
+                              <ul class="py-2 w-44 text-left">
+                                <li>
+                                  <button
+                                    class="downdown-menu-button"
+                                    on:click={banUser}
+                                  >
+                                    <i class="fa-solid fa-ban" /> Block user
+                                  </button>
+                                </li>
+                                <li>
+                                  <button
+                                    class="downdown-menu-button"
+                                    on:click={removeNote}
+                                  >
+                                    <i class="fa-solid fa-comment-slash" /> Mute
+                                    post
+                                  </button>
+                                </li>
+                              </ul>
+                            </div>
+                          {/if}
                         </div>
                       {/if}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="xl:max-w-lg md:max-w-lg sm:max-w-sm">
+              <div class="text-left w-full max-w-max break-words items-top">
+                <span class="text-black text-md font-medium">
+                  {@html toHtml(note.content)}
+                  {#if link}
+                    <!-- svelte-ignore a11y-click-events-have-key-events -->
+                    <div class="mt-2" on:click={(e) => e.stopPropagation()}>
+                      <Preview
+                        endpoint={`${
+                          import.meta.env.VITE_PREVIEW_LINK
+                        }/preview/link`}
+                        url={link}
+                      />
                     </div>
                   {/if}
                 </span>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div class="xl:max-w-lg md:max-w-lg sm:max-w-sm">
-          <div class="text-left w-full max-w-max break-words items-top">
-            <span class="text-black text-md font-medium">
-              {@html toHtml(note.content)}
-              {#if link}
-                <!-- svelte-ignore a11y-click-events-have-key-events -->
-                <div class="mt-2" on:click={(e) => e.stopPropagation()}>
-                  <Preview
-                    endpoint={`${
-                      import.meta.env.VITE_PREVIEW_LINK
-                    }/preview/link`}
-                    url={link}
-                  />
-                </div>
-              {/if}
-            </span>
-          </div>
-        </div>
+            <div class="w-full">
+              {#if userHasAccount}
+                <p class="mt-4 flex space-x-8 w-full p-1">
+                  <span class={votedFor == "+" ? "text-blue-700" : ""}>
+                    <button type="button" on:click={upvoteHandler}>
+                      <i class="fa-solid fa-thumbs-up " />
+                    </button>
+                    {upvotes}
+                  </span>
+                  <span class={votedFor == "-" ? "text-blue-700" : ""}>
+                    <button type="button" on:click={downvoteHandler}>
+                      <i class="fa-solid fa-thumbs-down" />
+                    </button>
+                    {downvotes}
+                  </span>
 
-        <div class="w-full">
-          {#if userHasAccount}
-            <p class="mt-4 flex space-x-8 w-full p-1">
-              <span class={votedFor == "+" ? "text-blue-700" : ""}>
-                <button type="button" on:click={upvoteHandler}>
-                  <i class="fa-solid fa-thumbs-up " />
-                </button>
-                {upvotes}
-              </span>
-              <span class={votedFor == "-" ? "text-blue-700" : ""}>
-                <button type="button" on:click={downvoteHandler}>
-                  <i class="fa-solid fa-thumbs-down" />
-                </button>
-                {downvotes}
-              </span>
-
-              <span>
-                <button type="button" on:click={createTextNote}>
-                  <i class="fa-regular fa-comment-dots" />
-                </button>
-                {#if note.replies}
-                  {note.replies.length}
-                {/if}
-              </span>
-              <span>
-                {#if note.replies && note.replies.length > 0}
-                  <button type="button" on:click={toggleReplies} class="">
-                    {#if repliesExpanded}
-                      Hide {note.replies.length} repl{#if note.replies.length == 1}y{:else}ies{/if}
-                    {:else}
-                      Show {note.replies.length} repl{#if note.replies.length == 1}y{:else}ies{/if}
+                  <span>
+                    <button type="button" on:click={createTextNote}>
+                      <i class="fa-regular fa-comment-dots" />
+                    </button>
+                    {#if note.replies}
+                      {note.replies.length}
                     {/if}
-                  </button>
-                {/if}
-              </span>
-            </p>
-          {/if}
+                  </span>
+                  <span>
+                    {#if note.replies && note.replies.length > 0}
+                      <button type="button" on:click={toggleReplies} class="">
+                        {#if repliesExpanded}
+                          Hide {note.replies.length} repl{#if note.replies.length == 1}y{:else}ies{/if}
+                        {:else}
+                          Show {note.replies.length} repl{#if note.replies.length == 1}y{:else}ies{/if}
+                        {/if}
+                      </button>
+                    {/if}
+                  </span>
+                </p>
+              {/if}
+            </div>
+          </div>
         </div>
+        {#if repliesExpanded}
+          {#if note.replies && note.replies.length > 0}
+            <ul>
+              {#each note.replies ? note.replies : [] as textnote (textnote.id)}
+                <li>
+                  <!--on:banUser is required here so that the event is forwarded-->
+                  <!--https://dev.to/mohamadharith/workaround-for-bubbling-custom-events-in-svelte-3khk-->
+                  <svelte:self note={textnote} {userHasAccount} on:banUser />
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        {/if}
       </div>
     </div>
-    {#if repliesExpanded}
-      {#if note.replies && note.replies.length > 0}
-        <ul>
-          {#each note.replies ? note.replies : [] as textnote (textnote.id)}
-            <li>
-              <!--on:banUser is required here so that the event is forwarded-->
-              <!--https://dev.to/mohamadharith/workaround-for-bubbling-custom-events-in-svelte-3khk-->
-              <svelte:self note={textnote} {userHasAccount} on:banUser/>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-    {/if}
-  </div>
+  </li>
 {/if}
 
 <style>
