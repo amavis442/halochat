@@ -5,9 +5,9 @@
   import TextArea from "../TextArea.svelte";
 
   // provided by <Modals />
-  export let isOpen:boolean;
-  export let note:TextNote;
-  export let onSendTextNote:Function
+  export let isOpen: boolean;
+  export let note: TextNote | null;
+  export let onSendTextNote: Function;
 
   function onSubmit(e: Event) {
     const target = e.target as HTMLFormElement;
@@ -31,10 +31,17 @@
   <div role="dialog" class="modal">
     <div class="contents">
       <form on:submit|preventDefault={onSubmit}>
-        <h5 class="text-gray-900 text-xl font-medium mb-2">
-          Re: {note.content.slice(0, 30)}
-        </h5>
-        <TextArea id="reply{note.id}" placeholder="Add reply" cols="20" />
+        {#if note}
+          <h5 class="text-gray-900 text-xl font-medium mb-2">
+            Re: {note.content.slice(0, 30)}
+          </h5>
+          <TextArea id="reply{note.id}" placeholder="Add reply" cols="30" rows="5"/>
+        {:else}
+          <h5 class="text-gray-900 text-xl font-medium mb-2">
+            Create a new note
+          </h5>
+          <TextArea id="create-note" placeholder="Create a note" cols="30" rows="5"/>
+        {/if}
 
         <div class="flex space-x-1 p-2">
           <div class="justify-items-start w-6/12">
@@ -44,7 +51,7 @@
             </Button>
           </div>
           <div class="w-6/12 flex justify-end">
-            <Button click={closeModal}>OK</Button>
+            <Button click={closeModal} class="bg-red-500 hover:bg-red-700">Cancel</Button>
           </div>
         </div>
       </form>
@@ -69,7 +76,7 @@
   }
 
   .contents {
-    min-width: 440px;
+    min-width: 460px;
     border-radius: 6px;
     padding: 16px;
     background: white;

@@ -19,6 +19,7 @@
   import { deleteNodeFromTree } from "./util/misc";
   import { users } from "./stores/users";
 
+
   let msg = "";
   let replyTo: NoteEvent | null = null;
   let moreLoading = Promise<void>;
@@ -227,6 +228,8 @@
     deleteNodeFromTree(rootNote, id);
     console.debug("BAN ", pubkey, tree);
   }
+
+
 </script>
 
 <Feeder bind:msg {scrollHandler} {sendMessage}>

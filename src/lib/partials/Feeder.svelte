@@ -1,20 +1,30 @@
 <script lang="ts">
-  import { relays } from "../state/pool";
+  import { relays, publish } from "../state/pool";
   import Spinner from "./Spinner/Spinner.svelte";
   import Button from "./Button.svelte";
   import Text from "./Text.svelte";
   import Anchor from "./Anchor.svelte";
-  
-  export let msg:string;
-  export let sendMessage:Function 
-  export let scrollHandler:any
+  import { openModal } from "svelte-modals";
+  import CreateNoteModal from "./Modal/CreateNoteModal.svelte";
+
+  export let msg: string;
+  export let sendMessage: Function;
+  export let scrollHandler: any;
 
   export let moreLoading = Promise<void>;
-  
+
+  function createTextNote() {
+    openModal(CreateNoteModal, {
+      note: null,
+      onSendTextNote: (noteText: string) => {
+        publish(1, noteText);
+      },
+    });
+  }
 </script>
 
-<div class="flex flex-col gap-4 h-screen" >
-  <div class="h-screen" >
+<div class="flex flex-col gap-4 h-screen">
+  <div class="h-screen">
     <div
       id="Notes"
       class="flex flex-col relative mx-auto bg-gray-800
@@ -22,23 +32,14 @@
             divide-y ml-4 mr-4
             space-y-0 place-content-start
             h-full max-h-full w-11/12"
-      
     >
       {#if $relays && $relays.length}
         <div class="h-full w-full overflow-y-auto" on:scroll={scrollHandler}>
-          <slot/>
+          <slot />
         </div>
         {#await moreLoading}
           <Spinner size={36} />
         {/await}
-        <div class="flex h-24 w-full items-center from-blue-100 via-blue-300 to-blue-500 bg-gradient-to-br">
-          <div class="flex w-full items-content justify-center">
-            <div class="w-4/5 mr-2">
-              <Text bind:value={msg} id="msg" placeholder="Message to send" />
-            </div>
-            <Button type="button" click={sendMessage}>Send</Button>
-          </div>
-        </div>
       {:else}
         <div class="flex h-full place-items-center">
           <div class="w-full h-24 rounded-lg p-4 text-center  bg-blue-200 mb-2">
@@ -52,3 +53,33 @@
     </div>
   </div>
 </div>
+
+{#if $relays && $relays.length}
+  <div class="createnote">
+    <button
+      on:click={createTextNote}
+      class="create-note p-2 mr-4"
+      title="Create a new note"
+    >
+      <i class="fa-regular fa-message" />
+    </button>
+  </div>
+{/if}
+
+<style>
+  div.createnote {
+    position: absolute;
+    bottom: 10px;
+    right: 15%;
+    border: 0;
+  }
+  .create-note {
+    height: 50px;
+    width: 50px;
+  }
+  .create-note i {
+    height: 100%;
+    font-size: 60px;
+    color: rgba(255, 255, 255, 0.90);
+  }
+</style>
