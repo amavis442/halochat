@@ -292,6 +292,13 @@ async function handleTags(note: TextNote) {
         let user = $users.find(u => u.pubkey == note.pubkey)
         if (user) note.user = user
         if (!user) await placeHolderUser(note, '')
+        
+        /* For later...
+        let filter = {kinds: [1], '#e': [note.id]}
+        await getData([filter]).then((results: Array<Event>) => {
+
+        })
+        */
         return note
     }
 
@@ -591,14 +598,22 @@ async function handleMentions(note: TextNote): Promise<void> {
     }
 }
 
+/**
+ * Got a live kind 7 event and lookup a note to add this too
+ * @param evt 
+ * @param relay 
+ * @returns 
+ */
 async function handleReaction(evt: TextNote, relay: string) {
+    if (evt.kind != 7) return
+
     let lastTag = getLastETag(evt.tags)
     if (!lastTag) {
         log('handleReaction:: Misformed tags.. ignore it', 'Tags:', evt.tags, 'Event:', evt)
         return false
     }
     initNote(evt, relay)
-    //await new Promise((resolve) => {
+
     feedStack.update(data => {
         let note: TextNote = data[lastTag[1]] || null
         if (note && note.reactions && !note.reactions.find(r => r.id == evt.id)) {
@@ -611,23 +626,30 @@ async function handleReaction(evt: TextNote, relay: string) {
         return data
     })
     feed.update((data) => data) // Hope this will trigger an subscribe trigger event and updates the view
-    //  resolve(true)
-    //})
 }
 
+/**
+ * Look up the reactions for this textnote.
+ * 
+ * @param note
+ * @returns 
+ */
 async function handleReactions(note: TextNote) {
+    if (note.kind != 1) return 
+    
     let filter: Filter = {
         kinds: [7],
         '#e': [note.id]
     }
 
-    return await getData([filter], 'getReactions')
+    return await getData([filter], 'getReactions' + now())
         .then((results: Array<Reaction>) => {
             if (!note.upvotes) note.upvotes = 0
             if (!note.downvotes) note.downvotes = 0
 
             for (let i = 0; i < results.length; i++) {
                 let item: Reaction = results[i]
+                if (item.kind != 7) continue;
                 let lastTag = getLastETag(item.tags)
 
                 feedStack.update(data => {
