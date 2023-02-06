@@ -253,10 +253,13 @@ export async function publishAccount() {
 
 function copyTags(evt: Event) {
   let newtags = [];
+  let hasEtag = false;
   evt.tags.forEach((tag) => {
     let t = [];
     let add = true
-
+ 
+    if (tag[0] == 'e') hasEtag = true
+ 
     if (tag[3] == "reply") {
       t = [tag[0], tag[1], tag[2]];
     } else {
@@ -274,7 +277,12 @@ function copyTags(evt: Event) {
   let relayUrl = Object.keys(relays)[0]
 
   newtags.push(["p", evt.pubkey, relayUrl]);
-  newtags.push(["e", evt.id, relayUrl, "reply"]);
+  if (hasEtag) {
+    newtags.push(["e", evt.id, relayUrl, "reply"]);
+  }
+  if (!hasEtag) {
+    newtags.push(["e", evt.id, relayUrl, "root"]);
+  }
 
   let rootTag = getRootTag(newtags)
   let replyTag = getReplyTag(newtags)
