@@ -26,7 +26,7 @@ export function getReplyTag(tags: string[][]): string[] {
 }
 
 export function getLastETag(tags: string[][]): string[] {
-    for (let i = tags.length - 1; i >= 0; i--) {
+    for (let i = tags.length - 1; i > -1; i--) {
         if (tags[i][0] == 'e') {
             return tags[i]
         }
