@@ -70,7 +70,7 @@ export function toHtml(content: string): string {
       }
     }
     //console.debug('INVOICE:', match, match[0], invoice)
-    content = content.replace(match[0], 'lightning invoice: ' + amount + ' sats (Amount: ' + rawAmount + ', Unit: ' + rawUnit +' Unit number: ' +  unitNumber + ')')
+    content = content.replace(match[0], 'lightning invoice: ' + amount + ' sats (Amount: ' + rawAmount + ', Unit: ' + rawUnit +', Unit number: ' +  unitNumber + ')')
     //content = content.replace(match[1], '')
 
   }
