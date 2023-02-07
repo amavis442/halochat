@@ -152,7 +152,7 @@
   });
 </script>
 
-<Feeder {scrollHandler} bind:msg {sendMessage}>
+<Feeder>
   <slot>
     {#each $page ? $page : [] as note (note.id)}
       <ul class="items-center w-full border-hidden">

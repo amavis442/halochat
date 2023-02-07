@@ -232,7 +232,7 @@
 
 </script>
 
-<Feeder bind:msg {scrollHandler} {sendMessage}>
+<Feeder>
   <slot>
     <ul class="items-center w-full border-hidden">
       {#each $page ? $page : [] as note (note.id)}

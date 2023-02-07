@@ -1,15 +1,9 @@
 <script lang="ts">
   import { relays, publish } from "../state/pool";
   import Spinner from "./Spinner/Spinner.svelte";
-  import Button from "./Button.svelte";
-  import Text from "./Text.svelte";
   import Anchor from "./Anchor.svelte";
   import { openModal } from "svelte-modals";
   import CreateNoteModal from "./Modal/CreateNoteModal.svelte";
-
-  export let msg: string;
-  export let sendMessage: Function;
-  export let scrollHandler: any;
 
   export let moreLoading = Promise<void>;
 
@@ -34,7 +28,7 @@
             h-full max-h-full w-11/12"
     >
       {#if $relays && $relays.length}
-        <div class="h-full w-full overflow-y-auto" on:scroll={scrollHandler}>
+        <div class="h-full w-full overflow-y-auto">
           <slot />
         </div>
         {#await moreLoading}
