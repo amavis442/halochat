@@ -30,3 +30,7 @@ export const addToast = (toast: Toast) => {
     // If toast is dismissible, dismiss it after "timeout" amount of time.
     if (t.timeout) setTimeout(() => dismissToast(id), t.timeout)
 }
+
+export const clearToasts = () => {
+    toasts.set([])
+}
