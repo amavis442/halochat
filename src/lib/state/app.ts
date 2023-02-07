@@ -806,7 +806,7 @@ export class Listener {
             sub.unsub()
             console.log(`Stop listening to relay ${url} by unsubscribe to events and eose`)
         }
-        pool.stop()
+        pool.close()
         clearInterval(this.timer)
 
         feedQueue = []
