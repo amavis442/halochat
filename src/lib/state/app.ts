@@ -742,6 +742,7 @@ export class Listener {
             console.log(`Stop listening to relay ${url} by unsubscribe to events and eose`)
         }
 
+        await pool.start()
         for (const [url, relay] of Object.entries(pool.getRelays())) {
             if (relay.status !== 1) {
                 try {
@@ -805,6 +806,7 @@ export class Listener {
             sub.unsub()
             console.log(`Stop listening to relay ${url} by unsubscribe to events and eose`)
         }
+        pool.stop()
         clearInterval(this.timer)
 
         feedQueue = []

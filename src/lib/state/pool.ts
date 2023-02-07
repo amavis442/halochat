@@ -5,7 +5,7 @@ import { now } from "../util/time";
 import { account } from '../stores/account';
 import { getRootTag, getReplyTag } from '../util/tags';
 import { log } from '../util/misc';
-import { addToast } from '../partials/Toast/toast';
+import { addToast, clearToasts } from '../partials/Toast/toast';
 import {
   relayInit,
   getEventHash,
@@ -28,16 +28,28 @@ export class relayPool {
 
   addRelay = (url: string) => {
     let relay = relayInit(url)
+
+    //this.connect(relay)
+
+    if (!this.hasRelay(url)) {
+      this.relays[url] = relay
+    }
+  }
+
+  connect = async (relay: Relay) => {
     relay.connect()
+    let url = relay.url
     //@ts-ignore is in it but not in the type declaration 
     relay.on('error', () => {
       console.log(`failed to connect to ${url}`)
+      
       addToast({
         message: `failed to connect to ${url}`,
         type: "error",
         dismissible: true,
         timeout: 3000,
       })
+    
     })
 
     relay.on('connect', () => {
@@ -52,9 +64,22 @@ export class relayPool {
       console.log(`Closing connection to ${url}`)
       if (relay.status == 3) relay.connect() //reconnect
     })
-
-    this.relays[url] = relay
   }
+
+  start = async () => {
+    for (const [url, relay] of Object.entries(this.relays)) {
+      await this.connect(relay)
+    }
+  }
+
+  close = () => {
+    for (const [url, relay] of Object.entries(this.relays)) {
+      console.log(`Closing connection to ${url}`)
+      relay.close()
+    }
+    clearToasts()
+  }
+
 
   removeRelay = (url: string) => {
     if (this.hasRelay(url)) {
@@ -65,9 +90,9 @@ export class relayPool {
 
   publish = async (evt: Event) => {
     const $relays = get(relays)
-    
+
     let evtIds = []
-    
+
 
     console.log($relays)
     for (const [url, relay] of Object.entries(this.relays)) {
@@ -103,12 +128,7 @@ export class relayPool {
     return
   }
 
-  close = () => {
-    for (const [url, relay] of Object.entries(this.relays)) {
-      console.log(`Closing connection to ${url}`)
-      relay.close()
-    }
-  }
+
 
   getRelays = (): { [key: string]: Relay } => {
     return this.relays
@@ -257,9 +277,9 @@ function copyTags(evt: Event) {
   evt.tags.forEach((tag) => {
     let t = [];
     let add = true
- 
+
     if (tag[0] == 'e') hasEtag = true
- 
+
     if (tag[3] == "reply") {
       t = [tag[0], tag[1], tag[2]];
     } else {
