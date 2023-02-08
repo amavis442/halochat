@@ -41,15 +41,7 @@ export class relayPool {
     let url = relay.url
     //@ts-ignore is in it but not in the type declaration 
     relay.on('error', () => {
-      console.log(`failed to connect to ${url}`)
-      
-      addToast({
-        message: `failed to connect to ${url}`,
-        type: "error",
-        dismissible: true,
-        timeout: 3000,
-      })
-    
+      console.log(`failed to connect to ${url}`)    
     })
 
     relay.on('connect', () => {
