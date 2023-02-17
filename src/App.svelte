@@ -2,6 +2,8 @@
   import { Router, Link, Route } from "svelte-routing";
   import Feed from "./routes/Feed.svelte";
   import FollowFeed from "./routes/FollowFeed.svelte";
+  import BlockAndMute from "./routes/BlockAndMute.svelte";
+
 
   import Relays from "./routes/Relays.svelte";
   import Account from "./routes/Account.svelte";
@@ -55,6 +57,9 @@
         <p class="nav-p {url === '/account' ? 'selected' : ''}">
           <Link to="account" title="Your account data">Account</Link>
         </p>
+        <p class="nav-p {url === '/blockandmute' ? 'selected' : ''}">
+          <Link to="blockandmute" title="Block and mute settings">Block and mute</Link>
+        </p>
       </nav>
     </header>
 
@@ -66,6 +71,7 @@
       <Route path="relays" component="{Relays}" />
       <Route path="contacts" component="{Contacts}" />
       <Route path="account" component="{Account}" />
+      <Route path="blockandmute" component="{BlockAndMute}" />
     </main>
   </div>
 </Router>

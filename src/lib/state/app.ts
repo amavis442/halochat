@@ -292,7 +292,7 @@ async function handleTags(note: TextNote) {
         let user = $users.find(u => u.pubkey == note.pubkey)
         if (user) note.user = user
         if (!user) await placeHolderUser(note, '')
-        
+
         /* For later...
         let filter = {kinds: [1], '#e': [note.id]}
         await getData([filter]).then((results: Array<Event>) => {
@@ -493,6 +493,9 @@ function blockText(evt: Event): boolean {
     if (evt.content.match(/followid/)) return true
     if (evt.content.match(/Verifying\ My\ Public\ Key/)) return true
     if (evt.content.match(/free\ sats/gmi)) return true
+    if (evt.content.match(/wechat/gmi)) return true
+    if (evt.content.match(/lemony/gmi)) return true
+    if (evt.content.match(/chatgpt/gmi)) return true
 
     return false
 }
@@ -635,8 +638,8 @@ async function handleReaction(evt: TextNote, relay: string) {
  * @returns 
  */
 async function handleReactions(note: TextNote) {
-    if (note.kind != 1) return 
-    
+    if (note.kind != 1) return
+
     let filter: Filter = {
         kinds: [7],
         '#e': [note.id]
@@ -664,6 +667,22 @@ async function handleReactions(note: TextNote) {
             }
             return note
         })
+}
+
+function handleFeedQueueBlockAndMute(queue: any[]) {
+    for (let i = 0; i < queue.length; i++) {
+        let note:TextNote = queue[i].textnote
+        if ($account.pubkey != note.pubkey) {
+            if ($blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == note.pubkey)) {
+                delete queue[i]
+                continue
+            }
+            if (blockText(note)) {
+                delete queue[i]
+                continue
+            }
+        }
+    }
 }
 
 /**
@@ -841,7 +860,9 @@ export async function onEvent(evt: Event, relay: string) {
         case 1:
             if (evt.pubkey != $account.pubkey) {
                 feedQueue.push({ textnote: evt, url: relay })
+                handleFeedQueueBlockAndMute(feedQueue);
             }
+
             if (feedQueueTimer === null) {
                 feedQueueTimer = setInterval(handleTextNote, 500)
             }

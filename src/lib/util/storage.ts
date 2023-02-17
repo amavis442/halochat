@@ -4,7 +4,8 @@ export enum setting {
     Blocklist = 'halochat/blocklist',
     Blocktext = 'halochat/blocktext',
     Contacts = 'halochat/contacts',
-    Lastseen = 'halochat/lastseen'
+    Lastseen = 'halochat/lastseen',
+    Settings = 'halochat/settings'
 }
 
 export const allowedKeys = [
@@ -13,8 +14,9 @@ export const allowedKeys = [
     setting.Blocklist.toString(),
     setting.Blocktext.toString(),
     setting.Contacts.toString(),
-    setting.Lastseen.toString()
-]
+    setting.Lastseen.toString(),
+    setting.Settings.toString()
+]    
 
 export function getLocalJson(k: string) {
     if (!allowedKeys.includes(k)) {

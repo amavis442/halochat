@@ -37,7 +37,8 @@ export class relayPool {
   }
 
   connect = async (relay: Relay) => {
-    relay.connect()
+    await relay.connect().catch((e) => console.debug('Connect error: ', e))
+
     let url = relay.url
     //@ts-ignore is in it but not in the type declaration 
     relay.on('error', () => {
@@ -60,7 +61,7 @@ export class relayPool {
 
   start = async () => {
     for (const [url, relay] of Object.entries(this.relays)) {
-      await this.connect(relay)
+      await this.connect(relay).catch((e) => console.debug('Connect error: ', e))
     }
   }
 
