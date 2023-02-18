@@ -404,7 +404,9 @@ async function handleTags(note: TextNote) {
                             // Use our mapping to locate the parent element in our data array
                             let parentEl: TextNote = rootNote
                             if (replyTag.length > 0) {
+                                console.log('We have a replyTag ', replyTag, ' Feedstack result is ',$feedStack[replyTag[1]])
                                 parentEl = $feedStack[replyTag[1]]
+                                if (!parentEl) return // Even when we asked for all the data, this id is not present in the stack so we ignore it.
                                 initNote(parentEl, '')
                             }
 
@@ -412,7 +414,10 @@ async function handleTags(note: TextNote) {
                                 el.content += "\n\n ** 5 ** Tree: " + el.tree + '\n\n Tag length: ' + el.tags.length + "\n Note id: " + el.id + "\n Tag content: " + JSON.stringify(el.tags)
                             }
 
-                            if (!parentEl?.replies) parentEl.replies = []
+                            if (!parentEl?.replies) {
+                                console.log('ParentEl has no replies property: ', parentEl)
+                                parentEl.replies = []
+                            }
                             // Add our current el to its parent's `children` array
                             parentEl.replies = [...(parentEl?.replies || []), note];
                         };
@@ -545,6 +550,9 @@ async function handleTextNote(): Promise<void> {
     if (!note?.user || !$feedStack[evt.id]?.user) {
         throw new Error('handleTextNote(462): note has no user attached to it which sucks \n\n' + JSON.stringify(note) + '\n\n' + JSON.stringify($feedStack[evt.id]))
     }
+    
+    if (blockNote(note)) return
+    
 
     return await
         handleTags(note)
@@ -669,18 +677,25 @@ async function handleReactions(note: TextNote) {
         })
 }
 
+
+function blockNote(note): boolean {
+    if ($account.pubkey != note.pubkey) {
+        if ($blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == note.pubkey)) {
+            return true
+        }
+        if (blockText(note)) {
+            return true
+        }
+    }
+    return false
+}
+
 function handleFeedQueueBlockAndMute(queue: any[]) {
     for (let i = 0; i < queue.length; i++) {
         let note:TextNote = queue[i].textnote
-        if ($account.pubkey != note.pubkey) {
-            if ($blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == note.pubkey)) {
+        if (blockNote(note)) {
                 delete queue[i]
                 continue
-            }
-            if (blockText(note)) {
-                delete queue[i]
-                continue
-            }
         }
     }
 }
