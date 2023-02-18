@@ -181,29 +181,32 @@
 
   let blocklistSubscribe = blocklist.subscribe(($blocked) => {
     for (const pubkey of $blocked) {
-      Object.entries($feedStack).forEach((note: any) => {
+      for (const [id, note] of Object.entries($feedStack)) {
         if (note.pubkey == pubkey) {
-          note = null;
+          delete $feedStack[id];
         }
-      });
+      };
     }
 
     page.update(($pages) => {
-      $pages.forEach((item, id) => {
-        if ($blocked.includes(item.pubkey)) {
-          delete item[id];
+      let pageData = $pages.filter((page) => {
+        if ($blocked.includes(page.pubkey)) {
+          return false;
         }
-
-        if (item && item.replies.length) {
-          item.replies.forEach((reply) => {
-            if ($blocked.includes(reply.pubkey)) {
-              delete reply[id];
+        if (page && page.replies.length) {
+          let pageReplyData = page.replies.filter((reply) => {
+            if ($blocked[reply.pubkey]) {
+              return false;
             }
           });
+          page.replies = pageReplyData
         }
-      });
-      return $pages;
+        return true;
+      })
+      
+      return pageData;
     });
+    console.debug('Blocklist filtering')
   });
 
   let userSubscribe = users.subscribe(($users: Array<User>) => {
