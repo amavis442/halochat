@@ -21,6 +21,7 @@
   import contacts from "./state/contacts";
   import { createEventDispatcher } from "svelte";
   import { getRootTag } from "./util/tags";
+  import { setLocalJson, setting } from "./util/storage";
 
   const dispatch = createEventDispatcher();
   export let note: Note | any; // Todo: Do not know how to type this correctly to make sure in Notes it does not say Note__SvelteComponent_ <> Note type, very annoying
@@ -68,6 +69,7 @@
       10
     );
   }
+
 
   async function upvoteHandler() {
     upvotes = upvotes + 1;

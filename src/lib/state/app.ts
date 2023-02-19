@@ -404,7 +404,7 @@ async function handleTags(note: TextNote) {
                             // Use our mapping to locate the parent element in our data array
                             let parentEl: TextNote = rootNote
                             if (replyTag.length > 0) {
-                                console.log('We have a replyTag ', replyTag, ' Feedstack result is ',$feedStack[replyTag[1]])
+                                console.log('We have a replyTag ', replyTag, ' Feedstack result is ', $feedStack[replyTag[1]])
                                 parentEl = $feedStack[replyTag[1]]
                                 if (!parentEl) return // Even when we asked for all the data, this id is not present in the stack so we ignore it.
                                 initNote(parentEl, '')
@@ -528,6 +528,7 @@ export const mute: Writable<Array<string>> = writable([])
  */
 async function handleTextNote(): Promise<void> {
     if (!feedQueue.length) return
+
     let $feedStack = get(feedStack)
     let $mute = get(mute)
 
@@ -535,6 +536,7 @@ async function handleTextNote(): Promise<void> {
     let evt = eventItem.textnote
     const relay = eventItem.url
 
+    if (blockNote(evt)) return
     if (evt.kind != 1) return
 
     let note: TextNote = evt
@@ -550,9 +552,6 @@ async function handleTextNote(): Promise<void> {
     if (!note?.user || !$feedStack[evt.id]?.user) {
         throw new Error('handleTextNote(462): note has no user attached to it which sucks \n\n' + JSON.stringify(note) + '\n\n' + JSON.stringify($feedStack[evt.id]))
     }
-    
-    if (blockNote(note)) return
-    
 
     return await
         handleTags(note)
@@ -677,28 +676,30 @@ async function handleReactions(note: TextNote) {
         })
 }
 
-
+console.log('Complete blocklist is : ', $blocklist, $blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == "4a226bb248f3b03eb8d715adffaafafd9cddc855bfce79f3fb991e2797600234")? true:false)
 function blockNote(note): boolean {
+    let $account = get(account)
+    let $blocklist = get(blocklist)
+    
     if ($account.pubkey != note.pubkey) {
-        if ($blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == note.pubkey)) {
+        let found:boolean = $blocklist.find((b: { pubkey: string, added: number }) => b.pubkey == note.pubkey) ? true:false
+        if (found) {
+            console.log('Block Note on pubkey: ', note)
             return true
         }
         if (blockText(note)) {
+            console.log('Block Note on text: ', note)
             return true
         }
+    }
+    if (note.name && note.name.match(/BLOCK|BAN/gmi)) {
+        console.log('Block Note on tag: ', note, $blocklist)
+        return true
     }
     return false
 }
 
-function handleFeedQueueBlockAndMute(queue: any[]) {
-    for (let i = 0; i < queue.length; i++) {
-        let note:TextNote = queue[i].textnote
-        if (blockNote(note)) {
-                delete queue[i]
-                continue
-        }
-    }
-}
+
 
 /**
  * @todo: this will be time consuming, need to find a faster way to parse the tree for the ids i want
@@ -854,17 +855,30 @@ export class Listener {
 export let feedQueue: Array<{ textnote: Event, url: string }> = []
 let feedQueueTimer = null
 
+function handleFeedQueueBlockAndMute() {
+    for (let i = 0; i < feedQueue.length; i++) {
+        let note: TextNote = feedQueue[i].textnote
+        if (blockNote(note)) {
+            delete feedQueue[i]
+            continue
+        }
+    }
+}
+
+
 export let lastSeen = writable(getLocalJson(setting.Lastseen) || now() - 60 * 60)
 lastSeen.subscribe(value => {
     setLocalJson(setting.Lastseen, value)
 })
 
-
-
 export async function onEvent(evt: Event, relay: string) {
 
     if (pool.hasRelay('ws://localhost:8008') && relay != 'ws://localhost:8008') {
         pool.getRelays()['ws://localhost:8008'].publish(evt)
+    }
+
+    if (!feedQueueTimer) {
+        feedQueueTimer = setInterval(handleTextNote, 3000)
     }
 
     switch (evt.kind) {
@@ -873,13 +887,9 @@ export async function onEvent(evt: Event, relay: string) {
             await dbSave(evt, relay)
             break
         case 1:
-            if (evt.pubkey != $account.pubkey) {
+            if (evt.pubkey != $account.pubkey && !blockNote(evt)) {
                 feedQueue.push({ textnote: evt, url: relay })
-                handleFeedQueueBlockAndMute(feedQueue);
-            }
-
-            if (feedQueueTimer === null) {
-                feedQueueTimer = setInterval(handleTextNote, 500)
+                handleFeedQueueBlockAndMute();
             }
             break
         case 3:

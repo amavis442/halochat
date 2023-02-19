@@ -5,7 +5,9 @@ export const blocklist = writable(getLocalJson(setting.Blocklist) || [])
 
 blocklist.subscribe((value) => {
     setLocalJson(setting.Blocklist, value)
+    console.log('Block subscribe event', value)
 })
+
 
 export const addBlock = (pubkey:string) => {
     // Push the toast to the top of the list of toasts

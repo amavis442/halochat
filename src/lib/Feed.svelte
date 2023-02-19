@@ -18,6 +18,8 @@
   import { getRootTag } from "./util/tags";
   import { deleteNodeFromTree } from "./util/misc";
   import { users } from "./stores/users";
+  import { setLocalJson, setting } from "./util/storage";
+  import { settings } from "./stores/settings";
 
 
   let msg = "";
@@ -187,6 +189,7 @@
         }
       };
     }
+    setLocalJson(setting.Blocklist, $blocked)
 
     page.update(($pages) => {
       let pageData = $pages.filter((page) => {
