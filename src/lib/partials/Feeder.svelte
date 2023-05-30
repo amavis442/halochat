@@ -39,7 +39,7 @@
           <div class="w-full h-24 rounded-lg p-4 text-center  bg-blue-200 mb-2">
             <h2>
               Please add a relay first. You can do this here
-              <Anchor href="relays">relays</Anchor>
+              <Anchor href="/relays">relays</Anchor>
             </h2>
           </div>
         </div>

@@ -65,9 +65,9 @@
 
     <main class="xl:w-6/12 md:w-9/12 sm:w-full overflow-y-auto">
       <Route path="/" component="{Feed}" />
-      <Route path="/global" component="{Feed}" />
-      <Route path="/followfeed" component="{FollowFeed}" />
-      <Route path="/posts" component="{Posts}" />
+      <Route path="global" component="{Feed}" />
+      <Route path="followfeed" component="{FollowFeed}" />
+      <Route path="posts" component="{Posts}" />
       <Route path="relays" component="{Relays}" />
       <Route path="contacts" component="{Contacts}" />
       <Route path="account" component="{Account}" />
