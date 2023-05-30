@@ -858,7 +858,7 @@ let feedQueueTimer = null
 function handleFeedQueueBlockAndMute() {
     for (let i = 0; i < feedQueue.length; i++) {
         let note: TextNote = feedQueue[i].textnote
-        if (blockNote(note)) {
+        if (blockNote(note) && feedQueue[i]) {
             delete feedQueue[i]
             continue
         }
