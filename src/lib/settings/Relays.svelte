@@ -128,7 +128,7 @@
           A relay is a service where we send and receive messages from. We need
           at least 1 relay to receive and to send messages to. The relays
           usually has the form of wss://[name of relay]. For more relays see
-          <Link href="https://nostr-registry.netlify.app/">nostr-registry</Link>
+          <Link href="https://nostr.watch/relays/find">nostr.watch</Link>
         </small>
       </div>
 
