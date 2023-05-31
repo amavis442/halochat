@@ -1,6 +1,6 @@
-package follow
+package event
 
-type Follow struct {
+type Event struct {
 	ID        int64
 	Pubkey    string
 	CreatedAt int64

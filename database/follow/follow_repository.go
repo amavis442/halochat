@@ -2,38 +2,11 @@ package follow
 
 import (
 	"database/sql"
-	"database/sql/driver"
 	"errors"
 	"time"
 
 	"github.com/mattn/go-sqlite3"
 )
-
-var (
-	ErrDuplicate    = errors.New("record already exists")
-	ErrNotExists    = errors.New("row not exists")
-	ErrUpdateFailed = errors.New("update failed")
-	ErrDeleteFailed = errors.New("delete failed")
-)
-
-type NullTime struct {
-	Time  time.Time
-	Valid bool // Valid is true if Time is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (nt *NullTime) Scan(value interface{}) error {
-	nt.Time, nt.Valid = value.(time.Time)
-	return nil
-}
-
-// Value implements the driver Valuer interface.
-func (nt NullTime) Value() (driver.Value, error) {
-	if !nt.Valid {
-		return nil, nil
-	}
-	return nt.Time, nil
-}
 
 type SQLiteRepository struct {
 	db *sql.DB
@@ -44,6 +17,13 @@ func NewSQLiteRepository(db *sql.DB) *SQLiteRepository {
 		db: db,
 	}
 }
+
+var (
+	ErrDuplicate    = errors.New("record already exists")
+	ErrNotExists    = errors.New("row not exists")
+	ErrUpdateFailed = errors.New("update failed")
+	ErrDeleteFailed = errors.New("delete failed")
+)
 
 func (r *SQLiteRepository) Migrate() error {
 	query := `
@@ -59,7 +39,7 @@ func (r *SQLiteRepository) Migrate() error {
 }
 
 func (r *SQLiteRepository) Create(follow Follow) (*Follow, error) {
-	res, err := r.db.Exec("INSERT INTO follow(pubkey, created_at) values(?,?)", follow.Pubkey, follow.CreatedAt)
+	res, err := r.db.Exec("INSERT INTO follow(pubkey, created_at) values(?,?)", follow.Pubkey, time.Now().Unix())
 	if err != nil {
 		var sqliteErr sqlite3.Error
 		if errors.As(err, &sqliteErr) {
@@ -103,7 +83,7 @@ func (r *SQLiteRepository) GetByPubkey(pubkey string) (*Follow, error) {
 	var follow Follow
 	if err := row.Scan(&follow.ID, &follow.Pubkey, &follow.CreatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotExists
+			return nil, nil
 		}
 		return nil, err
 	}
