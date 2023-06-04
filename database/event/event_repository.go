@@ -42,7 +42,7 @@ func (r *SQLiteRepository) Migrate() error {
 }
 
 func (r *SQLiteRepository) Create(event Event) (*Event, error) {
-	res, err := r.db.Exec("INSERT INTO event(pubkey, created_at) values(?,?)", event.Pubkey, event.CreatedAt)
+	_, err := r.db.Exec("INSERT INTO event(id, created_at) values(?,?)", event.ID, event.CreatedAt)
 	if err != nil {
 		var sqliteErr sqlite3.Error
 		if errors.As(err, &sqliteErr) {
@@ -52,12 +52,6 @@ func (r *SQLiteRepository) Create(event Event) (*Event, error) {
 		}
 		return nil, err
 	}
-
-	id, err := res.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
-	event.ID = id
 
 	return &event, nil
 }
@@ -94,7 +88,7 @@ func (r *SQLiteRepository) GetByID(id string) (*Event, error) {
 }
 
 func (r *SQLiteRepository) Update(updated *Event) error {
-	if updated.ID == 0 {
+	if updated.ID == "" {
 		return errors.New("invalid updated ID")
 	}
 	res, err := r.db.Exec("UPDATE event SET pubkey = ? WHERE id = ?", updated.Pubkey, updated.ID)
@@ -114,7 +108,7 @@ func (r *SQLiteRepository) Update(updated *Event) error {
 	return nil
 }
 
-func (r *SQLiteRepository) Delete(id int64) error {
+func (r *SQLiteRepository) Delete(id string) error {
 	res, err := r.db.Exec("DELETE FROM event WHERE id = ?", id)
 	if err != nil {
 		return err
