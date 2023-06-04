@@ -3,7 +3,12 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"halochat/halochat-server/database/common"
+	"halochat/halochat-server/database/event"
 	"halochat/halochat-server/database/follow"
+	"halochat/halochat-server/database/seen"
+	"halochat/halochat-server/database/tag"
+	"halochat/halochat-server/database/user"
 	"log"
 	"mime"
 	"net/http"
@@ -42,11 +47,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	myDb = db
 
 	defer db.Close()
 
-	follow.InitController(myDb)
+	common.CreateTables(db, event.CreatQuery+follow.CreateQuery+seen.CreatQuery+tag.CreatQuery+user.CreatQuery)
+	follow.InitController(db)
 
 	// Windows may be missing this
 	mime.AddExtensionType(".js", "application/javascript")
@@ -59,7 +64,8 @@ func main() {
 	http.Handle("/api/follow/get", http.HandlerFunc(follow.Get))       // Get by pubkey
 	http.Handle("/api/follow/delete", http.HandlerFunc(follow.Delete)) // Delete by pubkey
 
+	http.Handle("/api/event/create", http.HandlerFunc(event.Create))
+
 	http.Handle("/", http.FileServer(http.Dir("dist")))
 	log.Fatal(http.ListenAndServe(":8080", nil))
-
 }

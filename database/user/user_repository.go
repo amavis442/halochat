@@ -1,4 +1,4 @@
-package event
+package user
 
 import (
 	"database/sql"
@@ -19,17 +19,15 @@ func NewSQLiteRepository(db *sql.DB) *SQLiteRepository {
 }
 
 const CreatQuery string = `
-CREATE TABLE IF NOT EXISTS events (
-	id TEXT PRIMARY KEY, 
-	pubkey TEXT, 
-	kind INTEGER, 
-	created_at INTEGER, 
+CREATE TABLE IF NOT EXISTS users (
+	pubkey TEXT PRIMARY KEY, 
+	relay TEXT, 
+	name TEXT, 
+	about TEXT, 
+	picture TEXT, 
 	content TEXT, 
-	tags_full TEXT, 
-	sig TEXT
+	updated_at INTEGER
 );
-CREATE INDEX IF NOT EXISTS events_by_kind ON events (kind, created_at);
-CREATE INDEX IF NOT EXISTS events_by_pubkey_kind ON events (pubkey, kind, created_at);
 `
 
 func (r *SQLiteRepository) Migrate() error {
@@ -80,8 +78,8 @@ func (r *SQLiteRepository) All() ([]Event, error) {
 	return all, nil
 }
 
-func (r *SQLiteRepository) GetByID(id string) (*Event, error) {
-	row := r.db.QueryRow("SELECT * FROM event WHERE id = ?", id)
+func (r *SQLiteRepository) GetByPubkey(pubkey string) (*Event, error) {
+	row := r.db.QueryRow("SELECT * FROM event WHERE pubkey = ?", pubkey)
 
 	var event Event
 	if err := row.Scan(&event.ID, &event.Pubkey, &event.CreatedAt); err != nil {

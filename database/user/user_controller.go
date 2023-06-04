@@ -1,25 +1,11 @@
-package event
+package user
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"time"
 )
-
-var eventRepository *SQLiteRepository
-
-type ReturnFollow struct {
-	Status string  `json:"status"`
-	Data   []Event `json:"data"`
-}
-
-func InitController(myDb *sql.DB) {
-	eventRepository = NewSQLiteRepository(myDb)
-	eventRepository.Migrate()
-}
 
 func doSqlStuffEvent(myDb *sql.DB) {
 	eventRepository := NewSQLiteRepository(myDb)
@@ -74,35 +60,4 @@ func doSqlStuffEvent(myDb *sql.DB) {
 	for _, event := range all {
 		fmt.Printf("website: %+v\n", event)
 	}
-}
-
-func Create(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*") // for CORS
-
-	var evt Event
-	err := json.NewDecoder(r.Body).Decode(&evt)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	var id string = evt.ID
-	evtFound, err := eventRepository.GetByID(id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if evtFound == nil {
-		evtFound, err = eventRepository.Create(evt)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	}
-
-	w.WriteHeader(http.StatusOK)
-	var evts []Event
-	evts = append(evts, *evtFound)
-	returnStatus := ReturnFollow{Status: "ok", Data: evts}
-	json.NewEncoder(w).Encode(returnStatus)
 }

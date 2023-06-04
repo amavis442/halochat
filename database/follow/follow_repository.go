@@ -25,14 +25,16 @@ var (
 	ErrDeleteFailed = errors.New("delete failed")
 )
 
+const CreateQuery string = `
+CREATE TABLE IF NOT EXISTS follow(
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	pubkey TEXT NOT NULL UNIQUE,
+	created_at INT NOT NULL
+);
+`
+
 func (r *SQLiteRepository) Migrate() error {
-	query := `
-    CREATE TABLE IF NOT EXISTS follow(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        pubkey TEXT NOT NULL UNIQUE,
-        created_at INT NOT NULL
-    );
-    `
+	query := CreateQuery
 
 	_, err := r.db.Exec(query)
 	return err

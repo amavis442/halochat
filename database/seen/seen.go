@@ -1,7 +1,7 @@
-package event
+package seen
 
 type Event struct {
-	ID        string
+	ID        int64
 	Pubkey    string
 	Kind      int
 	CreatedAt int64
