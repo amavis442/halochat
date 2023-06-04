@@ -183,7 +183,7 @@
 
   let blocklistSubscribe = blocklist.subscribe(($blocked) => {
     for (const pubkey of $blocked) {
-      for (const [id, note] of Object.entries($feedStack)) {
+      for (const [id, note] of (Object.entries( ($feedStack as number,TextNote)))) {
         if (note.pubkey == pubkey && $feedStack[id]) {
           delete $feedStack[id];
         }

@@ -22,6 +22,7 @@
   import { createEventDispatcher } from "svelte";
   import { getRootTag } from "./util/tags";
   import { setLocalJson, setting } from "./util/storage";
+  import { log } from "./util/misc";
 
   const dispatch = createEventDispatcher();
   export let note: Note | any; // Todo: Do not know how to type this correctly to make sure in Notes it does not say Note__SvelteComponent_ <> Note type, very annoying
@@ -151,16 +152,55 @@
       return;
     }
     contacts.follow(note.pubkey, user.name);
-    contacts.publishList();
+    
+    const json = await fetch("/api/follow/create", {
+      method: "POST",
+      body: JSON.stringify({ pubkey: note.pubkey }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((res) => {
+        log("Reponse from preview app.");
+        return res.json();
+      })
+      .then((data) => {
+        log("Json is ", data);
+        return data;
+      })
+      .catch((err) => {
+        log("error", err);
+      });
+
+    //contacts.publishList();
     followed = true;
   }
 
-  function unfollowUser() {
+  async function unfollowUser() {
     expanded = false;
 
     let c = contacts.unFollow(note.pubkey);
     console.log(c);
-    contacts.publishList();
+    //contacts.publishList();
+    const json = await fetch("/api/follow/delete", {
+      method: "POST",
+      body: JSON.stringify({ pubkey: note.pubkey }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((res) => {
+        log("Reponse from preview app.");
+        return res.json();
+      })
+      .then((data) => {
+        log("Json is ", data);
+        return data;
+      })
+      .catch((err) => {
+        log("error", err);
+      });
+    
     followed = false;
   }
 

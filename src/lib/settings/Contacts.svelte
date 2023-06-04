@@ -4,8 +4,8 @@
   import Button from "../partials/Button.svelte";
   import Text from "../partials/Text.svelte";
   import { prop, differenceWith, sort, ascend } from "ramda";
-  import type { User } from "../state/types";
-  import { fetchUser, isAlive } from "../state/app";
+  import type { TextNote, User } from "../state/types";
+  import { fetchUser } from "../state/app";
   import Spinner from "../partials/Spinner/Spinner.svelte";
   import { users } from "../stores/users";
   import { onMount } from "svelte";
@@ -26,12 +26,13 @@
   }
 
   export async function saveContactList() {
-    contacts.publishList(followPubKeys);
+    contacts.publishList();
   }
 
   let userDiff = [];
   $: userDiff = differenceWith(
-    (a: User, b: { pubkey: string, relay: string, petname: string }) => a.pubkey == b.pubkey,
+    (a: User, b: { pubkey: string; relay: string; petname: string }) =>
+      a.pubkey == b.pubkey,
     $users,
     contacts.getList()
   ).filter((u) => u.pubkey != $account.pubkey);
@@ -43,14 +44,36 @@
   let promiseGetContacts: Promise<void>;
   onMount(async () => {
     if ($account && $account.pubkey) {
-      
-      await isAlive()
+      //await isAlive();
+
+      const json = await fetch("/api/follow", {
+        method: "GET",
+      })
+        .then((res) => {
+          return res.json();
+        })
+        .then((data) => {
+          console.log('Following:', data.data);
+          let item:TextNote 
+          for (item of (data.data as TextNote[])) {
+            followPubKeys.push(item.pubkey);
+          } 
+          return data;
+        })
+        .catch((err) => {
+          console.error("error", err);
+        });
 
       promiseGetContacts = contacts
         .getContacts($account.pubkey)
         .then((data) => {
           followPubKeys = data;
-          console.debug('Contactlist: ', followPubKeys, 'Contacts', contacts.getList());
+          console.debug(
+            "Contactlist: ",
+            followPubKeys,
+            "Contacts",
+            contacts.getList()
+          );
         });
     }
   });

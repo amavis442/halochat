@@ -11,8 +11,6 @@ import { getRootTag, getReplyTag, getLastETag } from '../util/tags';
 import { log } from '../util/misc';
 import { blocklist } from '../stores/block'
 import { account } from '../stores/account'
-import { dbGetMetaEvent, dbSave } from '../../db'
-import type Text from '../partials/Text.svelte'
 
 let $users: Array<User> = get(users)
 let $blocklist: Array<{ pubkey: string, added: number }> = get(blocklist)
@@ -272,7 +270,7 @@ async function placeHolderUser(note: TextNote, relay: string) {
         return note
     }
 
-    let evt: Event = await dbGetMetaEvent(0, note.pubkey)
+    let evt: Event //= await dbGetMetaEvent(0, note.pubkey)
     if (!user) user = initUser(evt.pubkey, relay)
     if (evt) {
         user = formatUser(evt, relay)
@@ -443,24 +441,16 @@ async function handleTags(note: TextNote) {
     }
 }
 
-async function handleUser(note: TextNote, relay?: string): Promise<void> {
+async function handleUser(note: TextNote): Promise<void> {
     if (!note?.user) initNote(note, '')
     let foundUser: User = $users.find((u: User) => u.pubkey == note.pubkey && u.name != u.pubkey)
     if (!foundUser) {
-        let evt: Event = await dbGetMetaEvent(0, note.pubkey)
-        if (evt) {
-            foundUser = initUser(evt.pubkey, relay)
-            foundUser = formatUser(evt, relay)
-            annotateUsers(foundUser)
-        } else {
-            fetchUsers([note.pubkey], relay);
-        }
+        fetchUsers([note.pubkey], '');
     }
     if (foundUser) {
         note.user = foundUser;
     }
 }
-
 
 let userMapping = []
 
@@ -570,7 +560,7 @@ async function handleTextNote(): Promise<void> {
             .then(() => handleDeletions(note))
             .then(() => handleReactions(note)) // Can be very slow
             .then(() => handleMentions(note))
-            .then(() => handleUser(note, relay)) // Can be very slow
+            .then(() => handleUser(note)) // Can be very slow
             .then(() => { console.debug('Done handle note'); feed.update((data) => data) })
 
 }
@@ -757,6 +747,7 @@ export class Listener {
     subs: { [key: string]: Sub } = {}
     id: string
     timer: string | number | NodeJS.Timeout
+    active: boolean
 
     constructor(filters: Array<Filter>, id?: string) {
         this.filters = filters
@@ -766,8 +757,10 @@ export class Listener {
             this.id = id
         }
         this.timer = null
+        
     }
     async start() {
+        this.active = true
         // Cleanup first
         feedStack.set({})
         feedQueue = []
@@ -836,7 +829,13 @@ export class Listener {
             })
         })
     }
+    isActive() {
+        return this.active
+    }
     stop() {
+        if (!this.active) return 
+
+        this.active = false
         for (const [url, sub] of Object.entries(this.subs)) {
             sub.unsub()
             console.log(`Stop listening to relay ${url} by unsubscribe to events and eose`)
@@ -865,35 +864,31 @@ function handleFeedQueueBlockAndMute() {
     }
 }
 
-
 export let lastSeen = writable(getLocalJson(setting.Lastseen) || now() - 60 * 60)
 lastSeen.subscribe(value => {
     setLocalJson(setting.Lastseen, value)
 })
 
-export async function onEvent(evt: Event, relay: string) {
-
+export function onEvent(evt: Event, relay: string) {
+    /*
     if (pool.hasRelay('ws://localhost:8008') && relay != 'ws://localhost:8008') {
         pool.getRelays()['ws://localhost:8008'].publish(evt)
     }
-
+    */
     if (!feedQueueTimer) {
-        feedQueueTimer = setInterval(handleTextNote, 3000)
+        feedQueueTimer = setInterval(handleTextNote, 1000)
     }
 
     switch (evt.kind) {
         case 0:
             handleMetadata(evt, relay)
-            await dbSave(evt, relay)
             break
         case 1:
-            if (evt.pubkey != $account.pubkey && !blockNote(evt)) {
+            if (evt.pubkey != $account.pubkey) {
                 feedQueue.push({ textnote: evt, url: relay })
-                handleFeedQueueBlockAndMute();
             }
             break
         case 3:
-            await dbSave(evt, relay)
             // Update contact list, and seeing other contact lists
             break
         case 5:
@@ -916,12 +911,8 @@ export async function onEvent(evt: Event, relay: string) {
             break;
         case 44: //mute user
             break;
-        case 10001:
-            await dbSave(evt, relay)
-            break;
+
         default:
 
     }
 }
-
-
